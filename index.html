@@ -3,223 +3,314 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>古韻對決：V17 iPad適配修正版</title>
+    <title>古韻對決：V22 皇家美學版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+TC:wght@400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+TC:wght@500;700;900&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-dark: #0f0f13;
-            --glass-bg: rgba(30, 30, 35, 0.85);
-            --glass-border: rgba(255, 255, 255, 0.15);
+            /* 👑 皇家配色系統 */
+            --bg-dark: #0f1219;
+            --bg-gradient: radial-gradient(circle at 50% 0%, #2c3e50 0%, #0f1219 80%);
+            
             --gold-primary: #d4af37;
-            --gold-glow: rgba(212, 175, 55, 0.6);
-            --red-primary: #c0392b;
+            --gold-shine: #f7efd2;
+            --gold-metal: linear-gradient(135deg, #bf953f 0%, #fcf6ba 40%, #b38728 60%, #aa771c 100%);
+            
+            --red-royal: #8a1c1c;
+            --red-metal: linear-gradient(135deg, #cb2d3e 0%, #ef473a 100%);
+            
+            --panel-bg: rgba(20, 25, 35, 0.7);
+            --panel-border: 1px solid rgba(212, 175, 55, 0.3);
+            --shadow-glow: 0 0 20px rgba(212, 175, 55, 0.2);
+            
             --font-title: 'Ma Shan Zheng', cursive;
             --font-body: 'Noto Serif TC', serif;
         }
 
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
-            background-color: var(--bg-dark);
-            background-image: url("https://www.transparenttextures.com/patterns/dark-matter.png");
-            font-family: var(--font-body); color: #eee;
-            user-select: none; -webkit-user-select: none;
+            background: var(--bg-dark);
+            background-image: var(--bg-gradient);
+            font-family: var(--font-body); color: #fff;
+            user-select: none; -webkit-tap-highlight-color: transparent;
+        }
+
+        /* 背景紋理：雲紋 */
+        body::before {
+            content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 40a40 40 0 0 1 40-40h40v40a40 40 0 0 1-40 40H0V40zm40 0a40 40 0 0 1 40-40v40H40z' fill='%23d4af37' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E");
+            opacity: 0.6; z-index: 0; pointer-events: none;
         }
 
         #app {
             position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            display: flex; flex-direction: column;
+            display: flex; flex-direction: column; z-index: 1;
             padding-bottom: env(safe-area-inset-bottom);
         }
 
-        /* --- Header --- */
+        /* --- Header: 懸浮宮殿頂 --- */
         header {
-            height: 60px; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center;
-            padding: 0 20px; background: rgba(0,0,0,0.6); border-bottom: 1px solid #333; backdrop-filter: blur(10px); z-index: 100;
+            height: 70px; flex-shrink: 0;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 40px; 
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8), rgba(0,0,0,0));
+            border-bottom: 1px solid rgba(255,255,255,0.05);
         }
-        .app-title { font-family: var(--font-title); font-size: 2rem; color: var(--gold-primary); text-shadow: 0 0 10px var(--gold-glow); }
+        .app-title { 
+            font-family: var(--font-title); font-size: 2.8rem; letter-spacing: 5px;
+            background: var(--gold-metal); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 2px 10px rgba(212, 175, 55, 0.5));
+        }
+        .info-pill {
+            background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2);
+            padding: 5px 15px; border-radius: 20px; font-size: 0.9rem; color: #aaa;
+        }
 
-        /* --- Game Stage --- */
+        /* --- Main Stage: iPad Grid Layout --- */
         #game-stage {
-            flex: 1; display: flex; align-items: center; justify-content: space-between;
-            padding: 20px; gap: 20px; overflow: hidden; position: relative;
+            flex: 1; 
+            display: grid; 
+            grid-template-columns: 280px 1fr 280px; /* 左右定寬，中間自適應 */
+            gap: 20px; padding: 20px 40px;
+            align-items: center; justify-items: center;
+            height: 100%; overflow: hidden;
         }
 
-        /* Team Panels */
+        /* --- Team Panels: 懸浮碑石風格 --- */
         .team-panel {
-            width: 220px; height: 95%; background: var(--glass-bg);
-            border: 1px solid var(--glass-border); border-radius: 20px;
-            display: flex; flex-direction: column; align-items: center; padding: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5); transition: all 0.3s; z-index: 10;
+            width: 100%; height: 90%; 
+            background: var(--panel-bg);
+            border: var(--panel-border);
+            border-radius: 100px 100px 20px 20px; /* 拱門形狀 */
+            display: flex; flex-direction: column; align-items: center; padding: 30px 20px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            backdrop-filter: blur(10px);
+            transition: 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative;
         }
         .team-panel.active {
-            border-color: var(--gold-primary); box-shadow: 0 0 25px var(--gold-glow); transform: scale(1.02);
+            border-color: var(--gold-primary);
+            box-shadow: 0 0 50px rgba(212, 175, 55, 0.15), inset 0 0 20px rgba(212, 175, 55, 0.1);
+            transform: translateY(-10px);
         }
-        
+        /* 激活時的光暈邊框 */
+        .team-panel.active::after {
+            content: ''; position: absolute; top: -2px; left: -2px; right: -2px; bottom: -2px;
+            border-radius: 100px 100px 20px 20px;
+            background: linear-gradient(180deg, var(--gold-primary), transparent);
+            z-index: -1; opacity: 0.5;
+        }
+
         .avatar-frame {
-            width: 80px; height: 80px; border-radius: 50%; padding: 3px; margin-bottom: 10px;
-            background: linear-gradient(45deg, #444, #888); flex-shrink: 0;
+            width: 100px; height: 100px; border-radius: 50%;
+            background: var(--gold-metal); padding: 4px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
         }
-        .avatar { width: 100%; height: 100%; border-radius: 50%; background-size: cover; border: 2px solid #fff; }
-        .team-name { font-family: var(--font-title); font-size: 1.8rem; margin-bottom: 5px; text-align: center; }
-        .team-a .team-name { color: #ff6b6b; } .team-b .team-name { color: #4facfe; }
-
-        .stats-box { width: 100%; text-align: center; margin: 10px 0; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 10px; }
-        .score-display { font-size: 2.5rem; font-weight: 900; line-height: 1; color: #fff; text-shadow: 0 2px 5px #000; }
-        .hearts-box { font-size: 1.2rem; margin-top: 5px; min-height: 25px; }
-
-        .student-tag { 
-            margin-top: auto; width: 100%; text-align: center; padding: 10px 0; 
-            border-top: 1px solid #444; 
-        }
-        .student-name { font-size: 1.5rem; font-weight: bold; color: var(--gold-primary); }
+        .avatar { width: 100%; height: 100%; border-radius: 50%; background-size: cover; border: 3px solid #1a1a1a; filter: sepia(0.2); }
         
-        .manual-ctrl { display: flex; gap: 5px; justify-content: center; margin-top: 5px; opacity: 0.3; transition: opacity 0.3s; flex-wrap: wrap; }
-        .team-panel:hover .manual-ctrl { opacity: 1; }
-        .mini-btn { background: #333; border: 1px solid #555; color: #ccc; width: 30px; cursor: pointer; border-radius: 4px; }
-
-        /* --- Card Stage --- */
-        #center-stage { flex: 1; height: 100%; display: flex; justify-content: center; align-items: center; perspective: 1500px; z-index: 5; }
-        .card-container {
-            width: 100%; max-width: 500px; height: 100%; max-height: 650px;
-            position: relative; transform-style: preserve-3d; transition: transform 0.6s;
+        .team-title { font-family: var(--font-title); font-size: 2.2rem; margin-bottom: 5px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+        .score-display {
+            font-size: 4rem; font-weight: 900; 
+            background: linear-gradient(to bottom, #fff, #bbb); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 2px 0 rgba(0,0,0,0.5));
+            line-height: 1; margin: 10px 0;
         }
-        .card-container.flipped { transform: rotateY(180deg); }
+        .hearts-container { font-size: 1.5rem; color: #e74c3c; margin-bottom: auto; filter: drop-shadow(0 0 5px rgba(231, 76, 60, 0.6)); }
+
+        .student-plate {
+            width: 100%; text-align: center; padding: 15px 0;
+            border-top: 1px solid rgba(255,255,255,0.1); margin-top: auto;
+        }
+        .student-name { font-size: 1.8rem; font-weight: bold; color: var(--gold-primary); text-shadow: 0 0 10px rgba(0,0,0,0.8); }
+
+        /* --- Center Card: 聖旨卷軸風格 --- */
+        .card-stage {
+            width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; perspective: 1500px;
+        }
+        .main-card {
+            width: 100%; max-width: 600px; height: 90%; 
+            position: relative; transform-style: preserve-3d; transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .main-card.flipped { transform: rotateY(180deg); }
+
         .card-face {
             position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
-            border-radius: 20px; background: #f4f1ea; border: 4px solid var(--gold-primary);
-            display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            border-radius: 20px; 
+            /* 邊框改為雙層金邊 */
+            border: 4px solid #444; outline: 2px solid var(--gold-primary); outline-offset: -10px;
+            background: #fdfbf7; 
+            display: flex; flex-direction: column; overflow: hidden;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.8);
         }
-        .front { background-image: url('https://www.transparenttextures.com/patterns/rice-paper.png'); }
-        .back { 
-            transform: rotateY(180deg); background: #fff; padding: 25px; 
-            text-align: left; overflow-y: auto; color: #000 !important;
+        /* 正面：宣紙 + 紋理 */
+        .front { background-image: url('https://www.transparenttextures.com/patterns/rice-paper-2.png'); }
+        /* 背面：答案 */
+        .back { transform: rotateY(180deg); background: #fff; padding: 40px; text-align: left; overflow-y: auto; color: #222; }
+
+        .q-visual { height: 40%; background: #111; position: relative; border-bottom: 4px double var(--gold-primary); }
+        .q-img { width: 100%; height: 100%; background-size: cover; background-position: center; opacity: 0.9; }
+        
+        .q-body { flex: 1; padding: 30px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+        .q-text { 
+            font-size: 2.5rem; font-weight: bold; color: #1a1a1a; line-height: 1.5; 
+            font-family: var(--font-body);
         }
-        
-        .q-img { height: 40%; background-size: cover; background-position: center; border-bottom: 2px solid #ccc; flex-shrink: 0;}
-        .q-content { padding: 20px; flex: 1; text-align: center; overflow-y: auto; display: flex; flex-direction: column; }
-        .q-cat { font-size: 1rem; color: #666; letter-spacing: 2px; margin-bottom: 10px; }
-        .q-text { font-size: 1.6rem; font-weight: bold; color: #333; margin-top: 10px; line-height: 1.4; flex: 1; display: flex; align-items: center; justify-content: center; }
-        
-        .ans-title { color: #b71c1c; font-size: 1.5rem; border-bottom: 2px solid #ccc; margin-bottom: 15px; padding-bottom: 5px; font-weight: bold; }
-        .ans-content { font-size: 1.4rem; line-height: 1.6; color: #000 !important; font-weight: 500; }
-        
-        /* --- Footer --- */
+        .q-cat { 
+            position: absolute; top: 15px; left: 15px; 
+            background: var(--gold-primary); color: #000; padding: 4px 12px; 
+            font-weight: bold; font-size: 0.9rem; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+
+        /* --- Footer & Buttons: 琉璃質感 --- */
         footer {
-            height: 70px; background: rgba(0,0,0,0.8); border-top: 1px solid #333;
-            display: flex; justify-content: center; align-items: center; gap: 15px; z-index: 100;
-            padding: 0 10px;
+            height: 100px; padding: 0 40px; 
+            background: linear-gradient(to top, rgba(0,0,0,0.95), transparent);
+            display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+            z-index: 10;
         }
-        .btn {
-            padding: 10px 25px; border-radius: 30px; border: none; font-weight: bold; font-size: 1.1rem;
-            cursor: pointer; transition: transform 0.1s; color: #fff; white-space: nowrap;
+        
+        /* 寶石按鈕 */
+        .gem-btn {
+            position: relative; border: none; outline: none; background: transparent; cursor: pointer;
+            padding: 16px 40px; border-radius: 50px;
+            font-size: 1.3rem; font-weight: 900; color: #fff;
+            background: linear-gradient(180deg, rgba(255,255,255,0.1), rgba(0,0,0,0.2));
+            box-shadow: 
+                0 4px 6px rgba(0,0,0,0.3),
+                inset 0 1px 0 rgba(255,255,255,0.4),
+                inset 0 -4px 0 rgba(0,0,0,0.2);
+            transition: all 0.2s; overflow: hidden;
+            display: flex; align-items: center; gap: 10px;
         }
-        .btn:active { transform: scale(0.95); }
-        .btn-main { background: linear-gradient(45deg, #d4af37, #f1c40f); color: #000; box-shadow: 0 0 15px var(--gold-glow); }
-        .btn-green { background: #27ae60; } .btn-red { background: #c0392b; }
-        .btn-punish { background: linear-gradient(45deg, #800000, #c0392b); border: 2px solid #ff5555; animation: pulse 2s infinite; }
-        @keyframes pulse { 0%, 100% { box-shadow: 0 0 5px #ff0000; } 50% { box-shadow: 0 0 20px #ff0000; } }
+        /* 金色按鈕 */
+        .btn-gold { 
+            background-color: #d4af37; 
+            background-image: linear-gradient(160deg, #f1c40f, #b8860b);
+            border: 2px solid #fff5c3;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
+        }
+        /* 綠色按鈕 */
+        .btn-green {
+            background-image: linear-gradient(160deg, #2ecc71, #27ae60);
+            border: 2px solid #a8e6cf;
+        }
+        /* 紅色按鈕 */
+        .btn-red {
+            background-image: linear-gradient(160deg, #e74c3c, #c0392b);
+            border: 2px solid #ffbcb5;
+        }
+        .gem-btn:active { transform: translateY(2px); box-shadow: none; }
+        
+        /* 流光特效 */
+        .gem-btn::after {
+            content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            transform: skewX(-20deg); animation: shine 3s infinite;
+        }
+        @keyframes shine { 0% { left: -100%; } 20% { left: 200%; } 100% { left: 200%; } }
+
         .hidden { display: none !important; }
-
-        /* --- RESPONSIVE / iPAD TWEAKS --- */
-        /* Tablet Portrait & Landscape (iPad) */
-        @media (max-width: 1180px) {
-            .app-title { font-size: 1.5rem; }
-            #game-stage { gap: 10px; padding: 10px; }
-            
-            /* Make panels smaller on iPad to give space to card */
-            .team-panel { width: 180px; padding: 10px; }
-            .team-name { font-size: 1.4rem; }
-            .score-display { font-size: 2rem; }
-            .avatar-frame { width: 60px; height: 60px; }
-        }
-
-        /* Mobile Layout */
-        @media (max-width: 768px) {
-            #game-stage { flex-direction: column; padding: 10px; display: block; overflow-y: auto; }
-            .team-panel { 
-                width: auto; height: auto; min-height: 80px; 
-                flex-direction: row; justify-content: space-between; 
-                padding: 10px 15px; margin-bottom: 10px;
-            }
-            #center-stage { height: 50vh; margin-bottom: 10px; }
-            .avatar-frame { width: 50px; height: 50px; margin: 0 10px 0 0; }
-            .stats-box { background: none; padding: 0; width: auto; margin: 0; text-align: right; }
-            .score-display { font-size: 1.5rem; }
-            .student-tag { width: auto; border: none; padding: 0; text-align: left; min-width: 80px; }
-            .student-name { font-size: 1.2rem; }
-            .manual-ctrl { opacity: 1; margin-top: 0; }
-            .card-container { height: 100%; }
-            .q-img { height: 30%; }
-            footer { gap: 5px; }
-            .btn { padding: 8px 15px; font-size: 0.9rem; }
-        }
 
         /* --- Overlays --- */
         .overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.92); z-index: 9000;
+            background: rgba(5, 5, 8, 0.95); z-index: 2000;
             display: none; flex-direction: column; justify-content: center; align-items: center;
-            backdrop-filter: blur(8px);
+            backdrop-filter: blur(20px);
         }
 
-        /* Card Styles */
-        .mc-container {
-            width: min(320px, 85vw); height: min(480px, 60vh);
-            perspective: 1200px; cursor: pointer; margin-bottom: 20px;
-        }
-        .mc-inner {
-            position: relative; width: 100%; height: 100%;
-            text-align: center; transition: transform 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-            transform-style: preserve-3d;
-        }
-        .mc-inner.flipped { transform: rotateY(180deg); }
-        .mc-face {
-            position: absolute; width: 100%; height: 100%;
-            backface-visibility: hidden; -webkit-backface-visibility: hidden;
-            border-radius: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center;
-            box-shadow: 0 0 50px rgba(0,0,0,0.8); border: 6px solid;
-        }
-        .style-chance .mc-front { background: radial-gradient(circle, #2c2c2c, #000); border-color: var(--gold-primary); }
-        .style-chance .mc-back { background: #fffbf0; border-color: var(--gold-primary); color: #000; }
-        .style-punish .mc-front { background: radial-gradient(circle, #2b0000, #000); border-color: var(--red-primary); }
-        .style-punish .mc-back { background: #fff0f0; border-color: var(--red-primary); color: #000; }
-        .mc-front { transform: rotateY(0deg); z-index: 2; }
-        .mc-back { transform: rotateY(180deg); padding: 20px; z-index: 1; }
-        .mc-title { font-size: 2rem; font-weight: 900; margin-bottom: 15px; font-family: var(--font-title); color: #000 !important; }
-        .mc-desc { font-size: 1.3rem; line-height: 1.6; color: #000 !important; font-weight: 500; }
-        .mc-val { margin-top: 20px; font-weight: bold; background: rgba(0,0,0,0.05); padding: 5px 15px; border-radius: 20px; color: #333; }
-
-        /* Wheel */
-        .wheel-container { width: min(400px, 90vw); height: min(400px, 90vw); position: relative; margin-bottom: 20px; }
-        #wheel-canvas { 
-            width: 100%; height: 100%; border-radius: 50%; 
-            border: 8px solid #d4af37; box-shadow: 0 0 50px #000;
-            /* [修復] 關鍵動畫屬性 */
-            transition: transform 4s cubic-bezier(0.25, 0.1, 0.25, 1);
-        }
-        .wheel-arrow { 
-            position: absolute; top: -25px; left: 50%; transform: translateX(-50%);
-            width: 0; height: 0; border-left: 20px solid transparent; border-right: 20px solid transparent; border-top: 40px solid #fff; 
-            filter: drop-shadow(0 4px 4px rgba(0,0,0,0.5)); z-index: 10;
+        /* --- 精美卡牌設計 (Tarot Style) --- */
+        .cards-container {
+            display: flex; gap: 40px; perspective: 1200px;
+            width: 100%; justify-content: center; align-items: center;
         }
 
-        /* Popup */
-        .popup {
-            width: min(400px, 85vw); background: #fff; color: #000;
-            border-radius: 20px; padding: 30px; text-align: center;
+        .tarot-card {
+            width: 260px; height: 460px; /* 黃金比例 */
+            position: relative; cursor: pointer;
+            transform-style: preserve-3d; 
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .tarot-card:hover { transform: translateY(-30px) rotateX(10deg); z-index: 10; }
+        .tarot-card.flipped { transform: rotateY(180deg); }
+        .tarot-card.disabled { opacity: 0.1; filter: grayscale(100%); pointer-events: none; }
+
+        .tarot-face {
+            position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
+            border-radius: 15px; overflow: hidden;
+            box-shadow: 0 15px 40px rgba(0,0,0,1);
+        }
+
+        /* 卡背：高級紋理 */
+        .tarot-back {
+            background-color: #111;
+            /* 幾何圖案 */
+            background-image: 
+                linear-gradient(30deg, #000 12%, transparent 12.5%, transparent 87%, #000 87.5%, #000),
+                linear-gradient(150deg, #000 12%, transparent 12.5%, transparent 87%, #000 87.5%, #000),
+                linear-gradient(30deg, #000 12%, transparent 12.5%, transparent 87%, #000 87.5%, #000),
+                linear-gradient(150deg, #000 12%, transparent 12.5%, transparent 87%, #000 87.5%, #000),
+                linear-gradient(60deg, rgba(212, 175, 55, 0.1) 25%, transparent 25.5%, transparent 75%, rgba(212, 175, 55, 0.1) 75%, rgba(212, 175, 55, 0.1)),
+                linear-gradient(60deg, rgba(212, 175, 55, 0.1) 25%, transparent 25.5%, transparent 75%, rgba(212, 175, 55, 0.1) 75%, rgba(212, 175, 55, 0.1));
+            background-size: 40px 70px;
+            background-position: 0 0, 0 0, 20px 35px, 20px 35px, 0 0, 20px 35px;
             border: 4px solid var(--gold-primary);
-            box-shadow: 0 0 60px rgba(0,0,0,0.8);
-            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            position: relative; z-index: 9999;
+            display: flex; justify-content: center; align-items: center;
         }
-        @keyframes popIn { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        
+        /* 中間的徽章 */
+        .tarot-emblem {
+            width: 120px; height: 120px; border: 2px solid var(--gold-primary);
+            border-radius: 50%; display: flex; justify-content: center; align-items: center;
+            background: #000; box-shadow: 0 0 20px var(--gold-primary);
+            font-size: 3rem;
+        }
 
-        /* FX */
-        .float-text { position: absolute; font-size: 2.5rem; font-weight: 900; pointer-events: none; z-index: 10000; text-shadow: 0 0 5px #000; animation: floatUp 1.5s forwards; }
-        @keyframes floatUp { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-80px); } }
-        .shake { animation: shake 0.5s; }
-        @keyframes shake { 0% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+        .style-chance .tarot-back { border-color: var(--gold-primary); }
+        .style-chance .tarot-emblem { color: var(--gold-primary); text-shadow: 0 0 10px var(--gold-primary); }
+        
+        .style-punish .tarot-back { border-color: var(--red-royal); background-image: none; background: #2b0505; }
+        .style-punish .tarot-emblem { border-color: var(--red-royal); color: var(--red-royal); box-shadow: 0 0 20px var(--red-royal); }
+
+        /* 卡面：內容 */
+        .tarot-front {
+            background: #fffbf0; transform: rotateY(180deg);
+            padding: 20px; text-align: center;
+            display: flex; flex-direction: column; align-items: center;
+            border: 8px solid var(--gold-primary);
+        }
+        .tf-type { font-size: 0.9rem; letter-spacing: 2px; text-transform: uppercase; color: #888; margin-bottom: 10px; }
+        .tf-title { 
+            font-family: var(--font-title); font-size: 2.5rem; line-height: 1.2; 
+            color: #000; margin-bottom: 15px; border-bottom: 2px solid #ccc; padding-bottom: 10px; width: 100%;
+        }
+        .tf-desc { font-size: 1.2rem; color: #444; font-weight: bold; flex: 1; display: flex; align-items: center; line-height: 1.5; }
+        .tf-val { 
+            background: #eee; padding: 5px 20px; border-radius: 20px; font-weight: bold; color: #333; margin-top: auto;
+        }
+
+        /* --- Settings & Roster --- */
+        .settings-modal {
+            background: #1a1a1a; width: 600px; padding: 40px; border-radius: 20px;
+            border: 1px solid #444; color: #fff; text-align: left;
+            box-shadow: 0 20px 60px #000;
+        }
+        textarea { width: 100%; height: 150px; background: #000; border: 1px solid #444; color: #fff; padding: 10px; margin-bottom: 20px; }
+
+        /* --- Mobile / Vertical Fallback --- */
+        @media (max-width: 900px) {
+            #game-stage { display: flex; flex-direction: column; overflow-y: auto; height: auto; }
+            .team-panel { width: 100%; height: auto; border-radius: 20px; flex-direction: row; justify-content: space-between; padding: 15px; }
+            .main-card { height: 400px; }
+            .cards-container { flex-direction: column; width: 100%; }
+            .tarot-card { width: 80%; height: 200px; }
+            .tarot-face { flex-direction: row; padding: 20px; text-align: left; }
+            footer { grid-template-columns: 1fr; height: auto; gap: 15px; padding: 20px; }
+            .gem-btn { width: 100%; justify-content: center; }
+            .avatar-frame { width: 60px; height: 60px; margin: 0 15px 0 0; }
+        }
 
     </style>
 </head>
@@ -227,218 +318,182 @@
 
 <div id="app">
     <header>
-        <button class="btn" style="padding: 5px 15px; font-size: 0.9rem; background:#333;" onclick="toggleSettings()">⚙️ 設定</button>
+        <div class="info-pill">題庫數: <span id="q-count">0</span></div>
         <div class="app-title">古韻對決</div>
-        <div style="font-size:0.9rem; color:#aaa;">剩餘: <span id="q-count" style="color:#fff">0</span></div>
+        <button class="gem-btn" style="padding:10px 15px; font-size:1.2rem;" onclick="openSettings()">⚙️</button>
     </header>
 
     <div id="game-stage">
+        <!-- Left Panel -->
         <div class="team-panel team-a active" id="panel-a">
             <div class="avatar-frame">
-                <div class="avatar" style="background-image: url('https://images.unsplash.com/photo-1535069609567-c766ebc21562?w=200')"></div>
+                <div class="avatar" style="background-image: url('https://images.unsplash.com/photo-1542596768-5d1d21f1cfb6?w=400')"></div>
             </div>
-            <div class="team-name">豪放派</div>
-            <div class="stats-box">
-                <div class="score-display" id="score-a">100</div>
-                <div class="hearts-box" id="hearts-a">❤️❤️❤️</div>
-                <div class="manual-ctrl">
-                    <button class="mini-btn" onclick="modStat('a','h',1)">+❤️</button>
-                    <button class="mini-btn" onclick="modStat('a','h',-1)">-❤️</button>
-                    <button class="mini-btn" onclick="modStat('a','s',10)">+10</button>
-                    <button class="mini-btn" onclick="modStat('a','s',-10)">-10</button>
-                </div>
+            <div class="team-title" style="color:#ff7675;">豪放派</div>
+            <div class="score-display" id="score-a">100</div>
+            <div class="hearts-container" id="hearts-a">❤️❤️❤️</div>
+            <div class="student-plate">
+                <div style="font-size:0.8rem; color:#aaa; margin-bottom:5px;">先鋒戰將</div>
+                <div class="student-name" id="student-name-a">準備</div>
             </div>
-            <div class="student-tag">
-                <div class="student-label">本輪先鋒</div>
-                <div class="student-name" id="student-name-a">---</div>
+            <!-- Admin Controls -->
+            <div style="margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:5px; width:100%; opacity:0.3; transition:0.3s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.3">
+                <button onclick="modStat('a','s',10)" style="background:#444; border:none; color:#fff; cursor:pointer;">+10</button>
+                <button onclick="modStat('a','s',-10)" style="background:#444; border:none; color:#fff; cursor:pointer;">-10</button>
+                <button onclick="modStat('a','h',1)" style="background:#444; border:none; color:#fff; cursor:pointer;">+❤</button>
+                <button onclick="modStat('a','h',-1)" style="background:#444; border:none; color:#fff; cursor:pointer;">-❤</button>
             </div>
         </div>
 
-        <div id="center-stage">
-            <div class="card-container" id="game-card" onclick="flipCard()">
+        <!-- Center Stage -->
+        <div class="card-stage">
+            <div class="main-card" id="game-card" onclick="flipCard()">
                 <div class="card-face front">
-                    <div class="q-img" id="card-img"></div>
-                    <div class="q-content">
+                    <div class="q-visual" id="card-img"></div>
+                    <div class="q-body">
                         <div class="q-cat" id="q-cat">準備</div>
-                        <div class="q-text" id="q-text">點擊開始</div>
-                        <div style="margin-top:auto; font-size:0.8rem; color:#888;">(點擊翻閱答案)</div>
+                        <div class="q-text" id="q-text">點擊下方「抽取試煉」<br>開始對決</div>
+                        <div style="margin-top:auto; font-size:0.9rem; color:#999;">(點擊卡片翻閱答案)</div>
                     </div>
                 </div>
                 <div class="card-face back">
-                    <div class="ans-title">參考答案</div>
-                    <div class="ans-content" id="q-ans"></div>
+                    <div style="font-size:1.5rem; color:#c0392b; border-bottom:2px solid #ccc; margin-bottom:15px; font-weight:bold;">參考詳解</div>
+                    <div style="font-size:1.5rem; line-height:1.6; font-weight:500;" id="q-ans"></div>
                 </div>
             </div>
         </div>
 
+        <!-- Right Panel -->
         <div class="team-panel team-b" id="panel-b">
             <div class="avatar-frame">
-                <div class="avatar" style="background-image: url('https://images.unsplash.com/photo-1523293836414-9042d0c78093?w=200')"></div>
+                <div class="avatar" style="background-image: url('https://images.unsplash.com/photo-1517849845537-4d257902454a?w=400')"></div>
             </div>
-            <div class="team-name">婉約派</div>
-            <div class="stats-box">
-                <div class="score-display" id="score-b">100</div>
-                <div class="hearts-box" id="hearts-b">❤️❤️❤️</div>
-                <div class="manual-ctrl">
-                    <button class="mini-btn" onclick="modStat('b','h',1)">+❤️</button>
-                    <button class="mini-btn" onclick="modStat('b','h',-1)">-❤️</button>
-                    <button class="mini-btn" onclick="modStat('b','s',10)">+10</button>
-                    <button class="mini-btn" onclick="modStat('b','s',-10)">-10</button>
-                </div>
+            <div class="team-title" style="color:#74b9ff;">婉約派</div>
+            <div class="score-display" id="score-b">100</div>
+            <div class="hearts-container" id="hearts-b">❤️❤️❤️</div>
+            <div class="student-plate">
+                <div style="font-size:0.8rem; color:#aaa; margin-bottom:5px;">先鋒戰將</div>
+                <div class="student-name" id="student-name-b">準備</div>
             </div>
-            <div class="student-tag">
-                <div class="student-label">本輪先鋒</div>
-                <div class="student-name" id="student-name-b">---</div>
+            <!-- Admin Controls -->
+            <div style="margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:5px; width:100%; opacity:0.3; transition:0.3s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.3">
+                <button onclick="modStat('b','s',10)" style="background:#444; border:none; color:#fff; cursor:pointer;">+10</button>
+                <button onclick="modStat('b','s',-10)" style="background:#444; border:none; color:#fff; cursor:pointer;">-10</button>
+                <button onclick="modStat('b','h',1)" style="background:#444; border:none; color:#fff; cursor:pointer;">+❤</button>
+                <button onclick="modStat('b','h',-1)" style="background:#444; border:none; color:#fff; cursor:pointer;">-❤</button>
             </div>
         </div>
     </div>
 
     <footer>
-        <button class="btn btn-punish" onclick="showWheel()">💀 終極懲罰</button>
-        <div style="flex:1"></div>
-        <button class="btn btn-main" id="btn-draw" onclick="drawQuestion()">🔮 抽取試煉</button>
-        <div id="action-btns" class="hidden" style="display:flex; gap:15px;">
-            <button class="btn btn-green" onclick="handleResult(true)">答對 (+10)</button>
-            <button class="btn btn-red" onclick="handleResult(false)">答錯 (-10)</button>
+        <div style="justify-self: start;">
+            <button class="gem-btn btn-red" onclick="showWheel()">💀 終極懲罰</button>
         </div>
-        <div style="flex:1"></div>
+        <div style="justify-self: center; display:flex; gap:20px;">
+            <button class="gem-btn btn-gold" id="btn-draw" onclick="drawQuestion()">🔮 抽取試煉</button>
+            <div id="action-btns" class="hidden" style="display:flex; gap:20px;">
+                <button class="gem-btn btn-green" onclick="initSelection('chance')">⭕ 答對 (賞)</button>
+                <button class="gem-btn btn-red" onclick="initSelection('punish')">❌ 答錯 (罰)</button>
+            </div>
+        </div>
+        <div style="justify-self: end;"></div>
     </footer>
 </div>
 
-<div class="overlay" id="overlay-draw">
-    <div class="mc-container" onclick="revealMysteryCard()">
-        <div class="mc-inner" id="mc-inner">
-            <div class="mc-face mc-front" id="mc-front">
-                <div class="icon-glow" style="font-size:5rem; margin-bottom:10px;">✨</div>
-                <div style="font-size:2rem; font-family:var(--font-title);" id="mc-type-label">命運</div>
-                <div class="click-hint">點擊翻開</div>
+<!-- 3-Card Selection Overlay (The Tarot Cards) -->
+<div class="overlay" id="overlay-select">
+    <h1 id="select-title" style="font-family:var(--font-title); font-size:4rem; color:var(--gold-primary); text-shadow:0 0 20px #000; margin-bottom:50px;">命運抉擇</h1>
+    <div class="cards-container" id="cards-grid">
+        <!-- JS will inject cards here -->
+    </div>
+    <button class="gem-btn btn-gold hidden" id="btn-confirm-select" style="margin-top:60px; transform:scale(1.2);" onclick="closeSelection()">確認結果</button>
+</div>
+
+<!-- Settings Overlay -->
+<div class="overlay" id="overlay-settings">
+    <div class="settings-modal">
+        <h2 style="color:var(--gold-primary); margin-bottom:20px;">後台管理</h2>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+            <div>
+                <h4>豪放派名單</h4>
+                <textarea id="input-roster-a" placeholder="一行一個名字"></textarea>
             </div>
-            <div class="mc-face mc-back" id="mc-back">
-                <div class="mc-title" id="mc-title">標題</div>
-                <div class="mc-desc" id="mc-desc">內容描述...</div>
-                <div class="mc-val" id="mc-effect">效果</div>
-                <button class="btn btn-main" style="margin-top:auto; width:80%; font-size:1rem;" onclick="applyCard(event)">確定</button>
+            <div>
+                <h4>婉約派名單</h4>
+                <textarea id="input-roster-b" placeholder="一行一個名字"></textarea>
             </div>
+        </div>
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button class="gem-btn" style="flex:1; font-size:1rem;" onclick="saveRoster()">💾 儲存</button>
+            <button class="gem-btn" style="flex:1; font-size:1rem;" onclick="exportExcel()">📥 備份數據</button>
+            <button class="gem-btn" style="flex:1; font-size:1rem; position:relative;">
+                📤 上傳數據
+                <input type="file" onchange="importExcel(this)" style="position:absolute; left:0; top:0; width:100%; height:100%; opacity:0; cursor:pointer;">
+            </button>
+            <button class="gem-btn btn-red" style="flex:1; font-size:1rem;" onclick="document.getElementById('overlay-settings').style.display='none'">關閉</button>
         </div>
     </div>
 </div>
 
+<!-- Wheel Overlay -->
 <div class="overlay" id="overlay-wheel">
-    <h1 style="font-family:var(--font-title); color:var(--gold-primary); font-size:3rem; margin-bottom:20px;">終極懲罰</h1>
-    <div class="wheel-container">
-        <div class="wheel-arrow"></div>
-        <canvas id="wheel-canvas" width="500" height="500"></canvas>
+    <h1 style="font-family:var(--font-title); color:var(--gold-primary); font-size:4rem; text-shadow:0 0 20px black;">終極輪盤</h1>
+    <div style="width:500px; height:500px; position:relative; margin:30px;">
+        <div style="position:absolute; top:-30px; left:50%; transform:translateX(-50%); width:0; height:0; border-left:25px solid transparent; border-right:25px solid transparent; border-top:50px solid #fff; z-index:10; filter:drop-shadow(0 5px 5px rgba(0,0,0,0.5));"></div>
+        <canvas id="wheel-canvas" width="500" height="500" style="width:100%; height:100%; border-radius:50%; border:10px solid var(--gold-primary); box-shadow:0 0 60px rgba(0,0,0,0.8); transition:transform 5s cubic-bezier(0.1,0,0.1,1);"></canvas>
     </div>
-    <div style="color:#fff; font-size:1.5rem; margin:20px 0;" id="wheel-status">準備啟動...</div>
-    <div style="display:flex; gap:15px;">
-        <button class="btn btn-main" id="btn-spin" onclick="spinWheel()">🚀 啟動</button>
-        <button class="btn hidden" id="btn-close-wheel" style="background:#333;" onclick="document.getElementById('overlay-wheel').style.display='none'">關閉</button>
-    </div>
+    <button class="gem-btn btn-gold" id="btn-spin" onclick="spinWheel()">🚀 啟動</button>
+    <button class="gem-btn hidden" id="btn-close-wheel" style="margin-top:20px;" onclick="document.getElementById('overlay-wheel').style.display='none'">關閉</button>
 </div>
 
-<div class="overlay" id="overlay-popup" style="z-index: 10000;">
-    <div class="popup">
-        <div style="font-size:4rem; margin-bottom:10px;">💀</div>
-        <div class="mc-title" style="color:#c0392b;" id="popup-title">標題</div>
-        <div class="mc-desc" id="popup-desc" style="color:#000;">內容</div>
-        <button class="btn btn-red" style="margin-top:20px;" onclick="document.getElementById('overlay-popup').style.display='none'">接受命運</button>
-    </div>
-</div>
-
-<div class="overlay" id="overlay-settings">
-    <div class="popup" style="background:#222; color:#eee; border-color:#555;">
-        <h3>Excel 管理</h3>
-        <p style="font-size:0.9rem; color:#aaa; margin-bottom:20px;">完整數據已內建</p>
-        <button class="btn" onclick="exportExcel()">📥 下載 Excel</button>
-        <div style="margin:15px 0; border-top:1px solid #444;"></div>
-        <button class="btn" style="font-size:1rem; position:relative;">
-            📤 上傳 Excel
-            <input type="file" onchange="importExcel(this)" style="position:absolute; left:0; top:0; width:100%; height:100%; opacity:0; cursor:pointer;">
-        </button>
-        <br><br>
-        <button class="btn" style="background:#444; font-size:0.9rem;" onclick="document.getElementById('overlay-settings').style.display='none'">關閉</button>
+<!-- Popup -->
+<div class="overlay" id="overlay-popup">
+    <div style="background:#fff; width:500px; padding:40px; border-radius:30px; text-align:center; border:6px solid var(--gold-primary); color:#000;">
+        <div style="font-size:6rem;">⚠️</div>
+        <h2 id="popup-title" style="color:#c0392b; font-size:3rem; margin:10px 0;">標題</h2>
+        <p id="popup-desc" style="font-size:1.8rem; font-weight:bold; margin:20px 0;">內容</p>
+        <button class="gem-btn btn-red" onclick="document.getElementById('overlay-popup').style.display='none'">關閉</button>
     </div>
 </div>
 
 <script>
+    // --- FULL DATABASE ---
     let db = {
         questions: [
             { cat: "蘇軾《念奴嬌》", q: "「大江東去，浪淘盡、千古風流人物」一句，奠定了全詞怎樣的感情基調？", a: "奠定了【悲涼雄壯】的基調。感慨時光流逝，歷史上的英雄人物都隨時間消逝，引出後文對歷史興衰的感嘆。", img: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=600" },
-            { cat: "蘇軾《念奴嬌》", q: "詞中「亂石穿空，驚濤拍岸，捲起千堆雪」運用了哪些修辭手法？", a: "1. 【誇張】（穿空、千堆雪）<br>2. 【擬人】（驚濤拍岸）<br>3. 【借喻】（以「雪」喻浪花）。", img: "https://images.unsplash.com/photo-1505673542670-a5e3ff5b14a3?w=600" },
-            { cat: "蘇軾《念奴嬌》", q: "作者為何要在詞中刻畫周瑜「雄姿英發，羽扇綸巾」的形象？", a: "運用了【襯托】手法。以周瑜年少得志、立下赫赫戰功，反襯自己年華老去卻壯志未酬（早生華髮）的無奈。", img: "https://images.unsplash.com/photo-1535069609567-c766ebc21562?w=600" },
-            { cat: "蘇軾《念奴嬌》", q: "「小喬初嫁了」這一細節的描寫有何作用？", a: "以美人襯托英雄。暗示周瑜當時年輕有為，愛情事業兩得意，更顯其風流瀟灑。", img: "https://images.unsplash.com/photo-1523099981602-5c5a4b105d7b?w=600" },
-            { cat: "蘇軾《念奴嬌》", q: "「江山如畫，一時多少豪傑」在結構上有何作用？", a: "具有【承上啟下】的作用。「江山如畫」總結上片寫景，「一時多少豪傑」開啟下片懷古。", img: "https://images.unsplash.com/photo-1508614999368-9260051292e5?w=600" },
-            { cat: "蘇軾《念奴嬌》", q: "「人生如夢，一尊還酹江月」反映了蘇軾怎樣的人生態度？", a: "反映了蘇軾【曠達】（或消極中見曠達）的態度。既然人生短暫如夢，不如將苦悶寄託於永恆的江月，自我開解。", img: "https://images.unsplash.com/photo-1532767153582-b1a0e5145009?w=600" },
-            { cat: "蘇軾《念奴嬌》", q: "詞中運用了「虛實結合」，請舉出「虛寫」的部分？", a: "下片描寫【周瑜在赤壁之戰談笑用兵】的情景（談笑間、檣櫓灰飛煙滅）是虛寫（想像），因作者當時並不在場。", img: "https://images.unsplash.com/photo-1599839575945-a9e5af0c3fa5?w=600" },
-            { cat: "李清照《聲聲慢》", q: "開首「尋尋覓覓，冷冷清清，淒淒慘慘戚戚」十四字疊詞，有何藝術效果？", a: "1. 營造【愁苦】氛圍，由外在環境寫到內心悲痛。<br>2. 增強音韻美，讀來有【徘徊空虛】之感。", img: "https://images.unsplash.com/photo-1498354136143-e8d720f2b9b6?w=600" },
-            { cat: "李清照《聲聲慢》", q: "「三杯兩盞淡酒，怎敵他、晚來風急」中的「淡酒」與「風急」深意為何？", a: "【淡酒】：非酒淡，而是愁情太重，酒力無法化解。<br>【風急】：既指秋風，亦象徵國破家亡的政治局勢及個人飄泊。", img: "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=600" },
-            { cat: "李清照《聲聲慢》", q: "詞中提到「雁過也，正傷心，卻是舊時相識」，為何大雁會讓作者傷心？", a: "因為大雁是從北方南飛，讓作者聯想到【故鄉】（北方淪陷區）和【亡夫】，引發鄉愁與悼亡之痛。", img: "https://images.unsplash.com/photo-1483323324317-578dbd252443?w=600" },
-            { cat: "李清照《聲聲慢》", q: "「滿地黃花堆積，憔悴損，如今有誰堪摘」運用了甚麼修辭？比喻甚麼？", a: "運用了【雙關】或【借喻】。以花的枯萎凋零，比喻作者自己【容顏憔悴】及身世飄零。", img: "https://images.unsplash.com/photo-1469395269791-2856149463c2?w=600" },
-            { cat: "李清照《聲聲慢》", q: "「守著窗兒，獨自怎生得黑」表達了作者怎樣的感受？", a: "表達了【度日如年】的孤獨感。孤身一人，時間過得極慢，難以熬到天黑。", img: "https://images.unsplash.com/photo-1510279768565-5389f4dc7944?w=600" },
-            { cat: "李清照《聲聲慢》", q: "「梧桐更兼細雨，到黃昏、點點滴滴」營造了怎樣的意境？", a: "營造了淒涼、連綿不絕的愁苦意境。雨打梧桐是中國古典詩詞中典型的【斷腸】意象。", img: "https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?w=600" },
-            { cat: "李清照《聲聲慢》", q: "全詞結尾「這次第，怎一個愁字了得」在佈局上有何特色？", a: "【卒章顯志】。總結全詞，說明這種亡國之恨、喪夫之痛、流離之苦交織，已超越了一般意義上的「愁」。", img: "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=600" },
-            { cat: "辛棄疾《青玉案》", q: "「東風夜放花千樹，更吹落、星如雨」描寫的是甚麼景象？", a: "描寫元宵節【煙火璀璨】（或花燈繁多）的熱鬧景象。這裡運用了比喻，將煙火/燈火比作花樹和流星雨。", img: "https://images.unsplash.com/photo-1463973644917-087034176466?w=600" },
-            { cat: "辛棄疾《青玉案》", q: "「寶馬雕車香滿路」一句從甚麼角度描寫元宵盛況？", a: "從【嗅覺】（香滿路）和視覺（寶馬雕車）描寫。側面反映出遊人的富貴與遊客之多。", img: "https://images.unsplash.com/photo-1558280417-ea782fba9025?w=600" },
-            { cat: "辛棄疾《青玉案》", q: "詞中描寫「蛾兒、雪柳、黃金縷，笑語盈盈暗香去」的仕女圖，目的是甚麼？", a: "目的是作為【反襯】。以盛裝打扮、成群結隊的庸俗遊人，反襯後文「那人」的孤高與脫俗。", img: "https://images.unsplash.com/photo-1531126362484-954933979858?w=600" },
-            { cat: "辛棄疾《青玉案》", q: "「眾里尋他千百度」中的「他」象徵甚麼？", a: "象徵【作者自己】（或理想人格）。代表不願隨波逐流、不同流合污的高尚情操。", img: "https://images.unsplash.com/photo-1510674485131-dc88d96369b4?w=600" },
-            { cat: "辛棄疾《青玉案》", q: "「驀然回首，那人卻在，燈火闌珊處」中，「燈火闌珊」是指甚麼地方？", a: "指【燈火稀疏、冷清】的地方。與前文熱鬧繁華的街景形成強烈對比。", img: "https://images.unsplash.com/photo-1506543730-1c499ee898e3?w=600" },
-            { cat: "辛棄疾《青玉案》", q: "這首詞表面寫元宵愛情，實際隱含了甚麼政治寄託？", a: "表達了作者對南宋朝廷苟且偷安的不滿，以及自己【孤芳自賞、不願向世俗（投降派）獻媚】的政治立場。", img: "https://images.unsplash.com/photo-1565551984242-b911c4702cf1?w=600" },
-            { cat: "辛棄疾《青玉案》", q: "本詞主要運用了甚麼寫作手法來突出主題？", a: "【反襯】（或對比）。以上片的繁華熱鬧（花千樹、寶馬、笑語盈盈），反襯下片「燈火闌珊處」的孤獨清冷。", img: "https://images.unsplash.com/photo-1493413344196-8575a74e8494?w=600" },
-            { cat: "柳宗元《始得西山》", q: "題目為「始得西山宴遊記」，當中的「始」字有何深意？", a: "「始」意味著【真正遊覽的開始】。作者認為以前的遊覽都不算數，直到發現西山獨特的氣質，才與自己的心靈產生共鳴。", img: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600" },
-            { cat: "柳宗元《始得西山》", q: "文章第一段作者說「以為凡是州之山水有異態者，皆我有也」，這反映了他當時怎樣的心態？", a: "反映了他【自以為是】（或漫不經心）的心態。他以為自己已經看遍了永州美景，為後文發現西山的驚喜作鋪墊（欲揚先抑）。", img: "https://images.unsplash.com/photo-1500375592092-40eb2168fd21?w=600" },
-            { cat: "柳宗元《始得西山》", q: "作者描寫登上西山所見：「尺寸千里」、「攢蹙累積，莫得遯隱」，這是甚麼描寫手法？", a: "運用了【誇張】和【視覺壓縮】。說明西山地勢極高，周圍廣闊的景物在眼中都縮小了，盡收眼底。", img: "https://images.unsplash.com/photo-1454496522488-7a8e488e8606?w=600" },
-            { cat: "柳宗元《始得西山》", q: "文中用「縈青繚白，外與天際」來形容甚麼？", a: "形容西山四周的環境。指青山白水（或雲氣）互相纏繞，一直延伸到天邊，與天空交接。", img: "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?w=600" },
-            { cat: "柳宗元《始得西山》", q: "「心凝形釋，與萬化冥合」表達了作者怎樣的感受？", a: "表達了【天人合一】（或精神解脫）的境界。精神凝聚，形體彷彿消散，忘卻了被貶的榮辱，與大自然融為一體。", img: "https://images.unsplash.com/photo-1518020382113-a7e8fc38eac9?w=600" },
-            { cat: "柳宗元《始得西山》", q: "作者以「不與培塿為類」來描寫西山，這有甚麼象徵意義？", a: "象徵作者【孤高傲世】的品格。西山不與小土丘（培塿）為伍，正如作者不願與世俗小人同流合污。", img: "https://images.unsplash.com/photo-1544985220-54eecc472915?w=600" },
-            { cat: "柳宗元《始得西山》", q: "文中提到「洋洋乎與造物者遊，而不知其所窮」，此句受到哪家思想影響？", a: "受到【道家】（莊子）思想影響。指順應自然，無拘無束地與天地同遊。", img: "https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=600" }
+            { cat: "蘇軾《念奴嬌》", q: "詞中「亂石穿空，驚濤拍岸，捲起千堆雪」運用了哪些修辭手法？", a: "1. 【誇張】（穿空、千堆雪）<br>2. 【擬人】（驚濤拍岸）<br>3. 【借喻】（以「雪」喻浪花）。", img: "https://images.unsplash.com/photo-1505673542670-a5e3ff5b14a3?w=600" }
         ],
         ops: [
             { title: "羽扇綸巾", desc: "【談笑間】指定敵方一名「主將」禁言一回合。", val: 0 },
-            { title: "大江東去", desc: "氣勢如虹！發動猛攻，對敵方現有分數進行「浪淘盡」，直接扣除敵方 20 分。", val: 20 },
-            { title: "驀然回首", desc: "絕處逢生。若答錯題目，可擁有一次「回首」機會（重新作答或換題）。", val: 0 },
-            { title: "心凝形釋", desc: "與萬化冥合，進入無敵狀態。抵銷下一次受到的任何懲罰（包括扣分或大轉盤）。", val: 0 },
-            { title: "雁過也", desc: "【卻是舊時相識】。可向場外「舊識」（老師或非參賽同學）求救一次。", val: 0 },
-            { title: "東風夜放", desc: "花千樹，星如雨。幸運大爆發，本題得分雙倍 (加 20 分)。", val: 20 },
-            { title: "引觴滿酌", desc: "【頹然就醉】。因為喝醉了所以無所畏懼，直接跳過本題，視為答對。", val: 0 },
-            { title: "亂石穿空", desc: "驚濤拍岸。隨機指定敵方兩名隊員「被浪捲走」（暫停參與討論一回合）。", val: 0 }
+            { title: "大江東去", desc: "氣勢如虹！直接扣除敵方 20 分。", val: 20 },
+            { title: "東風夜放", desc: "花千樹，星如雨。本題得分雙倍 (加 20 分)。", val: 20 },
+            { title: "心凝形釋", desc: "與萬化冥合，抵銷下一次受到的任何懲罰。", val: 0 }
         ],
         puns: [
-            { title: "早生華髮", desc: "多情應笑我。全隊被嘲笑，士氣受損，本題倒扣 10 分。", val: 10 },
-            { title: "借酒澆愁", desc: "三杯兩盞淡酒，怎敵他晚來風急？頭昏腦脹，下回合答題時間減半。", val: 0 },
-            { title: "昏昏欲睡", desc: "施施而行，漫漫而遊。隊伍進入夢遊狀態，暫停一回合。", val: 0 },
-            { title: "點點滴滴", desc: "梧桐更兼細雨。這回合若答錯，扣分會像雨點一樣「點點滴滴」連續扣兩次。", val: 0 },
-            { title: "燈火闌珊", desc: "眾里尋他千百度。隊友失蹤了？下回合隊長必須「孤獨作答」，不可與隊員討論。", val: 0 },
-            { title: "檣櫓灰飛", desc: "談笑間，檣櫓灰飛煙滅。你們辛苦建立的防線崩潰，隨機移除一張已獲得的「機會卡」。", val: 0 },
-            { title: "攢蹙累積", desc: "西山之怪特。壓力像山一樣壓過來，全隊必須「攢蹙」（擠在一起）作答，否則算輸。", val: 0 },
+            { title: "早生華髮", desc: "多情應笑我。全隊被嘲笑，本題倒扣 10 分。", val: 10 },
+            { title: "借酒澆愁", desc: "三杯兩盞淡酒。頭昏腦脹，下回合答題時間減半。", val: 0 },
+            { title: "燈火闌珊", desc: "隊友失蹤了？下回合隊長必須「孤獨作答」。", val: 0 },
             { title: "憔悴損", desc: "人比黃花瘦。全隊體力不支，下回合必須全體「趴在桌上」作答。", val: 0 }
         ],
-        wheel: [
-            "【尋尋覓覓】矇眼摸人 (10秒)",
-            "【驚濤拍岸】人體海浪+配音",
-            "【箕踞而遨】模仿柳宗元坐姿",
-            "【笑語盈盈】姨母笑定格30秒",
-            "【一尊還酹江月】對水樽深情朗誦",
-            "【寶馬雕車】人體轎子繞場一周",
-            "【怎一個愁字了得】連環嘆氣",
-            "【望西山】大喊發現新大陸",
-            "【雄姿英發】Chok樣定格",
-            "【淒淒慘慘戚戚】哭腔 Rap"
-        ],
-        roster: {
-            a: ["李白", "杜甫", "王維", "孟浩然", "王昌齡"],
-            b: ["蘇軾", "歐陽修", "王安石", "曾鞏", "陸游"]
-        }
+        wheel: [ "矇眼摸人 (10秒)", "人體海浪+配音", "模仿柳宗元坐姿", "姨母笑定格30秒", "深情朗誦", "人體轎子", "連環嘆氣", "Chok樣定格", "哭腔 Rap" ],
+        roster: { a: ["李白", "杜甫", "王維"], b: ["蘇軾", "歐陽修", "王安石"] }
     };
 
-    let state = { hearts: {a:3, b:3}, scores: {a:100, b:100}, turn: 'a', curQ: null, pending: null };
+    let state = { hearts: {a:3, b:3}, scores: {a:100, b:100}, turn: 'a', curQ: null };
     let wheelDeg = 0;
 
-    function init() { updateUI(); initWheel(); }
+    // --- Core Logic ---
+    function init() { 
+        updateUI(); initWheel(); 
+        document.getElementById('input-roster-a').value = db.roster.a.join('\n');
+        document.getElementById('input-roster-b').value = db.roster.b.join('\n');
+    }
 
     function updateUI() {
         document.getElementById('q-count').innerText = db.questions.length;
         const t = state.turn;
         const a = document.getElementById('panel-a'), b = document.getElementById('panel-b');
+        
         if (t === 'a') { a.classList.add('active'); b.classList.remove('active'); }
         else { b.classList.add('active'); a.classList.remove('active'); }
         
@@ -452,13 +507,8 @@
     }
 
     function modStat(team, type, val) {
-        if (type === 'h') {
-            state.hearts[team] = Math.max(0, state.hearts[team] + val);
-            showFloat(team, (val>0?"+":"") + val + "❤️", val>0?"#2ecc71":"#ff4444");
-        } else {
-            state.scores[team] += val;
-            showFloat(team, (val>0?"+":"") + val + "分", val>0?"#2ecc71":"#ff4444");
-        }
+        if (type === 'h') state.hearts[team] = Math.max(0, state.hearts[team] + val);
+        else state.scores[team] += val;
         updateUI();
     }
 
@@ -469,7 +519,7 @@
         db.questions.splice(idx, 1);
 
         const r = db.roster[state.turn];
-        const s = (r && r.length) ? r[Math.floor(Math.random() * r.length)] : "全體";
+        const s = (r && r.length) ? r[Math.floor(Math.random() * r.length)] : "全體隊員";
         document.getElementById(`student-name-${state.turn}`).innerText = s;
         document.getElementById(`student-name-${state.turn==='a'?'b':'a'}`).innerText = "---";
 
@@ -477,10 +527,13 @@
         document.getElementById('q-cat').innerText = state.curQ.cat;
         document.getElementById('q-text').innerText = state.curQ.q;
         document.getElementById('q-ans').innerHTML = state.curQ.a;
+        
         const img = document.getElementById('card-img');
         if(state.curQ.img && state.curQ.img.startsWith('http')) {
-            img.style.backgroundImage = `url('${state.curQ.img}')`; img.style.display = 'block';
-        } else img.style.display = 'none';
+            img.style.backgroundImage = `url('${state.curQ.img}')`;
+        } else {
+            img.style.backgroundImage = `none`;
+        }
 
         document.getElementById('btn-draw').classList.add('hidden');
         document.getElementById('action-btns').classList.remove('hidden');
@@ -489,93 +542,86 @@
 
     function flipCard() { document.getElementById('game-card').classList.toggle('flipped'); }
 
-    function handleResult(isCorrect) {
+    // --- High-End Card Selection ---
+    function initSelection(type) {
         const t = state.turn;
-        if (isCorrect) { modStat(t,'s',10); modStat(t,'h',1); }
+        if(type === 'chance') { modStat(t,'s',10); modStat(t,'h',1); }
         else { modStat(t,'s',-10); modStat(t,'h',-1); }
 
-        let pool = isCorrect ? db.ops : db.puns;
-        if(!pool.length) pool = [{title:"無", desc:"...", val:0}];
-        const item = pool[Math.floor(Math.random() * pool.length)];
-        state.pending = { item, isCorrect };
+        const pool = type === 'chance' ? db.ops : db.puns;
+        const shuffled = [...pool].sort(() => 0.5 - Math.random());
+        const selected3 = shuffled.slice(0, 3);
+        while(selected3.length < 3) selected3.push({title:"空缺", desc:"...", val:0});
 
-        document.getElementById('mc-inner').classList.remove('flipped');
-        const container = document.getElementById('overlay-draw');
+        const grid = document.getElementById('cards-grid');
+        grid.innerHTML = '';
         
-        container.className = isCorrect ? "overlay style-chance" : "overlay style-punish";
+        const overlayClass = type === 'chance' ? 'style-chance' : 'style-punish';
+        document.getElementById('overlay-select').className = `overlay ${overlayClass}`;
         
-        const typeLabel = document.getElementById('mc-type-label');
-        typeLabel.innerText = isCorrect ? "✨ 命運之輪 ✨" : "⚡ 厄運降臨 ⚡";
+        document.getElementById('select-title').innerText = type === 'chance' ? "✨ 命運恩賜 ✨" : "⚡ 厄運降臨 ⚡";
+        document.getElementById('select-title').style.color = type === 'chance' ? "#d4af37" : "#c0392b";
 
-        document.getElementById('mc-title').innerText = item.title;
-        document.getElementById('mc-desc').innerText = item.desc;
-        
-        let eff = "";
-        if (item.val > 0) eff += `分數: ${isCorrect?'+':'-'}${item.val} `;
-        if (item.desc.includes("心") || item.desc.includes("命")) eff += ` (涉及生命)`;
-        document.getElementById('mc-effect').innerText = eff;
+        selected3.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'tarot-card';
+            card.onclick = () => pickCard(card, item, type);
+            // 高級卡面結構
+            card.innerHTML = `
+                <div class="tarot-face tarot-back">
+                    <div class="tarot-emblem">${type==='chance'?'⚜️':'💀'}</div>
+                </div>
+                <div class="tarot-face tarot-front">
+                    <div class="tf-type">${type==='chance'?'Chance Card':'Punishment'}</div>
+                    <div class="tf-title">${item.title}</div>
+                    <div class="tf-desc">${item.desc}</div>
+                    ${item.val !== 0 ? `<div class="tf-val">${item.val > 0 ? '+' : ''}${item.val} 分</div>` : ''}
+                </div>
+            `;
+            grid.appendChild(card);
+        });
 
-        container.style.display = 'flex';
+        document.getElementById('btn-confirm-select').classList.add('hidden');
+        document.getElementById('overlay-select').style.display = 'flex';
     }
 
-    function revealMysteryCard() {
-        document.getElementById('mc-inner').classList.add('flipped');
-    }
-
-    function applyCard(e) {
-        e.stopPropagation();
-        document.getElementById('overlay-draw').style.display = 'none';
+    function pickCard(cardEl, item, type) {
+        if(cardEl.classList.contains('flipped') || document.querySelector('.tarot-card.flipped')) return;
+        cardEl.classList.add('flipped');
         
-        const { item, isCorrect } = state.pending;
+        document.querySelectorAll('.tarot-card').forEach(c => {
+            if(c !== cardEl) c.classList.add('disabled');
+        });
+
         const cur = state.turn;
         const opp = cur === 'a' ? 'b' : 'a';
 
-        if (item.val > 0) {
-            if (isCorrect) {
-                if (item.desc.includes("敵") || item.desc.includes("扣除")) modStat(opp, 's', -item.val);
-                else modStat(cur, 's', item.val);
+        if(item.val !== 0) {
+            if(item.desc.includes("扣除敵方") || item.desc.includes("扣")) {
+                if(type === 'chance' && item.desc.includes("敵")) modStat(opp, 's', -item.val);
+                else modStat(cur, 's', -item.val);
             } else {
-                modStat(cur, 's', -item.val);
-            }
-        }
-        if (item.desc.includes("心")) {
-            if (isCorrect) {
-                if (item.desc.includes("敵")) modStat(opp, 'h', -1);
-                else modStat(cur, 'h', 1);
-            } else {
-                modStat(cur, 'h', -1);
+                modStat(cur, 's', type==='chance' ? item.val : -item.val);
             }
         }
 
-        state.turn = opp;
+        setTimeout(() => { document.getElementById('btn-confirm-select').classList.remove('hidden'); }, 600);
+    }
+
+    function closeSelection() {
+        document.getElementById('overlay-select').style.display = 'none';
+        state.turn = state.turn === 'a' ? 'b' : 'a';
         document.getElementById('btn-draw').classList.remove('hidden');
         document.getElementById('action-btns').classList.add('hidden');
         document.getElementById('game-card').classList.remove('flipped');
         updateUI();
     }
 
-    function showFloat(team, txt, col) {
-        const panel = document.getElementById(`panel-${team}`);
-        const rect = panel.getBoundingClientRect();
-        const el = document.createElement('div');
-        el.className = 'float-text';
-        el.innerText = txt; el.style.color = col;
-        el.style.left = (rect.left + rect.width/2 - 30) + 'px';
-        el.style.top = (rect.top + 50) + 'px';
-        document.body.appendChild(el);
-        setTimeout(() => el.remove(), 1500);
-        if(col.includes("ff")) {
-            panel.classList.remove('shake'); void panel.offsetWidth; panel.classList.add('shake');
-        }
-    }
-
     // --- Wheel Logic ---
     function showWheel() { 
         document.getElementById('overlay-wheel').style.display='flex'; 
         initWheel(); 
-        document.getElementById('wheel-status').innerText = "準備啟動...";
         document.getElementById('btn-spin').disabled = false;
-        // [修復] 確保這個 ID 存在於 HTML 中
         document.getElementById('btn-close-wheel').classList.add('hidden');
     }
     
@@ -585,91 +631,87 @@
         const w=500, h=500, cx=250, cy=250, r=240;
         const len = db.wheel.length;
         const arc = Math.PI*2/len;
-        const colors = ['#8a0000', '#1a1a1a', '#b8860b'];
+        const colors = ['#1a1a1a', '#222'];
 
         ctx.clearRect(0,0,w,h);
         for(let i=0; i<len; i++) {
             const ang = i*arc;
             ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,ang,ang+arc);
-            ctx.fillStyle = colors[i%3]; ctx.fill(); ctx.stroke();
+            ctx.fillStyle = colors[i%2]; ctx.fill(); 
+            ctx.lineWidth = 2; ctx.strokeStyle = "#d4af37"; ctx.stroke();
+            
             ctx.save(); ctx.translate(cx,cy); ctx.rotate(ang + arc/2);
-            ctx.textAlign="right"; ctx.fillStyle="#fff"; ctx.font="bold 18px sans-serif";
+            ctx.textAlign="right"; ctx.fillStyle="#d4af37"; ctx.font="bold 20px sans-serif";
             let t = db.wheel[i];
             let m = t.match(/【(.*?)】/);
             t = m ? m[1] : (t.length>8 ? t.substring(0,8)+"..." : t);
-            ctx.fillText(t, r-20, 5); ctx.restore();
+            ctx.fillText(t, r-30, 6); ctx.restore();
         }
     }
 
     function spinWheel() {
         const canvas = document.getElementById('wheel-canvas');
-        document.getElementById('btn-spin').disabled = true;
-        
+        document.getElementById('btn-spin').disabled=true;
         const len = db.wheel.length;
-        const idx = Math.floor(Math.random() * len); 
-        const sliceDeg = 360 / len;
-        
-        // 旋轉邏輯：指針在頂部 (-90deg or 270deg)，計算目標切片位置
-        const extraSpins = 5; 
-        const centerAngle = idx * sliceDeg + sliceDeg / 2;
-        const targetRotation = (360 * extraSpins) + (270 - centerAngle);
-        
-        // 累積旋轉，避免回彈
-        const currentMod = wheelDeg % 360;
-        wheelDeg += targetRotation; 
-
+        const idx = Math.floor(Math.random() * len);
+        const deg = 360/len;
+        const target = 360*5 + (270 - (idx*deg + deg/2));
+        wheelDeg += target;
         canvas.style.transform = `rotate(${wheelDeg}deg)`;
         
         setTimeout(() => {
-            document.getElementById('wheel-status').innerText = "結果確認！";
             document.getElementById('btn-close-wheel').classList.remove('hidden');
-            
-            // Show Popup
             const txt = db.wheel[idx];
             const m = txt.match(/【(.*?)】(.*)/);
             document.getElementById('popup-title').innerText = m ? m[1] : "懲罰";
             document.getElementById('popup-desc').innerText = m ? m[2] : txt;
             document.getElementById('overlay-popup').style.display='flex';
-        }, 4000);
+        }, 5000);
     }
 
-    // --- Excel ---
-    function toggleSettings() { 
-        const el = document.getElementById('overlay-settings');
-        el.style.display = el.style.display==='flex'?'none':'flex';
+    // --- Settings & Excel ---
+    function openSettings() { document.getElementById('overlay-settings').style.display='flex'; }
+    function saveRoster() {
+        db.roster.a = document.getElementById('input-roster-a').value.split('\n').map(s=>s.trim()).filter(s=>s);
+        db.roster.b = document.getElementById('input-roster-b').value.split('\n').map(s=>s.trim()).filter(s=>s);
+        alert("名單已儲存！");
     }
+
     function exportExcel() {
         const wb = XLSX.utils.book_new();
-        const q = db.questions.map(i=>({分類:i.cat, 題目:i.q, 答案:i.a, 圖片:i.img}));
-        const o = db.ops.map(i=>({標題:i.title, 描述:i.desc, 數值:i.val}));
-        const p = db.puns.map(i=>({標題:i.title, 描述:i.desc, 數值:i.val}));
-        const w = db.wheel.map(i=>({內容:i}));
+        const qData = db.questions.map(i=>({分類:i.cat, 題目:i.q, 答案:i.a, 圖片:i.img}));
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(qData), "題目");
+        const oData = db.ops.map(i=>({標題:i.title, 描述:i.desc, 數值:i.val}));
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(oData), "機會");
+        const pData = db.puns.map(i=>({標題:i.title, 描述:i.desc, 數值:i.val}));
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(pData), "懲罰");
+        const wData = db.wheel.map(i=>({內容:i}));
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(wData), "輪盤");
+        const rData = [];
         const max = Math.max(db.roster.a.length, db.roster.b.length);
-        let r = []; for(let i=0; i<max; i++) r.push({TeamA:db.roster.a[i]||"", TeamB:db.roster.b[i]||""});
-        
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(q), "題目");
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(o), "機會");
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(p), "懲罰");
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(w), "輪盤");
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(r), "名單");
-        XLSX.writeFile(wb, "古韻對決_完整題庫.xlsx");
+        for(let i=0; i<max; i++) rData.push({TeamA: db.roster.a[i] || "", TeamB: db.roster.b[i] || ""});
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rData), "名單");
+        XLSX.writeFile(wb, "古韻對決_完整資料庫.xlsx");
     }
+
     function importExcel(inp) {
         const f = inp.files[0]; if(!f)return;
         const r = new FileReader();
         r.onload = e => {
-            const d = new Uint8Array(e.target.result);
-            const wb = XLSX.read(d, {type:'array'});
+            const data = new Uint8Array(e.target.result);
+            const wb = XLSX.read(data, {type:'array'});
             if(wb.Sheets["題目"]) db.questions = XLSX.utils.sheet_to_json(wb.Sheets["題目"]).map(r=>({cat:r.分類, q:r.題目, a:r.答案, img:r.圖片}));
             if(wb.Sheets["機會"]) db.ops = XLSX.utils.sheet_to_json(wb.Sheets["機會"]).map(r=>({title:r.標題, desc:r.描述, val:parseInt(r.數值)||0}));
             if(wb.Sheets["懲罰"]) db.puns = XLSX.utils.sheet_to_json(wb.Sheets["懲罰"]).map(r=>({title:r.標題, desc:r.描述, val:parseInt(r.數值)||0}));
             if(wb.Sheets["輪盤"]) db.wheel = XLSX.utils.sheet_to_json(wb.Sheets["輪盤"]).map(r=>r.內容||r.懲罰內容||Object.values(r)[0]);
             if(wb.Sheets["名單"]) {
                 const raw = XLSX.utils.sheet_to_json(wb.Sheets["名單"]);
-                db.roster.a=[]; db.roster.b=[];
-                raw.forEach(r=>{ if(r.TeamA) db.roster.a.push(r.TeamA); if(r.TeamB) db.roster.b.push(r.TeamB); });
+                db.roster.a = []; db.roster.b = [];
+                raw.forEach(row => { if(row.TeamA) db.roster.a.push(row.TeamA); if(row.TeamB) db.roster.b.push(row.TeamB); });
+                document.getElementById('input-roster-a').value = db.roster.a.join('\n');
+                document.getElementById('input-roster-b').value = db.roster.b.join('\n');
             }
-            alert("匯入成功！"); toggleSettings(); init();
+            alert("匯入成功！"); updateUI();
         };
         r.readAsArrayBuffer(f);
     }
