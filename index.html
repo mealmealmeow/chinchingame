@@ -6,7 +6,788 @@
     <title>古韻對決：點名對戰版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+TC:wght@500;700;900&display=swap" rel="stylesheet">
+    <style><!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>古韻對決：宋唐風雲 (完整題庫版)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+TC:wght@500;700;900&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg-dark: #111;
+            --panel-bg: rgba(30, 30, 30, 0.9);
+            --gold-primary: #d4af37;
+            --red-bright: #ff4444;
+            --font-title: 'Ma Shan Zheng', cursive;
+            --font-body: 'Noto Serif TC', serif;
+        }
+
+        /* --- 全局 --- */
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            overflow: hidden;
+            background-color: var(--bg-dark);
+            background-image: url("https://www.transparenttextures.com/patterns/dark-matter.png");
+            font-family: var(--font-body);
+            color: #f0f0f0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #app {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            display: flex; flex-direction: column;
+            padding: 10px;
+            box-sizing: border-box;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        /* --- 頂部導航 --- */
+        header {
+            height: 60px; flex-shrink: 0;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 10px;
+            background: rgba(0,0,0,0.6);
+            border-bottom: 1px solid var(--gold-primary);
+            z-index: 100;
+        }
+        
+        /* 終極懲罰按鈕 (置於頂部中間) */
+        .btn-punish-main {
+            position: absolute; left: 50%; top: 10px; transform: translateX(-50%);
+            background: linear-gradient(180deg, #800000, #330000);
+            color: #fff; border: 2px solid #ff4444;
+            padding: 5px 20px; border-radius: 20px;
+            font-family: var(--font-title); font-size: 1.2rem;
+            cursor: pointer; box-shadow: 0 0 10px #ff0000;
+            animation: pulse 2s infinite;
+            z-index: 101;
+            white-space: nowrap;
+        }
+        @keyframes pulse { 0% { box-shadow: 0 0 5px #ff0000; } 50% { box-shadow: 0 0 20px #ff0000; } 100% { box-shadow: 0 0 5px #ff0000; } }
+
+        /* --- 遊戲主舞台 --- */
+        #game-stage {
+            flex: 1; display: flex;
+            position: relative; overflow: hidden;
+            flex-direction: row; 
+            align-items: center; justify-content: space-between;
+            gap: 10px; padding: 10px 0;
+        }
+
+        /* 隊伍面板 */
+        .team-panel {
+            background: var(--panel-bg);
+            border: 2px solid #444; border-radius: 12px;
+            padding: 10px; display: flex; flex-direction: column; align-items: center;
+            transition: all 0.3s ease; position: relative;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            width: 220px; height: 90%;
+        }
+        .team-panel.active {
+            border-color: var(--gold-primary);
+            background: rgba(50, 50, 50, 0.95);
+            box-shadow: 0 0 25px rgba(212, 175, 55, 0.3);
+            transform: scale(1.02);
+            z-index: 5;
+        }
+
+        .avatar {
+            width: 80px; height: 80px;
+            background-size: cover; background-position: center;
+            border-radius: 50%; border: 3px solid #fff;
+            margin-bottom: 10px; box-shadow: 0 5px 10px rgba(0,0,0,0.5);
+        }
+        .team-name { font-family: var(--font-title); font-size: 1.8rem; margin: 0 0 10px 0; }
+        
+        /* 心心顯示區 */
+        .hearts-container {
+            font-size: 1.8rem; display: flex; gap: 5px; flex-wrap: wrap; justify-content: center;
+            min-height: 40px; margin-bottom: 10px;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        }
+        .heart-icon { animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
+
+        /* 學生點名顯示 */
+        .student-display {
+            margin-top: auto; width: 100%;
+            background: #222; border: 1px dashed #666;
+            padding: 10px 5px; border-radius: 8px;
+            text-align: center; color: #aaa;
+        }
+        .student-name-active {
+            color: var(--gold-primary); font-size: 1.5rem; font-weight: bold;
+            animation: flashName 0.5s;
+        }
+        @keyframes flashName { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+        /* 響應式調整 (直向/手機) */
+        @media (max-aspect-ratio: 1/1) {
+            #game-stage { flex-direction: column; }
+            .team-panel {
+                width: 95%; height: 80px;
+                flex-direction: row; align-items: center; justify-content: flex-start;
+                padding: 0 10px; margin: 0 auto;
+            }
+            .avatar { width: 50px; height: 50px; margin: 0 10px 0 0; }
+            .team-info-box { flex: 1; text-align: left; }
+            .team-name { font-size: 1.2rem; margin: 0; }
+            .hearts-container { font-size: 1.2rem; justify-content: flex-start; margin: 0; min-height: auto;}
+            .student-display { width: auto; min-width: 80px; margin: 0; font-size: 0.9rem; padding: 5px; }
+            
+            .btn-punish-main { top: auto; bottom: 85px; font-size: 1rem; padding: 5px 15px; } 
+            #center-stage { width: 100%; }
+        }
+
+        /* 中央卡牌 */
+        #center-stage { perspective: 1000px; flex: 1; display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; }
+        .question-card {
+            width: min(90%, 500px); height: min(65vh, 600px);
+            position: relative; transform-style: preserve-3d;
+            transition: transform 0.6s;
+        }
+        .question-card.flipped { transform: rotateY(180deg); }
+        .card-face {
+            position: absolute; width: 100%; height: 100%;
+            backface-visibility: hidden; border-radius: 15px;
+            background: #fffdf5; border: 4px solid var(--gold-primary);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        .card-content { flex: 1; padding: 15px; text-align: center; display: flex; flex-direction: column; align-items: center; overflow-y: auto; }
+        .q-text { font-size: 1.3rem; font-weight: bold; color: #333; margin: 15px 0; line-height: 1.5; }
+        .card-back { transform: rotateY(180deg); background: #fff; padding: 20px; text-align: left; overflow-y: auto;}
+
+        /* 底部 */
+        footer {
+            height: 70px; flex-shrink: 0;
+            display: flex; justify-content: center; align-items: center; gap: 15px; z-index: 50;
+        }
+        .btn {
+            background: linear-gradient(145deg, #333, #111);
+            border: 1px solid var(--gold-primary); color: var(--gold-primary);
+            padding: 10px 25px; font-size: 1.1rem; border-radius: 25px;
+            font-weight: bold; cursor: pointer; white-space: nowrap;
+        }
+        .btn-green { border-color: #2ecc71; color: #2ecc71; }
+        .btn-red { border-color: #ff4444; color: #ff4444; }
+        .hidden { display: none !important; }
+
+        /* 特效字 */
+        .float-text {
+            position: absolute; font-size: 3rem; font-weight: 900;
+            pointer-events: none; z-index: 2000;
+            animation: floatUp 1.5s ease-out forwards;
+            text-shadow: 0 0 5px #fff;
+        }
+        @keyframes floatUp { 0% { transform: translateY(0); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(-80px); opacity: 0; } }
+
+        /* 抽卡遮罩 (命運卡) */
+        .mystery-card {
+            width: min(300px, 80vw); height: min(450px, 60vh);
+            perspective: 1000px; cursor: pointer;
+        }
+        .mc-inner {
+            position: relative; width: 100%; height: 100%;
+            transition: transform 0.8s; transform-style: preserve-3d;
+        }
+        .mc-inner.flipped { transform: rotateY(180deg); }
+        .mc-front, .mc-back {
+            position: absolute; width: 100%; height: 100%;
+            backface-visibility: hidden; border-radius: 15px;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            border: 4px solid var(--gold-primary);
+            box-shadow: 0 0 30px rgba(212, 175, 55, 0.3);
+        }
+        .mc-front { background: #222; color: var(--gold-primary); }
+        .mc-back { background: #fff; color: #000; transform: rotateY(180deg); padding: 20px; text-align: center; }
+
+        /* 遮罩通用 */
+        .overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.92); z-index: 3000;
+            display: none; flex-direction: column; justify-content: center; align-items: center;
+        }
+        /* 輪盤 */
+        .wheel-box {
+            width: min(80vw, 350px); height: min(80vw, 350px);
+            position: relative; border-radius: 50%;
+            box-shadow: 0 0 0 10px #222, 0 0 50px rgba(212, 175, 55, 0.5);
+            margin-bottom: 20px;
+        }
+        #wheel-canvas { width: 100%; height: 100%; border-radius: 50%; transition: transform 4s cubic-bezier(0.2, 0.8, 0.2, 1); }
+        .wheel-arrow { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); width: 30px; height: 40px; z-index: 10; background: #fff; clip-path: polygon(50% 100%, 0 0, 100% 0); }
+        
+        /* 設定框 */
+        .settings-modal { background: #222; border: 1px solid #555; padding: 25px; width: 90%; max-width: 400px; border-radius: 10px; text-align: center; }
+
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <header>
+        <button class="btn" style="padding: 5px 10px; font-size: 0.8rem;" onclick="toggleSettings()">⚙️ 名單</button>
+        <div class="title" style="color:var(--gold-primary); margin-left:10px;">古韻對決</div>
+        <button class="btn-punish-main" onclick="showWheel()">💀 終極懲罰</button>
+        <div style="font-size:0.9rem; color:#aaa;">剩餘: <span id="q-count">0</span></div>
+    </header>
+
+    <div id="game-stage">
+        <div class="team-panel team-a active" id="panel-a">
+            <div class="avatar" style="background-image: url('https://images.unsplash.com/photo-1535069609567-c766ebc21562?w=200')"></div>
+            <div class="team-info-box">
+                <h3 class="team-name" style="color:#ff6b6b">豪放派</h3>
+                <div class="hearts-container" id="hearts-a">❤️❤️❤️</div>
+            </div>
+            <div class="student-display">
+                <div style="font-size:0.7rem;">指定作答</div>
+                <div id="student-name-a">---</div>
+            </div>
+        </div>
+
+        <div id="center-stage">
+            <div class="question-card" id="card" onclick="flipCard()">
+                <div class="card-face card-front">
+                    <div id="card-img" style="height:40%; background-size:cover; background-position:center; border-bottom:2px solid var(--gold-primary);"></div>
+                    <div class="card-content">
+                        <span style="background:#222; color:#d4af37; padding:2px 10px; border-radius:10px; font-size:0.8rem;" id="q-cat">準備</span>
+                        <div class="q-text" id="q-text">請點擊下方抽取試煉</div>
+                        <div style="margin-top:auto; font-size:0.8rem; color:#888;">(點擊卡片翻閱答案)</div>
+                    </div>
+                </div>
+                <div class="card-face card-back">
+                    <h3 style="color:#b71c1c; border-bottom:1px solid #ddd; padding-bottom:10px;">參考答案</h3>
+                    <div id="q-ans" style="font-size:1.1rem; line-height:1.6; color:#222;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="team-panel team-b" id="panel-b">
+            <div class="avatar" style="background-image: url('https://images.unsplash.com/photo-1523293836414-9042d0c78093?w=200')"></div>
+            <div class="team-info-box">
+                <h3 class="team-name" style="color:#4facfe">婉約派</h3>
+                <div class="hearts-container" id="hearts-b">❤️❤️❤️</div>
+            </div>
+            <div class="student-display">
+                <div style="font-size:0.7rem;">指定作答</div>
+                <div id="student-name-b">---</div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <button class="btn" id="btn-draw" onclick="drawQuestion()">🔮 抽取試煉</button>
+        <div id="action-btns" class="hidden" style="display:flex; gap:20px;">
+            <button class="btn btn-green" onclick="handleResult(true)">❤️ 答對</button>
+            <button class="btn btn-red" onclick="handleResult(false)">💔 答錯</button>
+        </div>
+    </footer>
+</div>
+
+<div class="overlay" id="overlay-draw" onclick="revealMysteryCard()">
+    <div style="font-size:1.5rem; color:white; margin-bottom:20px;">命運時刻</div>
+    <div class="mystery-card">
+        <div class="mc-inner" id="mc-inner">
+            <div class="mc-front">
+                <div style="font-size:4rem;">❓</div>
+                <div style="font-size:1.5rem; margin-top:10px;" id="mc-type-label">機會/懲罰</div>
+            </div>
+            <div class="mc-back">
+                <h2 id="mc-title" style="color:#b71c1c; margin-bottom:15px;">標題</h2>
+                <p id="mc-desc" style="font-size:1.1rem; line-height:1.5;">內容</p>
+                <div style="margin-top:auto; color:#888; font-size:0.8rem;">點擊繼續...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="overlay" id="overlay-wheel">
+    <h2 style="font-family:var(--font-title); color:var(--gold-primary); font-size:2rem; margin-bottom:20px;">終極懲罰</h2>
+    <div class="wheel-box">
+        <div class="wheel-arrow"></div>
+        <div id="wheel-canvas"></div>
+    </div>
+    <div id="wheel-result-text" style="color:white; font-size:1.2rem; min-height:30px; margin-bottom:20px; text-align:center; padding:0 10px;">準備啟動...</div>
+    <button class="btn" id="btn-spin" onclick="spinWheel()">🚀 啟動</button>
+    <button class="btn hidden" id="btn-close-wheel" onclick="document.getElementById('overlay-wheel').style.display='none'" style="margin-top:15px; border-color:#666; color:#aaa;">關閉</button>
+</div>
+
+<div class="overlay" id="overlay-settings" style="z-index:4000;">
+    <div class="settings-modal">
+        <h3 style="color:var(--gold-primary);">Excel 資料管理</h3>
+        <p style="text-align:left; font-size:0.85rem; color:#ccc; margin-bottom:15px;">
+            系統已內建完整題庫。<br>
+            若需自訂，請下載 Excel 修改後重新上傳。<br>
+            <b>名單設定</b>：請在 Excel「名單」分頁輸入學生姓名。
+        </p>
+        <button class="btn" onclick="exportExcel()">📥 下載當前 Excel</button>
+        <div style="margin:20px 0; border-top:1px solid #444;"></div>
+        <button class="btn" style="position:relative; overflow:hidden;">
+            📤 上傳 Excel
+            <input type="file" onchange="importExcel(this)" style="position:absolute; left:0; top:0; width:100%; height:100%; opacity:0; cursor:pointer;">
+        </button>
+        <button class="btn btn-red" onclick="toggleSettings()" style="margin-top:20px;">關閉</button>
+    </div>
+</div>
+
+<script>
+    // --- 完整資料庫 (來自您的 Excel) ---
+    let db = {
+        // 題目
+        questions: [
+            { cat: "蘇軾《念奴嬌》", q: "「大江東去，浪淘盡、千古風流人物」一句，奠定了全詞怎樣的感情基調？", a: "奠定了【悲涼雄壯】的基調。感慨時光流逝，歷史上的英雄人物都隨時間消逝，引出後文對歷史興衰的感嘆。", img: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=600" },
+            { cat: "蘇軾《念奴嬌》", q: "詞中「亂石穿空，驚濤拍岸，捲起千堆雪」運用了哪些修辭手法？", a: "1. 【誇張】（穿空、千堆雪）<br>2. 【擬人】（驚濤拍岸）<br>3. 【借喻】（以「雪」喻浪花）。", img: "https://images.unsplash.com/photo-1505673542670-a5e3ff5b14a3?w=600" },
+            { cat: "蘇軾《念奴嬌》", q: "作者為何要在詞中刻畫周瑜「雄姿英發，羽扇綸巾」的形象？", a: "運用了【襯托】手法。以周瑜年少得志、立下赫赫戰功，反襯自己年華老去卻壯志未酬（早生華髮）的無奈。", img: "https://images.unsplash.com/photo-1535069609567-c766ebc21562?w=600" },
+            { cat: "蘇軾《念奴嬌》", q: "「小喬初嫁了」這一細節的描寫有何作用？", a: "以美人襯托英雄。暗示周瑜當時年輕有為，愛情事業兩得意，更顯其風流瀟灑。", img: "https://images.unsplash.com/photo-1523099981602-5c5a4b105d7b?w=600" },
+            { cat: "蘇軾《念奴嬌》", q: "「江山如畫，一時多少豪傑」在結構上有何作用？", a: "具有【承上啟下】的作用。「江山如畫」總結上片寫景，「一時多少豪傑」開啟下片懷古。", img: "https://images.unsplash.com/photo-1508614999368-9260051292e5?w=600" },
+            { cat: "蘇軾《念奴嬌》", q: "「人生如夢，一尊還酹江月」反映了蘇軾怎樣的人生態度？", a: "反映了蘇軾【曠達】（或消極中見曠達）的態度。既然人生短暫如夢，不如將苦悶寄託於永恆的江月，自我開解。", img: "https://images.unsplash.com/photo-1532767153582-b1a0e5145009?w=600" },
+            { cat: "蘇軾《念奴嬌》", q: "詞中運用了「虛實結合」，請舉出「虛寫」的部分？", a: "下片描寫【周瑜在赤壁之戰談笑用兵】的情景（談笑間、檣櫓灰飛煙滅）是虛寫（想像），因作者當時並不在場。", img: "https://images.unsplash.com/photo-1599839575945-a9e5af0c3fa5?w=600" },
+            { cat: "李清照《聲聲慢》", q: "開首「尋尋覓覓，冷冷清清，淒淒慘慘戚戚」十四字疊詞，有何藝術效果？", a: "1. 營造【愁苦】氛圍，由外在環境寫到內心悲痛。<br>2. 增強音韻美，讀來有【徘徊空虛】之感。", img: "https://images.unsplash.com/photo-1498354136143-e8d720f2b9b6?w=600" },
+            { cat: "李清照《聲聲慢》", q: "「三杯兩盞淡酒，怎敵他、晚來風急」中的「淡酒」與「風急」深意為何？", a: "【淡酒】：非酒淡，而是愁情太重，酒力無法化解。<br>【風急】：既指秋風，亦象徵國破家亡的政治局勢及個人飄泊。", img: "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=600" },
+            { cat: "李清照《聲聲慢》", q: "詞中提到「雁過也，正傷心，卻是舊時相識」，為何大雁會讓作者傷心？", a: "因為大雁是從北方南飛，讓作者聯想到【故鄉】（北方淪陷區）和【亡夫】，引發鄉愁與悼亡之痛。", img: "https://images.unsplash.com/photo-1483323324317-578dbd252443?w=600" },
+            { cat: "李清照《聲聲慢》", q: "「滿地黃花堆積，憔悴損，如今有誰堪摘」運用了甚麼修辭？比喻甚麼？", a: "運用了【雙關】或【借喻】。以花的枯萎凋零，比喻作者自己【容顏憔悴】及身世飄零。", img: "https://images.unsplash.com/photo-1469395269791-2856149463c2?w=600" },
+            { cat: "李清照《聲聲慢》", q: "「守著窗兒，獨自怎生得黑」表達了作者怎樣的感受？", a: "表達了【度日如年】的孤獨感。孤身一人，時間過得極慢，難以熬到天黑。", img: "https://images.unsplash.com/photo-1510279768565-5389f4dc7944?w=600" },
+            { cat: "李清照《聲聲慢》", q: "「梧桐更兼細雨，到黃昏、點點滴滴」營造了怎樣的意境？", a: "營造了淒涼、連綿不絕的愁苦意境。雨打梧桐是中國古典詩詞中典型的【斷腸】意象。", img: "https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?w=600" },
+            { cat: "李清照《聲聲慢》", q: "全詞結尾「這次第，怎一個愁字了得」在佈局上有何特色？", a: "【卒章顯志】。總結全詞，說明這種亡國之恨、喪夫之痛、流離之苦交織，已超越了一般意義上的「愁」。", img: "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=600" },
+            { cat: "辛棄疾《青玉案》", q: "「東風夜放花千樹，更吹落、星如雨」描寫的是甚麼景象？", a: "描寫元宵節【煙火璀璨】（或花燈繁多）的熱鬧景象。這裡運用了比喻，將煙火/燈火比作花樹和流星雨。", img: "https://images.unsplash.com/photo-1463973644917-087034176466?w=600" },
+            { cat: "辛棄疾《青玉案》", q: "「寶馬雕車香滿路」一句從甚麼角度描寫元宵盛況？", a: "從【嗅覺】（香滿路）和視覺（寶馬雕車）描寫。側面反映出遊人的富貴與遊客之多。", img: "https://images.unsplash.com/photo-1558280417-ea782fba9025?w=600" },
+            { cat: "辛棄疾《青玉案》", q: "詞中描寫「蛾兒、雪柳、黃金縷，笑語盈盈暗香去」的仕女圖，目的是甚麼？", a: "目的是作為【反襯】。以盛裝打扮、成群結隊的庸俗遊人，反襯後文「那人」的孤高與脫俗。", img: "https://images.unsplash.com/photo-1531126362484-954933979858?w=600" },
+            { cat: "辛棄疾《青玉案》", q: "「眾里尋他千百度」中的「他」象徵甚麼？", a: "象徵【作者自己】（或理想人格）。代表不願隨波逐流、不同流合污的高尚情操。", img: "https://images.unsplash.com/photo-1510674485131-dc88d96369b4?w=600" },
+            { cat: "辛棄疾《青玉案》", q: "「驀然回首，那人卻在，燈火闌珊處」中，「燈火闌珊」是指甚麼地方？", a: "指【燈火稀疏、冷清】的地方。與前文熱鬧繁華的街景形成強烈對比。", img: "https://images.unsplash.com/photo-1506543730-1c499ee898e3?w=600" },
+            { cat: "辛棄疾《青玉案》", q: "這首詞表面寫元宵愛情，實際隱含了甚麼政治寄託？", a: "表達了作者對南宋朝廷苟且偷安的不滿，以及自己【孤芳自賞、不願向世俗（投降派）獻媚】的政治立場。", img: "https://images.unsplash.com/photo-1565551984242-b911c4702cf1?w=600" },
+            { cat: "辛棄疾《青玉案》", q: "本詞主要運用了甚麼寫作手法來突出主題？", a: "【反襯】（或對比）。以上片的繁華熱鬧（花千樹、寶馬、笑語盈盈），反襯下片「燈火闌珊處」的孤獨清冷。", img: "https://images.unsplash.com/photo-1493413344196-8575a74e8494?w=600" },
+            { cat: "柳宗元《始得西山》", q: "題目為「始得西山宴遊記」，當中的「始」字有何深意？", a: "「始」意味著【真正遊覽的開始】。作者認為以前的遊覽都不算數，直到發現西山獨特的氣質，才與自己的心靈產生共鳴。", img: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600" },
+            { cat: "柳宗元《始得西山》", q: "文章第一段作者說「以為凡是州之山水有異態者，皆我有也」，這反映了他當時怎樣的心態？", a: "反映了他【自以為是】（或漫不經心）的心態。他以為自己已經看遍了永州美景，為後文發現西山的驚喜作鋪墊（欲揚先抑）。", img: "https://images.unsplash.com/photo-1500375592092-40eb2168fd21?w=600" },
+            { cat: "柳宗元《始得西山》", q: "作者描寫登上西山所見：「尺寸千里」、「攢蹙累積，莫得遯隱」，這是甚麼描寫手法？", a: "運用了【誇張】和【視覺壓縮】。說明西山地勢極高，周圍廣闊的景物在眼中都縮小了，盡收眼底。", img: "https://images.unsplash.com/photo-1454496522488-7a8e488e8606?w=600" },
+            { cat: "柳宗元《始得西山》", q: "文中用「縈青繚白，外與天際」來形容甚麼？", a: "形容西山四周的環境。指青山白水（或雲氣）互相纏繞，一直延伸到天邊，與天空交接。", img: "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?w=600" },
+            { cat: "柳宗元《始得西山》", q: "「心凝形釋，與萬化冥合」表達了作者怎樣的感受？", a: "表達了【天人合一】（或精神解脫）的境界。精神凝聚，形體彷彿消散，忘卻了被貶的榮辱，與大自然融為一體。", img: "https://images.unsplash.com/photo-1518020382113-a7e8fc38eac9?w=600" },
+            { cat: "柳宗元《始得西山》", q: "作者以「不與培塿為類」來描寫西山，這有甚麼象徵意義？", a: "象徵作者【孤高傲世】的品格。西山不與小土丘（培塿）為伍，正如作者不願與世俗小人同流合污。", img: "https://images.unsplash.com/photo-1544985220-54eecc472915?w=600" },
+            { cat: "柳宗元《始得西山》", q: "文中提到「洋洋乎與造物者遊，而不知其所窮」，此句受到哪家思想影響？", a: "受到【道家】（莊子）思想影響。指順應自然，無拘無束地與天地同遊。", img: "https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=600" }
+        ],
+        // 機會 (ops)
+        ops: [
+            { title: "羽扇綸巾", desc: "【談笑間】指定敵方一名「主將」禁言一回合，該回合敵方只能由「小兵」作答。", val: 0 },
+            { title: "大江東去", desc: "氣勢如虹！發動猛攻，直接扣除敵方 1 顆心。", val: 1 },
+            { title: "驀然回首", desc: "絕處逢生。若答錯題目，可擁有一次「回首」機會（重新作答）。", val: 0 },
+            { title: "心凝形釋", desc: "與萬化冥合，進入無敵狀態。抵銷下一次受到的任何懲罰。", val: 0 },
+            { title: "雁過也", desc: "【卻是舊時相識】。可向場外「舊識」（老師或非參賽同學）求救一次。", val: 0 },
+            { title: "東風夜放", desc: "花千樹，星如雨。幸運大爆發，本題若答對可直接加 2 顆心。", val: 2 },
+            { title: "引觴滿酌", desc: "【頹然就醉】。因為喝醉了所以無所畏懼，直接跳過本題，視為答對。", val: 1 },
+            { title: "亂石穿空", desc: "驚濤拍岸。隨機指定敵方兩名隊員「被浪捲走」（暫停討論一回合）。", val: 0 }
+        ],
+        // 懲罰 (puns)
+        puns: [
+            { title: "早生華髮", desc: "多情應笑我。全隊被嘲笑，士氣受損，額外扣 1 顆心。", val: 1 },
+            { title: "借酒澆愁", desc: "三杯兩盞淡酒。頭昏腦脹，下回合答題時間減半。", val: 0 },
+            { title: "昏昏欲睡", desc: "施施而行，漫漫而遊。隊伍進入夢遊狀態，暫停一回合。", val: 0 },
+            { title: "點點滴滴", desc: "梧桐更兼細雨。這回合若答錯，扣心會像雨點一樣連續扣兩次。", val: 0 },
+            { title: "燈火闌珊", desc: "眾里尋他千百度。隊友失蹤了？下回合隊長必須「孤獨作答」。", val: 0 },
+            { title: "檣櫓灰飛", desc: "談笑間，檣櫓灰飛煙滅。你們辛苦建立的防線崩潰，移除一張保留的機會卡。", val: 0 },
+            { title: "攢蹙累積", desc: "西山之怪特。壓力像山一樣壓過來，全隊必須「攢蹙」（擠在一起）作答。", val: 0 },
+            { title: "憔悴損", desc: "人比黃花瘦。全隊體力不支，下回合必須全體「趴在桌上」作答。", val: 0 }
+        ],
+        // 輪盤
+        wheel: [
+            "【尋尋覓覓】矇眼摸人 (限時10秒)",
+            "【驚濤拍岸】人體海浪 (需配音)",
+            "【箕踞而遨】模仿柳宗元坐姿",
+            "【笑語盈盈】姨母笑定格30秒",
+            "【一尊還酹江月】對水樽深情朗誦",
+            "【寶馬雕車】人體轎子繞場一周",
+            "【怎一個愁字了得】連環嘆氣",
+            "【望西山】站椅子大喊發現新大陸",
+            "【雄姿英發】全隊 Chok 樣定格",
+            "【淒淒慘慘戚戚】哭腔 Rap"
+        ],
+        // 名單 (預設範例，可在 Excel 中修改)
+        roster: {
+            a: ["李白", "杜甫", "王維", "孟浩然"],
+            b: ["蘇軾", "歐陽修", "王安石", "曾鞏"]
+        }
+    };
+
+    let state = {
+        hearts: { a: 3, b: 3 }, // 預設 3 顆心
+        turn: 'a',
+        curQ: null,
+        pendingEffect: null // 暫存抽卡結果
+    };
+
+    // --- 初始化 ---
+    function init() {
+        updateUI();
+        initWheelCanvas();
+    }
+
+    function updateUI() {
+        document.getElementById('q-count').innerText = db.questions.length;
+        
+        // 更新面板狀態
+        document.getElementById('panel-a').classList.toggle('active', state.turn === 'a');
+        document.getElementById('panel-b').classList.toggle('active', state.turn === 'b');
+        
+        // 渲染心心
+        renderHearts('a');
+        renderHearts('b');
+    }
+
+    function renderHearts(team) {
+        const count = state.hearts[team];
+        const container = document.getElementById(`hearts-${team}`);
+        let html = '';
+        for(let i=0; i<count; i++) html += '<span class="heart-icon">❤️</span>';
+        if(count === 0) html = '<span style="color:#555">💔</span>'; // 沒血了
+        container.innerHTML = html;
+    }
+
+    // --- 遊戲流程 ---
+    function drawQuestion() {
+        if (db.questions.length === 0) return alert("題庫已空！請從設定匯入新題庫。");
+
+        // 1. 抽題
+        const idx = Math.floor(Math.random() * db.questions.length);
+        state.curQ = db.questions[idx];
+        db.questions.splice(idx, 1);
+
+        // 2. 隨機點名 (從當前隊伍名單中抽取)
+        const teamList = db.roster[state.turn];
+        let studentName = "全體";
+        if (teamList && teamList.length > 0) {
+            studentName = teamList[Math.floor(Math.random() * teamList.length)];
+        }
+        
+        // 更新顯示名單
+        const nameEl = document.getElementById(`student-name-${state.turn}`);
+        nameEl.innerText = studentName;
+        nameEl.classList.remove('student-name-active');
+        void nameEl.offsetWidth; // trigger reflow
+        nameEl.classList.add('student-name-active');
+        
+        // 清空另一隊的名單顯示
+        document.getElementById(`student-name-${state.turn === 'a' ? 'b' : 'a'}`).innerText = "---";
+
+        // 3. 顯示卡片
+        const card = document.getElementById('card');
+        card.classList.remove('flipped');
+        
+        // 內容
+        document.getElementById('q-cat').innerText = state.curQ.cat || "題目";
+        document.getElementById('q-text').innerText = state.curQ.q;
+        document.getElementById('q-ans').innerHTML = state.curQ.a;
+        // 圖片
+        const imgDiv = document.getElementById('card-img');
+        if (state.curQ.img && state.curQ.img.startsWith('http')) {
+            imgDiv.style.backgroundImage = `url('${state.curQ.img}')`;
+            imgDiv.style.display = 'block';
+        } else {
+            imgDiv.style.display = 'none'; // 無圖隱藏
+        }
+        
+        // 切換按鈕
+        document.getElementById('btn-draw').classList.add('hidden');
+        document.getElementById('action-btns').classList.remove('hidden');
+        
+        updateUI();
+    }
+
+    function flipCard() {
+        document.getElementById('card').classList.toggle('flipped');
+    }
+
+    // --- 答題結果 & 抽卡 ---
+    function handleResult(isCorrect) {
+        // 先顯示遮罩
+        const overlay = document.getElementById('overlay-draw');
+        const mcInner = document.getElementById('mc-inner');
+        const typeLabel = document.getElementById('mc-type-label');
+        
+        overlay.style.display = 'flex';
+        mcInner.classList.remove('flipped'); // 重置翻牌
+        
+        // 決定卡池
+        let pool = isCorrect ? db.ops : db.puns;
+        let typeText = isCorrect ? "✨ 機會 ✨" : "⚡ 懲罰 ⚡";
+        let color = isCorrect ? "var(--gold-primary)" : "var(--red-bright)";
+        
+        if (!pool || pool.length === 0) {
+            pool = [{ title: "無", desc: "卡池已空", val: 0 }];
+        }
+        
+        // 隨機抽一張
+        const item = pool[Math.floor(Math.random() * pool.length)];
+        state.pendingEffect = { item: item, isCorrect: isCorrect };
+        
+        // 設置卡面資訊 (背面)
+        document.getElementById('mc-title').innerText = item.title;
+        document.getElementById('mc-desc').innerText = item.desc;
+        document.getElementById('mc-title').style.color = isCorrect ? "#d4af37" : "#b71c1c";
+        
+        // 設置封面資訊
+        typeLabel.innerText = typeText;
+        typeLabel.style.color = color;
+    }
+
+    function revealMysteryCard() {
+        const mcInner = document.getElementById('mc-inner');
+        
+        // 1. 如果還沒翻，就翻開
+        if (!mcInner.classList.contains('flipped')) {
+            mcInner.classList.add('flipped');
+        } 
+        // 2. 如果已經翻開，執行效果並關閉
+        else {
+            applyEffect();
+        }
+    }
+
+    function applyEffect() {
+        const { item, isCorrect } = state.pendingEffect;
+        const currentTeam = state.turn;
+        const enemyTeam = currentTeam === 'a' ? 'b' : 'a';
+        
+        document.getElementById('overlay-draw').style.display = 'none';
+
+        // 邏輯：
+        // 答對：基礎加 1 心。若機會卡有數值(val>0)，通常是額外獎勵(加自己心)或攻擊(扣對方心)。
+        // 答錯：基礎扣 1 心。若懲罰卡有數值(val>0)，通常是額外扣分。
+        
+        if (isCorrect) {
+            // 基礎獎勵
+            changeHearts(currentTeam, 1);
+            
+            // 卡片效果
+            if (item.val > 0) {
+                // 簡單判斷：如果是"扣除敵方"，則扣敵方；否則加自己
+                if (item.desc.includes("扣除敵方")) {
+                    changeHearts(enemyTeam, -item.val);
+                } else {
+                    changeHearts(currentTeam, item.val);
+                }
+            }
+        } else {
+            // 基礎懲罰
+            changeHearts(currentTeam, -1);
+            
+            // 卡片效果 (額外懲罰)
+            if (item.val > 0) {
+                changeHearts(currentTeam, -item.val);
+            }
+        }
+
+        // 換回合
+        state.turn = state.turn === 'a' ? 'b' : 'a';
+        
+        // 重置 UI
+        document.getElementById('btn-draw').classList.remove('hidden');
+        document.getElementById('action-btns').classList.add('hidden');
+        document.getElementById('card').classList.remove('flipped');
+        updateUI();
+    }
+
+    function changeHearts(team, amount) {
+        let oldVal = state.hearts[team];
+        let newVal = Math.max(0, Math.min(5, oldVal + amount)); // 上限5顆
+        state.hearts[team] = newVal;
+        
+        // 特效
+        if (amount > 0) showFloatText(team, `+${amount}❤️`, "#2ecc71");
+        if (amount < 0) {
+            showFloatText(team, `${amount}💔`, "#ff4444");
+            shakePanel(team);
+        }
+    }
+
+    // --- 特效 ---
+    function showFloatText(team, text, color) {
+        const el = document.getElementById(`panel-${team}`);
+        const rect = el.getBoundingClientRect();
+        const floatEl = document.createElement('div');
+        floatEl.className = 'float-text';
+        floatEl.innerText = text;
+        floatEl.style.color = color;
+        floatEl.style.left = (rect.left + rect.width/2 - 20) + 'px';
+        floatEl.style.top = (rect.top + 50) + 'px';
+        document.body.appendChild(floatEl);
+        setTimeout(() => floatEl.remove(), 1500);
+    }
+
+    function shakePanel(team) {
+        const p = document.getElementById(`panel-${team}`);
+        p.style.animation = "shake 0.5s";
+        setTimeout(() => p.style.animation = "", 500);
+    }
+
+    // --- 輪盤 (終極懲罰) ---
+    function showWheel() {
+        document.getElementById('overlay-wheel').style.display = 'flex';
+        initWheelCanvas();
+        document.getElementById('wheel-result-text').innerText = "準備執行終極懲罰...";
+        document.getElementById('btn-spin').disabled = false;
+        document.getElementById('btn-close-wheel').classList.add('hidden');
+    }
+
+    function initWheelCanvas() {
+        const canvas = document.getElementById('wheel-canvas');
+        const items = db.wheel;
+        if(items.length === 0) return;
+        
+        const colors = ['#5a0000', '#222', '#d4af37'];
+        let gradient = [];
+        const step = 360 / items.length;
+        
+        for(let i=0; i<items.length; i++) {
+            gradient.push(`${colors[i%3]} ${i*step}deg ${(i+1)*step}deg`);
+        }
+        canvas.style.background = `conic-gradient(${gradient.join(', ')})`;
+        canvas.style.transform = `rotate(0deg)`;
+    }
+
+    function spinWheel() {
+        const canvas = document.getElementById('wheel-canvas');
+        const btn = document.getElementById('btn-spin');
+        btn.disabled = true;
+        
+        const count = db.wheel.length;
+        const idx = Math.floor(Math.random() * count); // 結果索引
+        const step = 360 / count;
+        
+        // 計算角度：目標區塊中心點
+        const targetAngle = 360 * 5 + (360 - ((idx + 0.5) * step)); 
+        const offset = (Math.random() - 0.5) * (step * 0.5); // 隨機偏移
+
+        canvas.style.transform = `rotate(${targetAngle + offset}deg)`;
+        
+        setTimeout(() => {
+            document.getElementById('wheel-result-text').innerText = `懲罰：${db.wheel[idx]}`;
+            document.getElementById('btn-close-wheel').classList.remove('hidden');
+        }, 4100);
+    }
+
+    // --- Excel 匯入/匯出 ---
+    function toggleSettings() {
+        const el = document.getElementById('overlay-settings');
+        el.style.display = el.style.display === 'flex' ? 'none' : 'flex';
+    }
+
+    function exportExcel() {
+        const wb = XLSX.utils.book_new();
+        // 1. 題目
+        // 轉換題目格式以符合原 Excel 欄位
+        const qData = db.questions.map(item => ({
+            "分類": item.cat,
+            "題目": item.q,
+            "答案": item.a,
+            "圖片": item.img
+        }));
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(qData), "題目");
+        
+        // 2. 機會
+        const opData = db.ops.map(item => ({ "標題": item.title, "描述": item.desc, "數值": item.val }));
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(opData), "機會");
+        
+        // 3. 懲罰
+        const punData = db.puns.map(item => ({ "標題": item.title, "描述": item.desc, "數值": item.val }));
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(punData), "懲罰");
+        
+        // 4. 輪盤
+        const wData = db.wheel.map(w => ({"懲罰內容": w}));
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(wData), "輪盤");
+        
+        // 5. 名單 (處理長度不一)
+        const maxLen = Math.max(db.roster.a.length, db.roster.b.length);
+        let rosterData = [];
+        for(let i=0; i<maxLen; i++) {
+            rosterData.push({
+                "Team A": db.roster.a[i] || "",
+                "Team B": db.roster.b[i] || ""
+            });
+        }
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rosterData), "名單");
+
+        XLSX.writeFile(wb, "古韻對決_題庫配置.xlsx");
+    }
+
+    function importExcel(input) {
+        const file = input.files[0];
+        if(!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const data = new Uint8Array(e.target.result);
+            const wb = XLSX.read(data, {type: 'array'});
+            
+            // 讀題目 (mapping Chinese keys to code keys)
+            if(wb.Sheets["題目"]) {
+                const raw = XLSX.utils.sheet_to_json(wb.Sheets["題目"]);
+                db.questions = raw.map(r => ({
+                    cat: r["分類"] || "未分類",
+                    q: r["題目"] || "",
+                    a: r["答案"] || "",
+                    img: r["圖片"] || ""
+                }));
+            }
+
+            // 讀機會
+            if(wb.Sheets["機會"]) {
+                const raw = XLSX.utils.sheet_to_json(wb.Sheets["機會"]);
+                db.ops = raw.map(r => ({
+                    title: r["標題"], desc: r["描述"], val: parseInt(r["數值"])||0
+                }));
+            }
+
+            // 讀懲罰
+            if(wb.Sheets["懲罰"]) {
+                const raw = XLSX.utils.sheet_to_json(wb.Sheets["懲罰"]);
+                db.puns = raw.map(r => ({
+                    title: r["標題"], desc: r["描述"], val: parseInt(r["數值"])||0
+                }));
+            }
+            
+            // 讀輪盤
+            if(wb.Sheets["輪盤"]) {
+                const raw = XLSX.utils.sheet_to_json(wb.Sheets["輪盤"]);
+                // 嘗試讀取不同可能的欄位名稱
+                db.wheel = raw.map(r => r["懲罰內容"] || r["內容"] || Object.values(r)[0]).filter(x=>x);
+            }
+            
+            // 讀名單
+            if(wb.Sheets["名單"]) {
+                const raw = XLSX.utils.sheet_to_json(wb.Sheets["名單"]);
+                db.roster.a = [];
+                db.roster.b = [];
+                raw.forEach(r => {
+                    if(r["Team A"]) db.roster.a.push(r["Team A"]);
+                    if(r["Team B"]) db.roster.b.push(r["Team B"]);
+                });
+            }
+
+            alert(`匯入成功！\n題目: ${db.questions.length}\n機會: ${db.ops.length}\n懲罰: ${db.puns.length}\nA隊: ${db.roster.a.length}人`);
+            toggleSettings();
+            init();
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    // 啟動
+    window.onload = init;
+
+    // 加入CSS動畫
+    const style = document.createElement('style');
+    style.innerHTML = `
+        @keyframes shake { 
+            0% { transform: translateX(0); } 25% { transform: translateX(-5px); } 
+            50% { transform: translateX(5px); } 75% { transform: translateX(-5px); } 100% { transform: translateX(0); } 
+        }
+    `;
+    document.head.appendChild(style);
+
+</script>
+</body>
+</html>
         :root {
             --bg-dark: #111;
             --panel-bg: rgba(30, 30, 30, 0.9);
