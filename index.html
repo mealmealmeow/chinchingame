@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>古韻對決：V15 視覺重製版</title>
+    <title>古韻對決：V16 視覺修正版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+TC:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
@@ -92,10 +92,36 @@
             display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
         }
         .front { background-image: url('https://www.transparenttextures.com/patterns/rice-paper.png'); }
-        .back { transform: rotateY(180deg); background: #fff; padding: 25px; text-align: left; overflow-y: auto; }
+        
+        /* [修復] 卡背與文字顏色 */
+        .back { 
+            transform: rotateY(180deg); 
+            background: #fff; 
+            padding: 25px; 
+            text-align: left; 
+            overflow-y: auto; 
+            color: #000000 !important; /* 強制黑色 */
+        }
+        
         .q-img { height: 40%; background-size: cover; background-position: center; border-bottom: 2px solid #ccc; }
         .q-content { padding: 20px; flex: 1; text-align: center; overflow-y: auto; }
         .q-text { font-size: 1.4rem; font-weight: bold; color: #333; margin-top: 10px; }
+        
+        /* [修復] 答案文字樣式 */
+        .ans-title { 
+            color: #b71c1c; 
+            font-size: 1.5rem; 
+            border-bottom: 2px solid #ccc; 
+            margin-bottom: 15px; 
+            padding-bottom: 5px;
+            font-weight: bold;
+        }
+        .ans-content { 
+            font-size: 1.3rem; /* 加大字體 */
+            line-height: 1.6; 
+            color: #000000 !important; /* 強制黑色 */
+            font-weight: 500; /* 加粗 */
+        }
         
         /* --- Mobile --- */
         @media (max-width: 900px) {
@@ -142,7 +168,7 @@
         }
         .mc-inner {
             position: relative; width: 100%; height: 100%;
-            text-align: center; transition: transform 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55); /* Bouncy effect */
+            text-align: center; transition: transform 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
             transform-style: preserve-3d;
         }
         .mc-inner.flipped { transform: rotateY(180deg); }
@@ -161,7 +187,8 @@
             background-image: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='2' cy='2' r='1' fill='%23d4af37' fill-opacity='0.2'/%3E%3C/svg%3E");
         }
         .style-chance .mc-back {
-            background: #fffbf0; border-color: var(--gold-primary); color: #5a4a00;
+            background: #fffbf0; border-color: var(--gold-primary); 
+            color: #000; /* [修復] 確保文字為黑色 */
             background-image: radial-gradient(circle at 50% 50%, rgba(212, 175, 55, 0.1) 0%, transparent 70%);
         }
         .style-chance .icon-glow { text-shadow: 0 0 20px var(--gold-primary); color: var(--gold-primary); }
@@ -173,7 +200,8 @@
             background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h40v40H0V0zm20 20h20v20H20V20zM0 20h20v20H0V20z' fill='%238a0000' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E");
         }
         .style-punish .mc-back {
-            background: #fff0f0; border-color: var(--red-primary); color: #660000;
+            background: #fff0f0; border-color: var(--red-primary); 
+            color: #000; /* [修復] 確保文字為黑色 */
             background-image: radial-gradient(circle at 50% 50%, rgba(192, 57, 43, 0.1) 0%, transparent 70%);
         }
         .style-punish .icon-glow { text-shadow: 0 0 20px #ff0000; color: var(--red-primary); }
@@ -185,9 +213,9 @@
         .click-hint { animation: pulseText 1.5s infinite; margin-top: 20px; font-size: 0.9rem; opacity: 0.7; }
         @keyframes pulseText { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
 
-        .mc-title { font-size: 2rem; font-weight: 900; margin-bottom: 15px; font-family: var(--font-title); }
-        .mc-desc { font-size: 1.2rem; line-height: 1.6; }
-        .mc-val { margin-top: 20px; font-weight: bold; font-size: 1.1rem; padding: 5px 15px; border-radius: 20px; background: rgba(0,0,0,0.05); display: inline-block; }
+        .mc-title { font-size: 2rem; font-weight: 900; margin-bottom: 15px; font-family: var(--font-title); color: #000 !important; }
+        .mc-desc { font-size: 1.3rem; line-height: 1.6; color: #000 !important; font-weight: 500; }
+        .mc-val { margin-top: 20px; font-weight: bold; font-size: 1.1rem; padding: 5px 15px; border-radius: 20px; background: rgba(0,0,0,0.05); display: inline-block; color: #333; }
 
         /* Wheel */
         .wheel-container { width: min(400px, 90vw); height: min(400px, 90vw); position: relative; margin-bottom: 20px; }
@@ -200,7 +228,7 @@
 
         /* Popups */
         .popup {
-            width: min(400px, 85vw); background: #fff; color: #333;
+            width: min(400px, 85vw); background: #fff; color: #000;
             border-radius: 20px; padding: 30px; text-align: center;
             border: 4px solid var(--gold-primary);
             box-shadow: 0 0 60px rgba(0,0,0,0.8);
@@ -259,7 +287,7 @@
                 </div>
                 <div class="card-face back">
                     <div class="ans-title">參考答案</div>
-                    <div class="ans-text" id="q-ans"></div>
+                    <div class="ans-content" id="q-ans"></div>
                 </div>
             </div>
         </div>
@@ -333,7 +361,7 @@
     <div class="popup">
         <div style="font-size:4rem; margin-bottom:10px;">💀</div>
         <div class="mc-title" style="color:#c0392b;" id="popup-title">標題</div>
-        <div class="mc-desc" id="popup-desc">內容</div>
+        <div class="mc-desc" id="popup-desc" style="color:#000;">內容</div>
         <button class="btn btn-red" style="margin-top:20px;" onclick="document.getElementById('overlay-popup').style.display='none'">接受命運</button>
     </div>
 </div>
@@ -344,7 +372,7 @@
         <p style="font-size:0.9rem; color:#aaa; margin-bottom:20px;">完整數據已內建 (28題+完整機會懲罰)</p>
         <button class="btn" onclick="exportExcel()">📥 下載 Excel</button>
         <div style="margin:15px 0; border-top:1px solid #444;"></div>
-        <button class="btn" style="position:relative;">
+        <button class="btn" style="font-size:1rem; position:relative;">
             📤 上傳 Excel
             <input type="file" onchange="importExcel(this)" style="position:absolute; left:0; top:0; width:100%; height:100%; opacity:0; cursor:pointer;">
         </button>
@@ -388,23 +416,23 @@
         ],
         ops: [
             { title: "羽扇綸巾", desc: "【談笑間】指定敵方一名「主將」禁言一回合。", val: 0 },
-            { title: "大江東去", desc: "氣勢如虹！直接扣除敵方 20 分。", val: 20 },
-            { title: "驀然回首", desc: "絕處逢生。若答錯題目，可擁有一次「回首」機會。", val: 0 },
-            { title: "心凝形釋", desc: "與萬化冥合，進入無敵狀態，抵銷下次懲罰。", val: 0 },
-            { title: "雁過也", desc: "【卻是舊時相識】。可向場外求救一次。", val: 0 },
-            { title: "東風夜放", desc: "花千樹，星如雨。幸運大爆發，本題得分雙倍 (加20分)。", val: 20 },
-            { title: "引觴滿酌", desc: "因為喝醉了無所畏懼，直接跳過本題視為答對。", val: 0 },
-            { title: "亂石穿空", desc: "驚濤拍岸。隨機指定敵方兩名隊員暫停一回合。", val: 0 }
+            { title: "大江東去", desc: "氣勢如虹！發動猛攻，對敵方現有分數進行「浪淘盡」，直接扣除敵方 20 分。", val: 20 },
+            { title: "驀然回首", desc: "絕處逢生。若答錯題目，可擁有一次「回首」機會（重新作答或換題）。", val: 0 },
+            { title: "心凝形釋", desc: "與萬化冥合，進入無敵狀態。抵銷下一次受到的任何懲罰（包括扣分或大轉盤）。", val: 0 },
+            { title: "雁過也", desc: "【卻是舊時相識】。可向場外「舊識」（老師或非參賽同學）求救一次。", val: 0 },
+            { title: "東風夜放", desc: "花千樹，星如雨。幸運大爆發，本題得分雙倍 (加 20 分)。", val: 20 },
+            { title: "引觴滿酌", desc: "【頹然就醉】。因為喝醉了所以無所畏懼，直接跳過本題，視為答對。", val: 0 },
+            { title: "亂石穿空", desc: "驚濤拍岸。隨機指定敵方兩名隊員「被浪捲走」（暫停參與討論一回合）。", val: 0 }
         ],
         puns: [
-            { title: "早生華髮", desc: "多情應笑我。全隊被嘲笑，士氣受損，扣 10 分。", val: 10 },
-            { title: "借酒澆愁", desc: "頭昏腦脹，下回合答題時間減半。", val: 0 },
-            { title: "昏昏欲睡", desc: "隊伍進入夢遊狀態，暫停一回合。", val: 0 },
-            { title: "點點滴滴", desc: "梧桐更兼細雨。這回合若答錯，連續扣分兩次。", val: 0 },
-            { title: "燈火闌珊", desc: "眾里尋他千百度。下回合隊長必須「孤獨作答」。", val: 0 },
-            { title: "檣櫓灰飛", desc: "防線崩潰，隨機移除一張機會卡，並扣除 1 顆心。", val: 0 },
-            { title: "攢蹙累積", desc: "壓力像山一樣，全隊必須「擠在一起」作答。", val: 0 },
-            { title: "憔悴損", desc: "人比黃花瘦。全隊體力不支，下回合趴在桌上作答。", val: 0 }
+            { title: "早生華髮", desc: "多情應笑我。全隊被嘲笑，士氣受損，本題倒扣 10 分。", val: 10 },
+            { title: "借酒澆愁", desc: "三杯兩盞淡酒，怎敵他晚來風急？頭昏腦脹，下回合答題時間減半。", val: 0 },
+            { title: "昏昏欲睡", desc: "施施而行，漫漫而遊。隊伍進入夢遊狀態，暫停一回合。", val: 0 },
+            { title: "點點滴滴", desc: "梧桐更兼細雨。這回合若答錯，扣分會像雨點一樣「點點滴滴」連續扣兩次。", val: 0 },
+            { title: "燈火闌珊", desc: "眾里尋他千百度。隊友失蹤了？下回合隊長必須「孤獨作答」，不可與隊員討論。", val: 0 },
+            { title: "檣櫓灰飛", desc: "談笑間，檣櫓灰飛煙滅。你們辛苦建立的防線崩潰，隨機移除一張已獲得的「機會卡」。", val: 0 },
+            { title: "攢蹙累積", desc: "西山之怪特。壓力像山一樣壓過來，全隊必須「攢蹙」（擠在一起）作答，否則算輸。", val: 0 },
+            { title: "憔悴損", desc: "人比黃花瘦。全隊體力不支，下回合必須全體「趴在桌上」作答。", val: 0 }
         ],
         wheel: [
             "【尋尋覓覓】矇眼摸人 (10秒)",
@@ -569,7 +597,7 @@
     function showWheel() { 
         document.getElementById('overlay-wheel').style.display='flex'; 
         initWheel(); 
-        document.getElementById('wheel-msg').innerText = "準備啟動...";
+        document.getElementById('wheel-status').innerText = "準備啟動...";
         document.getElementById('btn-spin').disabled = false;
         document.getElementById('btn-close-wheel').classList.add('hidden');
     }
@@ -623,7 +651,7 @@
         canvas.style.transform = `rotate(${wheelDeg}deg)`;
         
         setTimeout(() => {
-            document.getElementById('wheel-msg').innerText = "結果確認！";
+            document.getElementById('wheel-status').innerText = "結果確認！";
             document.getElementById('btn-close-wheel').classList.remove('hidden');
             
             // Show Popup
