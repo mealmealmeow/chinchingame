@@ -13128,7 +13128,7 @@ async function handleNetworkError(errorMsg) {
     }
 }
 
-// [v18.6.1] Step 2: Real Execution (Safe Mode)
+// [v18.6.2] Step 2: Real Execution (Smart Check-Insert)
 async function executeProjectCreation() {
     const modal = document.getElementById('pop-preflight-modal');
     const btn = modal.querySelector('.pop-btn-confirm');
@@ -13142,6 +13142,7 @@ async function executeProjectCreation() {
         const topicTitle = document.getElementById('topic').value.trim();
         const actionType = window._pendingActionType || 'default';
         const targetCount = allStudentRecords.length;
+        const classId = window.currentClassId;
 
         // 安全獲取評語庫
         let defaultCritiques = [];
@@ -13149,31 +13150,58 @@ async function executeProjectCreation() {
             defaultCritiques = cannedCritiques.common;
         }
 
-        // 準備 Settings
         const settingsPayload = {
             critiques: (actionType === 'default') ? defaultCritiques : [],
-            target_count: targetCount // 🔥 進度條分母
+            target_count: targetCount // 🔥 這是修復進度條的關鍵
         };
 
-        // 寫入 DB
-        const { data: newAssign, error: assignError } = await supabaseClient
+        // 🔥 [Fix] 改用 "先檢查，後寫入" (手動防撞)
+        let finalAssignmentId = null;
+
+        // 1. 檢查是否已存在同班、同名的專案
+        const { data: existing, error: checkError } = await supabaseClient
             .from('assignments')
-            .upsert({
-                user_id: currentUser.id,
-                class_id: window.currentClassId,
-                title: topicTitle,
-                settings: settingsPayload,
-                created_at: new Date().toISOString()
-            }, { onConflict: 'class_id, title' })
-            .select()
-            .single();
+            .select('id')
+            .eq('user_id', currentUser.id)
+            .eq('class_id', classId)
+            .eq('title', topicTitle)
+            .maybeSingle();
 
-        if (assignError) throw assignError;
+        if (checkError) throw checkError;
 
-        // 成功後處理
-        window.currentAssignmentId = newAssign.id;
+        if (existing) {
+            // 2A. 存在 -> 更新設定 (寫入正確人數)
+            console.log("專案已存在，更新設定...");
+            const { error: updateError } = await supabaseClient
+                .from('assignments')
+                .update({ settings: settingsPayload })
+                .eq('id', existing.id);
+            
+            if (updateError) throw updateError;
+            finalAssignmentId = existing.id;
+        } else {
+            // 2B. 不存在 -> 插入新專案
+            console.log("建立新專案...");
+            const { data: newAssign, error: insertError } = await supabaseClient
+                .from('assignments')
+                .insert([{
+                    user_id: currentUser.id,
+                    class_id: classId,
+                    title: topicTitle,
+                    settings: settingsPayload,
+                    created_at: new Date().toISOString()
+                }])
+                .select()
+                .single();
+            
+            if (insertError) throw insertError;
+            finalAssignmentId = newAssign.id;
+        }
+
+        // 3. 成功後處理 (保持原樣)
+        window.currentAssignmentId = finalAssignmentId;
         
-        // 刷新 UI
+        // 刷新 UI 隱藏欄位
         const rawList = allStudentRecords.map(r => r.originalName).join('\n');
         const className = document.getElementById('preflight-class').textContent;
         if(document.getElementById('student-names')) document.getElementById('student-names').value = rawList;
