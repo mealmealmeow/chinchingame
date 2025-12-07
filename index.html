@@ -5275,7 +5275,44 @@ header h1 {
     </div>
 </div>
 
+<!-- [v18.6.0] Pre-flight Check Modal (起飛前確認) -->
+<div id="pop-preflight-modal" class="pop-overlay">
+  <div class="pop-modal" style="max-width: 500px;">
+    <div class="pop-icon">🛫</div>
+    <h3>即將建立專案</h3>
+    <p class="pop-desc">請核對以下資訊，建立後<b>無法更改</b>班級與名單。</p>
+    
+    <div style="text-align: left; background: #f9f9f9; padding: 15px; border-radius: 12px; border: 1px solid #eee; margin-bottom: 20px;">
+        <div style="margin-bottom: 8px;">
+            <span style="color: #888; font-size: 0.85rem;">📝 題目：</span>
+            <span id="preflight-topic" style="font-weight: bold; color: #333;">-</span>
+        </div>
+        <div style="margin-bottom: 8px;">
+            <span style="color: #888; font-size: 0.85rem;">🏫 班別：</span>
+            <span id="preflight-class" style="font-weight: bold; color: #333;">-</span>
+        </div>
+        <div>
+            <span style="color: #888; font-size: 0.85rem;">👥 已選學生：</span>
+            <span id="preflight-count" style="font-weight: bold; color: #5A8F7B;">0 人</span>
+        </div>
+        
+        <!-- 學生名單捲動區 -->
+        <div id="preflight-student-list" style="margin-top: 10px; max-height: 150px; overflow-y: auto; background: #fff; border: 1px dashed #ddd; padding: 8px; font-size: 0.85rem; color: #666; border-radius: 6px;">
+            <!-- JS 填入 -->
+        </div>
+    </div>
 
+    <!-- 提示 -->
+    <div class="cozy-hint" style="font-size: 0.8rem; margin-bottom: 20px; padding: 10px;">
+        💡 建立後，請專注於批改。如需增刪學生，請刪除此專案並重新建立。
+    </div>
+
+    <div class="pop-footer">
+      <button class="pop-btn pop-btn-cancel" onclick="document.getElementById('pop-preflight-modal').classList.remove('active')">返回修改</button>
+      <button class="pop-btn pop-btn-confirm" onclick="executeProjectCreation()">確認並建立 🚀</button>
+    </div>
+  </div>
+</div>
 <script>
 
 // --- Supabase 初始化與設定 ---
@@ -9914,115 +9951,121 @@ function restoreFromLocalBackup() {
    ========================================== */
 let isDashboardRendering = false; // 加入鎖定旗標
 
-// [Pro-v10.1] Dashboard 讀取 (以班級為本位，顯示所有班級)
+// [v18.6.0] Dashboard 2.1 (Read target_count)
 async function loadDashboard() {
     const focusList = document.getElementById('focus-task-list');
     const classContainer = document.getElementById('class-accordion-container');
-    
     if(!focusList) return; 
 
-    // 1. 顯示讀取中 (增加用戶反饋)
     focusList.innerHTML = '<div class="dashboard-loading"><div class="spinner"></div> 正在同步雲端數據...</div>';
     if(classContainer) classContainer.innerHTML = '';
 
-    if (!currentUser) {
-        renderEmptyState(focusList);
-        return;
-    }
+    if (!currentUser) { renderEmptyState(focusList); return; }
 
     try {
-        console.log("📊 正在刷新 Dashboard (Class-Centric Mode)...");
-
-        // --- Step A: 讀取所有班級 (這是主角) ---
-        const { data: classesData, error: classError } = await supabaseClient
-            .from('classes')
-            .select('*') // 讀晒所有欄位
-            .eq('user_id', currentUser.id)
-            .order('academic_year', { ascending: false });
-
-        if (classError) throw classError;
-
-        // --- Step B: 讀取所有作業 ---
-        const { data: assignments, error: assignError } = await supabaseClient
+        // A. 讀取數據 (Assignments 加讀 settings 欄位)
+        const { data: classes } = await supabaseClient.from('classes').select('*').eq('user_id', currentUser.id);
+        const { data: assignments } = await supabaseClient
             .from('assignments')
-            .select('id, title, created_at, class_id,classes(class_name)') 
+            .select('id, title, created_at, class_id, settings, classes(class_name)') // 加了 settings
             .eq('user_id', currentUser.id)
             .order('created_at', { ascending: false });
-
-        if (assignError) throw assignError;
-
-        // 建立作業查找表 (Class ID -> Assignments Array)
-        const assignmentMap = {};
-        const allProjectsFlat = []; // 用來做 Focus List
-
-        // --- Step C: 統計數據 (Results & Students) ---
-        // 為了效能，我們只讀取需要的統計
-        const assignmentIds = assignments ? assignments.map(a => a.id) : [];
-        const classIds = classesData ? classesData.map(c => c.id) : [];
-
-        const { data: resultsData } = await supabaseClient.from('results').select('assignment_id').in('assignment_id', assignmentIds);
-        const { data: studentsData } = await supabaseClient.from('students').select('class_id').in('class_id', classIds);
-
-        const gradedCounts = {};
-        if (resultsData) resultsData.forEach(r => gradedCounts[r.assignment_id] = (gradedCounts[r.assignment_id] || 0) + 1);
-
-        const classStudentCounts = {};
-        if (studentsData) studentsData.forEach(s => classStudentCounts[s.class_id] = (classStudentCounts[s.class_id] || 0) + 1);
-
-        // --- Step D: 組裝數據 ---
         
-        // 先處理 assignments 變成豐富物件
+        // B. 讀取進度
+        const assignIds = assignments ? assignments.map(a => a.id) : [];
+        const { data: results } = await supabaseClient
+            .from('results')
+            .select('assignment_id, updated_at, students(name)')
+            .in('assignment_id', assignIds)
+            .order('updated_at', { ascending: false });
+
+        // C. 組裝
+        const assignmentMap = {};
+        const allProjectsFlat = [];
+
         if (assignments) {
             assignments.forEach(a => {
-                const cls = classesData.find(c => c.id === a.class_id) || { class_name: '未知', academic_year: '' };
-                const graded = gradedCounts[a.id] || 0;
-                const total = classStudentCounts[a.class_id] || 0;
-                const progress = total > 0 ? Math.round((graded / total) * 100) : 0;
+                const cls = classes.find(c => c.id === a.class_id) || { class_name: '未知', academic_year: '' };
+                const myResults = results ? results.filter(r => r.assignment_id === a.id) : [];
                 
+                const gradedCount = myResults.length;
+                
+                // 🔥 [v18.6.0] 分母邏輯優先級：
+                // 1. settings.target_count (新版專案)
+                // 2. settings.student_count (兼容舊版)
+                // 3. 1 (避免除以 0)
+                let totalStudents = 1;
+                if (a.settings && a.settings.target_count) {
+                    totalStudents = a.settings.target_count;
+                } else if (a.settings && a.settings.student_count) {
+                    totalStudents = a.settings.student_count;
+                } else {
+                    // 如果係舊專案無紀錄，暫時顯示已批改數 (即 100%)
+                    totalStudents = Math.max(gradedCount, 1);
+                }
+
+                const progressPct = totalStudents > 0 ? Math.round((gradedCount / totalStudents) * 100) : 0;
+                const lastStudent = myResults.length > 0 ? myResults[0].students?.name : "無";
+
                 const richProject = {
                     id: a.id,
                     source_type: 'new',
                     topic: a.title,
-                    class_id: a.class_id,
                     class_name: cls.class_name,
-                    academic_year: cls.academic_year,
                     last_updated: a.created_at,
-                    graded_count: graded,
-                    total_students: total,
-                    progress: progress,
-                    isCompleted: (total > 0 && graded >= total)
+                    progress: progressPct,
+                    progress_text: `${gradedCount} / ${totalStudents}`,
+                    last_student: lastStudent
                 };
 
                 allProjectsFlat.push(richProject);
-
                 if (!assignmentMap[a.class_id]) assignmentMap[a.class_id] = [];
                 assignmentMap[a.class_id].push(richProject);
             });
         }
 
-        // --- Step E: 渲染 ---
+        // D. 渲染 Focus List
+        const focusItems = allProjectsFlat.slice(0, 5);
+        let html = '';
         
-        // 1. Focus List (只顯示未完成的作業)
-        const focusItems = allProjectsFlat.filter(p => !p.isCompleted).slice(0, 5);
-        focusList.innerHTML = ''; 
-        renderFocusList(focusItems, focusList);
-
-        // 2. Class Archives (傳入 classData 同 assignmentMap)
-        if(classContainer) {
-            classContainer.innerHTML = ''; 
-            // 這裡不再用舊的 group function，改用新的渲染邏輯
-            renderClassCentricAccordion(classesData, assignmentMap, classContainer);
+        if (focusItems.length === 0) {
+            html = `<div style="text-align:center; padding:2rem; color:#aaa;">(暫無作業)</div>`;
+        } else {
+            focusItems.forEach(item => {
+                const dateStr = new Date(item.last_updated).toLocaleDateString();
+                const itemSafe = JSON.stringify(item).replace(/"/g, '&quot;');
+                
+                html += `
+                <div class="cozy-folder" onclick="openAssignment('${item.id}')">
+                    <div style="position:absolute; top:15px; right:15px;" onclick="event.stopPropagation();">
+                        <button onclick="openEditModal(${itemSafe})" style="background:transparent; border:none; color:#ddd; cursor:pointer;">⚙️</button>
+                    </div>
+                    <div class="folder-meta">
+                        <span class="folder-class">${escapeHtml(item.class_name)}</span>
+                        <div class="folder-title">${escapeHtml(item.topic)}</div>
+                    </div>
+                    <div class="task-progress">
+                        <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:#888; margin-bottom:4px;">
+                            <span>最後：${escapeHtml(item.last_student)}</span>
+                            <span>${item.progress_text} (${item.progress}%)</span>
+                        </div>
+                        <div class="task-progress-bar-bg">
+                            <div class="task-progress-bar-fill" style="width: ${item.progress}%"></div>
+                        </div>
+                    </div>
+                </div>`;
+            });
         }
-        
-        updateWelcomeMessage();
-        console.log("✅ Dashboard 刷新完成");
+        focusList.innerHTML = html;
+        focusList.style.display = focusItems.length ? 'grid' : 'block';
 
+        if(classContainer) renderClassCentricAccordion(classes, assignmentMap, classContainer);
+        
     } catch (error) {
-        console.error("Dashboard Load Error:", error);
-        focusList.innerHTML = `<div style="color:#c86a5a; padding:1rem;">讀取失敗: ${error.message}</div>`;
+        console.error(error);
+        focusList.innerHTML = '讀取失敗';
     }
 }
-
 
 // [Pro-v4.2-UI] 停止載入離線備份到 Dashboard (避免重複混亂)
 function getOfflineProjectMeta() {
@@ -11576,146 +11619,89 @@ function toggleAllSetupStudents(checked) {
     });
 }
 
-/* ================================================= */
-/* === [v16.1 Fix] Page 1 啟動批改 (純班級版) === */
-/* ================================================= */
+// [v18.6.0] Step 2: Real Execution (Insert DB)
+async function executeProjectCreation() {
+    // 1. 鎖定按鈕
+    const modal = document.getElementById('pop-preflight-modal');
+    const btn = modal.querySelector('.pop-btn-confirm');
+    const orgText = btn.textContent;
+    btn.textContent = "建立中..."; 
+    btn.disabled = true;
 
-async function startGradingWithSetup(actionType) {
-    const topicInput = document.getElementById('topic');
-    if (!topicInput || !topicInput.value.trim()) {
-        alert("請輸入作文題目！");
-        if(topicInput) topicInput.focus();
-        return;
-    }
+    try {
+        if (!currentUser) throw new Error("未登入，無法建立雲端專案");
 
-    const select = document.getElementById('setup-class-select');
-    if (!select || !select.value) {
-        alert("請選擇班級！");
-        return;
-    }
+        const topicTitle = document.getElementById('topic').value.trim();
+        const actionType = window._pendingActionType || 'default';
+        const targetCount = allStudentRecords.length; // 🔥 關鍵數據
 
-    // 1. 檢查有無揀學生
-    const checkedCards = document.querySelectorAll('#setup-student-checklist .student-check-card.checked');
-    if (checkedCards.length === 0) {
-        alert("⚠️ 請至少勾選一位學生！");
-        return;
-    }
+        // 2. 準備 Settings (包含目標人數)
+        const settingsPayload = {
+            critiques: (actionType === 'default') ? cannedCritiques.common : [], // 預設只載入通用，或者之後 loadCanned
+            target_count: targetCount // 🔥 進度條分母修復
+        };
 
-    // 2. 準備數據
-    const sourceClass = select.options[select.selectedIndex].dataset.className || '';
-    window.currentClassId = select.value;
-    window.currentProjectType = 'cloud'; // 強制雲端模式
-    
-    // 初始化變數
-    allStudentRecords = [];
-    let rawStudentList = "";
-    
-    // 3. 處理學生名單
-    const tempRecords = [];
-    checkedCards.forEach(card => {
-        const info = card.dataset.info; // "01-陳大文"
-        const dbId = card.dataset.dbId; // Database ID
-        const p = parseStudentName(info);
+        // 3. 寫入 Assignments
+        const { data: newAssign, error: assignError } = await supabaseClient
+            .from('assignments')
+            .upsert({
+                user_id: currentUser.id,
+                class_id: window.currentClassId,
+                title: topicTitle,
+                settings: settingsPayload,
+                created_at: new Date().toISOString()
+            }, { onConflict: 'class_id, title' })
+            .select()
+            .single();
 
-        rawStudentList += info + "\n";
+        if (assignError) throw assignError;
 
-        tempRecords.push({
-            number: p.number,
-            name: p.name,
-            originalName: p.originalName,
-            dbId: dbId,
-            data: null
-        });
-    });
-
-    allStudentRecords = tempRecords;
-    sortStudents(allStudentRecords);
-
-    // 4. 建立雲端專案 (Assignments)
-    if (currentUser) {
-        // 改變按鈕狀態
-        const saveBtn = event.target; // 獲取點擊的按鈕
-        const orgText = saveBtn.textContent;
-        saveBtn.textContent = "正在建立..."; saveBtn.disabled = true;
-
-        try {
-            // 使用 upsert 建立或獲取專案
-            const { data: newAssign, error: assignError } = await supabaseClient
-                .from('assignments')
-                .upsert({
-                    user_id: currentUser.id,
-                    class_id: window.currentClassId,
-                    title: topicInput.value.trim(),
-                    created_at: new Date().toISOString()
-                }, { onConflict: 'class_id, title' })
-                .select()
-                .single();
-
-            if (assignError) throw assignError;
-
-            window.currentAssignmentId = newAssign.id;
-            console.log("✅ 專案已建立，ID:", newAssign.id);
-
-            // 刷新 Dashboard
-            if (typeof loadDashboard === 'function') {
-                loadDashboard();
-                setTimeout(() => loadDashboard(), 800);
-            }
-
-        } catch (err) {
-            console.error("建立專案錯誤:", err);
-            // 錯誤不阻擋進入批改，只係 Sync 唔到
-        } finally {
-            saveBtn.textContent = orgText; saveBtn.disabled = false;
-        }
-    }
-
-    // 5. 同步 UI 到 Page 2
-    if(document.getElementById('student-names')) document.getElementById('student-names').value = rawStudentList;
-    if(document.getElementById('student-class')) document.getElementById('student-class').value = sourceClass;
-    
-    // 同步 Page 2 題目欄 (v11.8 功能)
-    if(document.getElementById('page2-topic-display')) document.getElementById('page2-topic-display').value = topicInput.value.trim();
-
-    updateStudentDropdown();
-    updateHeaderInfo();
-
-    // 6. 跳轉
-    if (actionType === 'default') {
-        loadCannedCritiquesAndFocus(); // 載入罐頭並跳轉
-    } else {
-        // 手動模式：清空評語庫，直接跳轉
-        const cData = document.getElementById('critique-data');
-        if(cData) cData.innerHTML = '';
-        buildChecklist();
-        buildOverviewPage();
+        // 4. 成功後處理
+        window.currentAssignmentId = newAssign.id;
         
-        showPage('page2', 'student-select');
-        if(typeof showToast === 'function') showToast(`已建立作業：${allStudentRecords.length} 位學生`, "success");
+        // 確保 Page 2 的隱藏欄位同步
+        const rawList = allStudentRecords.map(r => r.originalName).join('\n');
+        const className = document.getElementById('preflight-class').textContent;
+        if(document.getElementById('student-names')) document.getElementById('student-names').value = rawList;
+        if(document.getElementById('student-class')) document.getElementById('student-class').value = className;
+        if(document.getElementById('page2-topic-display')) document.getElementById('page2-topic-display').value = topicTitle;
+
+        // 刷新 UI
+        updateStudentDropdown();
+        updateHeaderInfo();
+        
+        // 5. 關閉 Modal
+        modal.classList.remove('active');
+
+        // 6. 載入評語庫並跳轉 (依據 actionType)
+        if (actionType === 'default') {
+            loadCannedCritiquesAndFocus(); 
+        } else {
+            // 手動模式：清空評語庫
+            document.getElementById('critique-data').innerHTML = '';
+            buildChecklist();
+            buildOverviewPage();
+            showPage('page2', 'student-select');
+        }
+
+        // 7. 🔥 強制重置髒數據狀態 (修復假斷線)
+        isDataDirty = false;
+        updateUIBasedOnAuthState();
+        
+        if(typeof showToast === 'function') showToast("🚀 專案已建立", "success");
+
+        // 8. 刷新 Dashboard (背景執行)
+        if (typeof loadDashboard === 'function') loadDashboard();
+
+    } catch (err) {
+        console.error("Creation Error:", err);
+        alert("建立失敗：" + err.message);
+        // 解鎖按鈕
+        btn.textContent = orgText; 
+        btn.disabled = false;
     }
 }
 
-// 下載「手動模式」專用的簡單範本
-function downloadManualTemplate() {
-    if (typeof XLSX === 'undefined') {
-        alert('Excel 功能未就緒，請稍後再試。');
-        return;
-    }
-    
-    // 簡單的單欄或雙欄格式
-    const templateData = [
-        { "學號": "01", "姓名": "陳大文 (範例)" },
-        { "學號": "02", "姓名": "李小美 (範例)" },
-        { "學號": "03", "姓名": "張志明 (範例)" }
-    ];
-
-    const ws = XLSX.utils.json_to_sheet(templateData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "學生名單");
-    
-    XLSX.writeFile(wb, "學生名單範本_手動輸入用.xlsx");
-}
-// 1. 下載班級名單範本
 function downloadMasterListTemplate() {
     if (typeof XLSX === 'undefined') {
         alert('Excel 功能未就緒。');
