@@ -3880,6 +3880,12 @@ header h1 {
     border-top: 1px solid #f5f5f5;
     padding-top: 5px;
 }
+/* [v18.1.1] Modal Layering Fix */
+/* 確保通用彈窗 (編輯/刪除確認) 永遠在管理名單之上 */
+#pop-generic-modal { z-index: 2147483650 !important; }
+#pop-manage-students-modal { z-index: 2147483640 !important; }
+/* 確保通用彈窗的底色更深一點，區分層次 */
+#pop-generic-modal .pop-modal { box-shadow: 0 25px 80px rgba(0,0,0,0.5); }
 </style>
 
 </head>
@@ -10833,17 +10839,22 @@ async function addSingleStudentToMaster() {
     }
 }
 
-// [v18.0.1] Page 8: Delete Logic (Red Alert)
+// [v18.1.1] Page 8: Delete Logic (Custom UI)
 async function deleteStudentFromMaster(studentId, studentName) {
-    // 1. 強力防呆確認
-    const msg = `⚠️ 危險動作 ⚠️\n\n確定要從母名單移除學生 [${studentName}] 嗎？\n\n注意：這不會影響「已建立」的作業專案，\n但會影響之後的新增作業。`;
+    // 1. 使用自定義 Modal 取代原生 confirm
+    const isConfirmed = await showCustomModal({
+        icon: '🗑️',
+        title: '危險動作',
+        desc: `確定要從母名單移除 [${studentName}] 嗎？\n此操作無法復原，且會影響日後的新增作業。`,
+        confirmText: '確認移除',
+        cancelText: '取消' // 按取消會回傳 false
+    });
     
-    if (!confirm(msg)) return;
+    if (!isConfirmed) return;
     
     const classId = document.getElementById('manage-class-id').value;
-    const btn = event.target; // 鎖定按鈕防止連按
-    const originalText = btn.textContent;
-    btn.textContent = "..."; btn.disabled = true;
+    // 雖然 Custom Modal 無按鈕鎖定 (因為是 await)，但這裡可以加一點視覺反饋
+    if(typeof showToast === 'function') showToast("正在移除...", "info");
 
     try {
         const { error } = await supabaseClient
@@ -10853,17 +10864,19 @@ async function deleteStudentFromMaster(studentId, studentName) {
             
         if (error) throw error;
         
-        // 成功後刷新
+        // 成功後刷新列表
         await loadMasterStudentList(classId);
         
-        // 如果有 Toast 就用，沒有就用 Alert
         if(typeof showToast === 'function') showToast(`已移除：${studentName}`, "success");
 
     } catch (error) {
-        alert("刪除失敗：" + error.message);
-    } finally {
-        // 防止列表刷新太快導致按鈕不存在而報錯
-        if(btn) { btn.textContent = originalText; btn.disabled = false; }
+        // 使用 Custom Modal 顯示錯誤 (比較一致)
+        showCustomModal({
+            icon: '❌',
+            title: '刪除失敗',
+            desc: error.message,
+            confirmText: '知道了'
+        });
     }
 }
 
