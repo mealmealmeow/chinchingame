@@ -4070,26 +4070,33 @@ header h1 {
   </div>
 </div>
 
-<!-- [Edition: v18.0-Step2-P1Refine_P2Lock] 開新專案確認 Modal (溫暖版) -->
+
+
+<!-- [Edition: v18.0-Step4-Polish] 開新專案確認 Modal (列表清晰版) -->
 <div id="pop-confirm-create-modal" class="pop-overlay">
   <div class="pop-modal">
     <div class="pop-icon">☕️</div>
     <h3>準備好開始了嗎？</h3>
-    <p class="pop-desc">
-      請核對本次「<span id="confirm-create-topic" style="color:#5A8F7B;font-weight:bold;"></span>」的設定。<br>
-      專案建立後，基本資訊將鎖定以確保數據安全。
-    </p>
+    <p class="pop-desc">建立後資訊將鎖定，請核對：</p>
     
-    <div style="text-align:left; background:#fdfbf7; border:1px solid #e1d8c8; border-radius:12px; padding:15px; margin-bottom:20px;">
-        <div style="display:flex; justify-content:space-between; margin-bottom:10px; border-bottom:1px dashed #ddd; padding-bottom:5px;">
-            <span style="color:#8c867a;">班別</span>
-            <span id="confirm-create-class" style="font-weight:bold; color:#5b5044;"></span>
-        </div>
-        <div style="color:#8c867a; margin-bottom:5px;">出席名單 (<span id="confirm-create-count">0</span> 人)：</div>
+    <div style="text-align:left; background:#fcfaf6; border:1px solid #e1d8c8; border-radius:12px; padding:15px; margin-bottom:20px; font-size: 1rem;">
         
-        <!-- 學生名單捲動區 -->
-        <div id="confirm-create-student-list" class="pop-scroll-area" style="max-height:120px; min-height:80px; background:#fff; border:1px solid #eee; padding:8px; font-size:0.9rem; color:#555;">
-            <!-- JS 動態填入 -->
+        <div style="display:grid; grid-template-columns: 60px 1fr; gap:8px; margin-bottom:12px;">
+            <span style="color:#8c867a; font-weight:bold;">班別：</span>
+            <span id="confirm-create-class" style="font-weight:bold; color:#5b5044;">-</span>
+            
+            <span style="color:#8c867a; font-weight:bold;">題目：</span>
+            <span id="confirm-create-topic" style="font-weight:bold; color:#3d5c4f;">-</span>
+            
+            <span style="color:#8c867a; font-weight:bold;">人數：</span>
+            <span style="color:#5b5044;"><span id="confirm-create-count" style="font-weight:bold;">0</span> 位學生</span>
+        </div>
+
+        <div style="border-top:1px dashed #ddd; padding-top:10px; margin-top:10px;">
+            <div style="color:#8c867a; font-size:0.85rem; margin-bottom:5px;">作答名單預覽：</div>
+            <div id="confirm-create-student-list" class="pop-scroll-area" style="max-height:100px; min-height:60px; background:#fff; border:1px solid #eee; padding:8px; font-size:0.9rem; color:#555;">
+                <!-- JS 動態填入 -->
+            </div>
         </div>
     </div>
 
@@ -7258,7 +7265,7 @@ async function saveCurrentStudentData(mode = 'cloud') {
           console.error("Sync Error:", e);
           // 失敗提示
           if (typeof showToast === 'function') showToast("❌ 同步失敗，請檢查網絡", "error");
-          alert(`同步失敗：${e.message}\n建議點擊「檔案室 > 匯出進度」以防資料遺失。`);
+          alert(`同步失敗：${e.message}\n\n為免心血白費，建議您：\n1. 檢查網絡連線\n2. 點擊「檔案室 > 匯出進度」備份 Excel`);
       } finally {
           // 還原按鈕
           if(saveBtn) { 
@@ -7356,21 +7363,18 @@ function handleOverviewScoreChange(input) {
     updateUIBasedOnAuthState();
 }
 
-/* [v17.4] 進度表渲染 (強力數據讀取版) */
+/* [Edition: v18.0-Step4-Polish] 進度表渲染 (連動更新進度文字) */
 function renderStudentOverviewTable() {
     const tbody = document.querySelector("#student-overview-table tbody");
-    const classDisplay = document.getElementById("overview-class-display");
-    const progressBox = document.getElementById("literary-progress");
-    if (!tbody || !classDisplay) return;
+    if (!tbody) return;
     tbody.innerHTML = '';
 
     if (allStudentRecords.length === 0) {
         tbody.innerHTML = `<tr><td colspan="9" class="empty-state-message">暫無學生資料。</td></tr>`;
-        if (progressBox) progressBox.style.display = 'none';
         return;
     }
 
-    // 寬鬆判斷：只要有分數 OR 有評語字串，就算已批改
+    // 計算進度
     const withData = allStudentRecords.filter(r => {
         if (!r.data) return false;
         const s = r.data.scores || {};
@@ -7378,7 +7382,14 @@ function renderStudentOverviewTable() {
         return (s.total && s.total !== '') || c.trim().length > 0;
     });
     
-    // 更新進度條
+    // 🔥 同步更新 Page 2 的鎖定介面 (進度數字)
+    // 我們從現有的 DOM 抓題目和班別 (因為這裡可能無從獲取完整 assignment 物件)
+    const currentTopic = document.getElementById('page2-topic-display-text')?.textContent;
+    const currentClass = document.getElementById('page2-class-badge')?.textContent;
+    updatePage2Display(currentTopic, currentClass, allStudentRecords.length, withData.length);
+
+    // 更新下方文青進度條 (原有功能)
+    const progressBox = document.getElementById("literary-progress");
     if (progressBox) {
         const total = allStudentRecords.length;
         const graded = withData.length;
@@ -7390,17 +7401,12 @@ function renderStudentOverviewTable() {
         document.getElementById("progress-text").innerHTML = (total - graded) > 0 ? `尚有 <strong>${total - graded}</strong> 篇待閱。` : `全班批改完成。`;
     }
 
-    classDisplay.textContent = `班別：${document.getElementById('student-class').value || '未分類'}`;
+    document.getElementById("overview-class-display").textContent = `班別：${document.getElementById('student-class').value || '未分類'}`;
 
     const renderRow = (r, isGraded) => {
         const d = r.data || {};
         const s = d.scores || {content:'',expression:'',structure:'',punctuation:'',typos:'',total:''};
-        
-        // 🔥 強力讀取：嘗試多個欄位，確保抓到字
-        // 優先次序：pureStudentComment -> studentComment -> comments -> 空
         let comment = d.pureStudentComment || d.studentComment || '';
-        if (typeof comment !== 'string') comment = ''; // 防爆
-
         const safeName = escapeHtmlAttr(r.originalName);
         
         const tr = document.createElement('tr');
@@ -7414,21 +7420,14 @@ function renderStudentOverviewTable() {
             <td><input type="number" value="${s.punctuation}" data-student-name="${safeName}" data-score-type="punctuation" oninput="handleOverviewScoreChange(this)"></td>
             <td><input type="number" value="${s.typos}" data-student-name="${safeName}" data-score-type="typos" oninput="handleOverviewScoreChange(this)"></td>
             <td class="total-score-cell" id="total-score-${safeName}">${s.total}</td>
-            <td>
-                <!-- 🔥 加入 spellcheck="false" 加快渲染 -->
-                <textarea data-student-name="${safeName}" data-field="pureStudentComment" spellcheck="false" 
-                    oninput="handleTableEdit(this); autoResizeTextarea(this);">${escapeHtml(comment)}</textarea>
-            </td>
+            <td><textarea data-student-name="${safeName}" data-field="pureStudentComment" spellcheck="false" oninput="handleTableEdit(this); autoResizeTextarea(this);">${escapeHtml(comment)}</textarea></td>
         `;
         tbody.appendChild(tr);
     };
     
     const sorter = (a, b) => (a.number || 999) - (b.number || 999);
-    // 重新排序並渲染 (已批改在上)
     allStudentRecords.filter(r => withData.includes(r)).sort(sorter).forEach(r => renderRow(r, true));
     allStudentRecords.filter(r => !withData.includes(r)).sort(sorter).forEach(r => renderRow(r, false));
-    
-    // 強制觸發一次高度調整
     setTimeout(() => tbody.querySelectorAll('textarea').forEach(autoResizeTextarea), 100);
 }
 
@@ -10035,23 +10034,18 @@ function startNewProjectForClass(classId, className) {
     }
 }
 
-/* [Edition: v18.0-Step2-OpenAssignment_Fix] 載入作業 (包含 Page 2 鎖定介面更新) */
+/* [Edition: v18.0-Step4-Polish] 載入專案 (整合即時顯示) */
 async function openAssignment(assignmentId) {
     if (!currentUser) return;
     try {
-        // 1. 讀取 Assignment 及 班級名稱
         const { data: assignment, error: assignError } = await supabaseClient
-            .from('assignments')
-            .select(`*, classes(class_name)`)
-            .eq('id', assignmentId)
-            .single();
+            .from('assignments').select(`*, classes(class_name)`).eq('id', assignmentId).single();
         if (assignError) throw assignError;
 
-        // 2. 讀取學生名單 & 成績
         const { data: students } = await supabaseClient.from('students').select('*').eq('class_id', assignment.class_id).order('student_number', { ascending: true });
         const { data: results } = await supabaseClient.from('results').select('*').eq('assignment_id', assignmentId);
 
-        // 3. 還原評語庫
+        // 評語庫
         const documentContainer = document.getElementById('critique-data');
         documentContainer.innerHTML = '';
         if (assignment.settings && assignment.settings.critiques && assignment.settings.critiques.length > 0) {
@@ -10062,80 +10056,60 @@ async function openAssignment(assignmentId) {
         buildChecklist();
         buildOverviewPage();
 
-        // 4. 設定全域變數 & 兼容舊欄位
         window.currentAssignmentId = assignment.id;
         window.currentClassId = assignment.class_id;
-        window.currentProjectType = 'cloud'; // 標記為雲端模式
+        window.currentProjectType = 'cloud';
 
         if(document.getElementById('student-class')) document.getElementById('student-class').value = assignment.classes.class_name;
         if(document.getElementById('topic')) document.getElementById('topic').value = assignment.title;
 
-        // 5. 數據組裝 (Merge Students & Results)
+        // 組裝數據
+        let gradedCount = 0;
         allStudentRecords = students.map(st => {
             const res = results.find(r => r.student_id === st.id);
             let dataObj = null;
             if (res) {
+                gradedCount++; // 計算已改人數
                 const extraData = res.comment_data || {};
                 dataObj = {
-                    class: assignment.classes.class_name,
-                    topic: assignment.title,
+                    class: assignment.classes.class_name, topic: assignment.title,
                     uniqueComment: extraData.uniqueComment || '',
                     scores: {
                         content: res.content_score, expression: res.expression_score, structure: res.structure_score,
                         punctuation: res.punctuation_score, total: res.total_score, typos: res.typo_score || 0
                     },
-                    typos: extraData.typos || [], 
-                    checkedCritiques: extraData.checkedCritiques || [],
-                    fullComment: res.comment_full || '', 
-                    studentComment: res.comment_student || '', 
+                    typos: extraData.typos || [], checkedCritiques: extraData.checkedCritiques || [],
+                    fullComment: res.comment_full || '', studentComment: res.comment_student || '', 
                     pureStudentComment: extraData.pureStudentComment || res.comment_student || '', 
                     pureFullComment: extraData.pureFullComment || res.comment_full || ''
                 };
             }
-            // 純學號顯示處理
             let displayNum = st.student_number;
             if (displayNum && /^\d$/.test(displayNum)) displayNum = '0' + displayNum;
-            const originalName = `${displayNum ? displayNum + '-' : ''}${st.name}`;
-
             return {
-                number: st.student_number, 
-                name: st.name, 
-                originalName: originalName,
-                dbId: st.id, 
-                data: dataObj
+                number: st.student_number, name: st.name, originalName: `${displayNum ? displayNum + '-' : ''}${st.name}`,
+                dbId: st.id, data: dataObj
             };
         });
 
-        // 6. 更新下拉選單與列表
         document.getElementById('student-names').value = allStudentRecords.map(r => r.originalName).join('\n');
         updateStudentDropdown(); 
         renderStudentOverviewTable(); 
         updateHeaderInfo();
 
-        // 🔥 7. [重點更新] 填充 Page 2 鎖定顯示介面
-        const p2TopicText = document.getElementById('page2-topic-display-text');
-        const p2Badge = document.getElementById('page2-class-badge');
-        const p2Count = document.getElementById('page2-student-count-badge');
+        // 🔥 3. 即時更新 Page 2 鎖定介面
+        updatePage2Display(assignment.title, assignment.classes.class_name, allStudentRecords.length, gradedCount);
 
-        if (p2TopicText) p2TopicText.textContent = assignment.title;
-        if (p2Badge) p2Badge.textContent = assignment.classes.class_name;
-        if (p2Count) p2Count.textContent = `共 ${allStudentRecords.length} 位學生`;
-
-        // 8. 載入右上角的「快速切換」清單
         loadSiblingProjects(assignment.class_id, assignment.id);
-
-        // 9. 跳轉與提示
         showPage('page2');
         if(typeof showToast === 'function') showToast(`已載入：${assignment.title}`, "success");
         
-        // 10. 自動跳轉至最後編輯的學生 (如有)
         const jumpTarget = localStorage.getItem('idw_jump_target');
         if (jumpTarget) {
             localStorage.removeItem('idw_jump_target'); 
             const targetRec = allStudentRecords.find(r => r.name === jumpTarget || r.originalName.includes(jumpTarget));
             if (targetRec) {
-                const select = document.getElementById('student-select');
-                select.value = targetRec.originalName;
+                document.getElementById('student-select').value = targetRec.originalName;
                 loadStudentData(targetRec.originalName);
             }
         }
@@ -11320,114 +11294,81 @@ function startGradingWithSetup(actionType) {
     document.getElementById('pop-confirm-create-modal').classList.add('active');
 }
 
-/* [Edition: v18.0-Step1-BasicSetup] 動作：Modal 點擊「確定建立」 -> 執行 DB 寫入與跳轉 */
+/* [Edition: v18.0-Step4-Polish] 建立專案 (整合即時顯示) */
 async function executeProjectCreation() {
     const modal = document.getElementById('pop-confirm-create-modal');
     const confirmBtn = modal.querySelector('.pop-btn-confirm');
-    
-    // UI 悲觀更新 (Loading)
     const orgText = confirmBtn.textContent;
-    confirmBtn.textContent = "建立中..."; 
-    confirmBtn.disabled = true;
+    confirmBtn.textContent = "建立中..."; confirmBtn.disabled = true;
 
     try {
         if (!currentUser) throw new Error("尚未登入，無法建立雲端專案。");
 
-        // 1. 獲取資料
         const topic = document.getElementById('topic').value.trim();
         const select = document.getElementById('setup-class-select');
         const classId = select.value;
-        // 獲取班級名稱 (用於 Header 顯示)
         const className = select.options[select.selectedIndex].dataset.className || select.options[select.selectedIndex].text.split('(')[0].trim();
         
-        // 2. 準備學生名單 (Memory)
+        // 1. 準備名單
         const checkedCards = document.querySelectorAll('#setup-student-checklist .student-check-card.checked');
         const tempRecords = [];
         let rawStudentList = "";
 
         checkedCards.forEach(card => {
             const info = card.dataset.info; 
-            const dbId = card.dataset.dbId; // UUID
-            const p = parseStudentName(info); // 使用現有的 parseStudentName
+            const dbId = card.dataset.dbId;
+            const p = parseStudentName(info);
             rawStudentList += info + "\n";
-            tempRecords.push({
-                number: p.number,
-                name: p.name,
-                originalName: p.originalName,
-                dbId: dbId,
-                data: null
-            });
+            tempRecords.push({ number: p.number, name: p.name, originalName: p.originalName, dbId: dbId, data: null });
         });
 
         allStudentRecords = tempRecords;
-        sortStudents(allStudentRecords); // 使用現有的 sortStudents
+        sortStudents(allStudentRecords);
 
-        // 3. 寫入 Supabase (Assignments)
+        // 2. 寫入 Supabase
         const { data: newAssign, error } = await supabaseClient
             .from('assignments')
             .insert([{
-                user_id: currentUser.id,
-                class_id: classId,
-                title: topic,
-                created_at: new Date().toISOString(),
-                settings: { critiques: collectExportData() } // 存入當前評語庫快照
-            }])
-            .select()
-            .single();
+                user_id: currentUser.id, class_id: classId, title: topic, created_at: new Date().toISOString(),
+                settings: { critiques: collectExportData() }
+            }]).select().single();
 
         if (error) throw error;
 
-        // 4. 設定全域狀態
         window.currentAssignmentId = newAssign.id;
         window.currentClassId = classId;
         window.currentProjectType = 'cloud';
 
-        // 5. 更新 Header 資訊 (重要：即時反映)
-        // 這裡我們手動更新 Header 的 DOM，不需要依賴 updateHeaderInfo 的 input 檢查
-        const headerInfo = document.getElementById('project-header-info');
-        const phClass = document.getElementById('ph-class');
-        const phTopic = document.getElementById('ph-topic');
-        
-        if (headerInfo && phClass && phTopic) {
-            phClass.textContent = className;
-            phTopic.textContent = topic;
-            headerInfo.style.display = 'inline-flex';
-        }
+        // 3. 🔥 即時更新 Page 2 鎖定介面
+        updatePage2Display(topic, className, allStudentRecords.length, 0);
 
-        // 6. 同步資料到 Page 2 的隱藏欄位 (保持兼容性)
+        // 4. 兼容舊欄位
         if(document.getElementById('student-class')) document.getElementById('student-class').value = className;
         if(document.getElementById('student-names')) document.getElementById('student-names').value = rawStudentList;
-        // 同步 Page 2 專用題目欄
         if(document.getElementById('page2-topic-display')) document.getElementById('page2-topic-display').value = topic;
 
-        // 7. 更新下拉選單
         updateStudentDropdown();
+        updateHeaderInfo();
 
-        // 8. 處理評語庫載入 (Default vs Manual)
+        // 5. 評語庫載入
         if (window._tempActionType === 'default') {
-            loadCannedCritiquesAndFocus(); // 載入罐頭並跳轉
+            loadCannedCritiquesAndFocus(); 
         } else {
-            // 手動模式：清空評語庫，直接跳轉
-            const cData = document.getElementById('critique-data');
-            if(cData) cData.innerHTML = '';
+            document.getElementById('critique-data').innerHTML = '';
             buildChecklist();
             buildOverviewPage();
             showPage('page2', 'student-select');
         }
 
-        // 9. 成功收尾
         modal.classList.remove('active');
         if(typeof showToast === 'function') showToast("🚀 專案已建立！", "success");
-
-        // 10. 刷新 Dashboard (讓首頁知道有新 Project)
         if (typeof loadDashboard === 'function') loadDashboard();
 
     } catch (err) {
         console.error(err);
         alert("建立失敗：" + err.message);
     } finally {
-        confirmBtn.textContent = orgText; 
-        confirmBtn.disabled = false;
+        confirmBtn.textContent = orgText; confirmBtn.disabled = false;
     }
 }
 
@@ -12654,18 +12595,26 @@ document.addEventListener('DOMContentLoaded', () => {
 /* === [v19.3] 報告引擎 (歷程圖 + 雜誌風) === */
 /* ========================================= */
 
+/* [Edition: v18.0-Step4-Polish] 列印報告 (加入同步) */
 async function printReport(mode) {
     const container = document.getElementById('print-container');
     if (!container) return;
 
-    if (typeof showToast === 'function') showToast("📊 正在分析歷史數據...", "info");
+    if (typeof showToast === 'function') showToast("⏳ 正在同步並準備報告...", "info");
 
-    // 1. 自動同步 (確保當前數據最新)
+    // 🔥 1. 強制同步 (關鍵改動)
     if (currentUser && document.getElementById('page2').classList.contains('active')) {
-        await saveCurrentStudentData('cloud_silent');
+        try {
+            await saveCurrentStudentData('cloud_silent');
+        } catch (e) {
+            // 同步失敗，但唔好阻住人印野，只係提示
+            console.warn("Print Sync Failed:", e);
+            if(typeof showToast === 'function') showToast("⚠️ 雲端同步失敗，報告將使用最後緩存", "warning");
+        }
     }
 
-    // 2. 篩選目標學生
+    // ... (之後嘅代碼保持不變) ...
+    // 請複製下面的內容繼續函數，以確保完整性
     let targets = [];
     if (mode === 'single') {
         const currentName = document.getElementById('student-select').value;
@@ -12684,11 +12633,8 @@ async function printReport(mode) {
     const dateStr = new Date().toLocaleDateString('zh-HK');
 
     container.innerHTML = '';
-    const chartsToRender = []; // 待繪製的圖表清單
+    const chartsToRender = [];
 
-    // 3. 逐個處理學生 (Async Loop 讀取歷史)
-    // 為了不卡死，我們用 Promise.all 平行讀取，但要注意 Supabase Rate Limit，這裡量少應該還好
-    
     for (let i = 0; i < targets.length; i++) {
         const student = targets[i];
         const d = student.data || {};
@@ -12696,28 +12642,23 @@ async function printReport(mode) {
         const comment = d.pureStudentComment || d.studentComment || "（暫無評語）";
         const canvasId = `history-chart-${i}`;
 
-        // --- 3a. 讀取該生的歷史成績 ---
         let historyData = [];
         if (student.dbId) {
             const { data: hist } = await supabaseClient
                 .from('results')
                 .select('total_score, assignments!inner(title, created_at)')
                 .eq('student_id', student.dbId)
-                .order('assignments(created_at)', { ascending: true }); // 按時間排
+                .order('assignments(created_at)', { ascending: true });
             
             if (hist) {
-                // 整理數據，確保按時間排序
-                historyData = hist
-                    .map(h => ({
+                historyData = hist.map(h => ({
                         title: h.assignments.title,
                         score: h.total_score,
                         date: new Date(h.assignments.created_at)
-                    }))
-                    .sort((a, b) => a.date - b.date); // 二次確保排序
+                    })).sort((a, b) => a.date - b.date);
             }
         }
 
-        // --- 3b. 生成 HTML (雜誌風) ---
         const pageHtml = `
         <div class="report-page">
             <div class="report-header">
@@ -12731,54 +12672,28 @@ async function printReport(mode) {
                     <div>日期：${dateStr}</div>
                 </div>
             </div>
-
-            <!-- 歷程圖 (如果有歷史數據) -->
             <div class="chart-section" style="display: ${historyData.length > 1 ? 'block' : 'none'}">
                 <canvas id="${canvasId}"></canvas>
             </div>
-
-            <!-- 分數表 -->
             <table class="score-table">
-                <thead>
-                    <tr><th>內容 (40)</th><th>表達 (30)</th><th>結構 (20)</th><th>標點 (10)</th><th>錯別字</th><th>總分</th></tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>${s.content||'-'}</td>
-                        <td>${s.expression||'-'}</td>
-                        <td>${s.structure||'-'}</td>
-                        <td>${s.punctuation||'-'}</td>
-                        <td style="color:#c86a5a;">${s.typos||'-'}</td>
-                        <td style="font-weight:bold; color:#5A8F7B; font-size:14pt;">${s.total||'-'}</td>
-                    </tr>
-                </tbody>
+                <thead><tr><th>內容 (40)</th><th>表達 (30)</th><th>結構 (20)</th><th>標點 (10)</th><th>錯別字</th><th>總分</th></tr></thead>
+                <tbody><tr>
+                    <td>${s.content||'-'}</td><td>${s.expression||'-'}</td><td>${s.structure||'-'}</td><td>${s.punctuation||'-'}</td>
+                    <td style="color:#c86a5a;">${s.typos||'-'}</td><td style="font-weight:bold; color:#5A8F7B; font-size:14pt;">${s.total||'-'}</td>
+                </tr></tbody>
             </table>
-
-            <!-- 評語區 -->
             <div class="comment-section">
                 <div class="comment-label">教師評語</div>
                 <div class="comment-content">${formatReportComment(comment)}</div>
             </div>
-
-            <div class="report-footer">
-                ${escapeHtml(className)} | ${escapeHtml(student.name)} | 學習歷程報告
-            </div>
-        </div>
-        `;
-        
+            <div class="report-footer">${escapeHtml(className)} | ${escapeHtml(student.name)} | 學習歷程報告</div>
+        </div>`;
         container.insertAdjacentHTML('beforeend', pageHtml);
-
-        // --- 3c. 準備繪圖數據 ---
         if (historyData.length > 1) {
-            chartsToRender.push({
-                id: canvasId,
-                labels: historyData.map(h => h.title), // X軸：題目
-                data: historyData.map(h => h.score)    // Y軸：分數
-            });
+            chartsToRender.push({ id: canvasId, labels: historyData.map(h => h.title), data: historyData.map(h => h.score) });
         }
     }
 
-    // 4. 繪製圖表 (關閉動畫)
     setTimeout(() => {
         chartsToRender.forEach(c => {
             const ctx = document.getElementById(c.id).getContext('2d');
@@ -12786,40 +12701,12 @@ async function printReport(mode) {
                 type: 'line',
                 data: {
                     labels: c.labels,
-                    datasets: [{
-                        label: '得分走勢',
-                        data: c.data,
-                        borderColor: '#5A8F7B', // 文青綠
-                        backgroundColor: 'rgba(90, 143, 123, 0.1)',
-                        borderWidth: 2,
-                        pointBackgroundColor: '#fff',
-                        pointBorderColor: '#5A8F7B',
-                        pointRadius: 4,
-                        fill: true,
-                        tension: 0.3 // 曲線平滑度
-                    }]
+                    datasets: [{ label: '得分走勢', data: c.data, borderColor: '#5A8F7B', backgroundColor: 'rgba(90, 143, 123, 0.1)', borderWidth: 2, pointBackgroundColor: '#fff', pointBorderColor: '#5A8F7B', pointRadius: 4, fill: true, tension: 0.3 }]
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: false, // 🔥 關鍵：無動畫，列印即出
-                    scales: {
-                        y: { beginAtZero: true, suggestedMax: 100, grid: { color: '#eee' } },
-                        x: { grid: { display: false } }
-                    },
-                    plugins: { 
-                        legend: { display: false },
-                        title: { display: true, text: '個人寫作成績走勢', font: { family: "'LXGW WenKai TC'" }, color: '#999', align: 'start' }
-                    }
-                }
+                options: { responsive: true, maintainAspectRatio: false, animation: false, scales: { y: { beginAtZero: true, suggestedMax: 100, grid: { color: '#eee' } }, x: { grid: { display: false } } }, plugins: { legend: { display: false }, title: { display: true, text: '個人寫作成績走勢', font: { family: "'LXGW WenKai TC'" }, color: '#999', align: 'start' } } }
             });
         });
-
-        // 5. 喚醒列印
-        setTimeout(() => {
-            window.print();
-        }, 800);
-
+        setTimeout(() => window.print(), 800);
     }, 200);
 }
 
@@ -12833,7 +12720,29 @@ function formatReportComment(text) {
     }).join('<br>');
 }
 
+/* [Edition: v18.0-Step4-Polish] Helper: 強制更新 Page 2 鎖定資訊與進度 */
+function updatePage2Display(topic, className, totalStudents, gradedCount = 0) {
+    // 1. 更新標題區
+    const topicText = document.getElementById('page2-topic-display-text');
+    const classBadge = document.getElementById('page2-class-badge');
+    const countBadge = document.getElementById('page2-student-count-badge'); // 鎖定區內的文字
 
+    if (topicText) topicText.textContent = topic || '(無題目)';
+    if (classBadge) classBadge.textContent = className || '(無班別)';
+    if (countBadge) countBadge.textContent = `共 ${totalStudents} 位學生`;
+
+    // 2. 更新進度區 (中間的操作列)
+    const progressText = document.getElementById('grading-progress-text');
+    if (progressText) {
+        progressText.textContent = `${gradedCount} / ${totalStudents}`;
+        // 簡單的顏色視覺回饋：全部改完變綠色
+        if (totalStudents > 0 && gradedCount >= totalStudents) {
+            progressText.style.color = '#2e7d32'; // Green
+        } else {
+            progressText.style.color = 'var(--accent-color)'; // Default Teal
+        }
+    }
+}
 
 </script> <!-- 呢個係原本全個檔案唯一的結尾，保留佢 -->
 
