@@ -10646,7 +10646,7 @@ function closeManageStudentsModal() {
     loadAllClasses(); // 刷新外面的卡片，更新「學生人數」
 }
 
-// [Pro-v9.0] Page 8 學生名單 (加入成長歷程按鈕)
+// [v18.0.1] Page 8: Render Master List (Safety Update)
 async function loadMasterStudentList(classId) {
     const listContainer = document.getElementById('master-student-list');
     listContainer.innerHTML = '<div style="text-align:center; color:#999; padding:10px;">讀取中...</div>';
@@ -10666,7 +10666,7 @@ async function loadMasterStudentList(classId) {
             return;
         }
 
-        // 自然排序 (1, 2, 10)
+        // 自然排序
         const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
         students.sort((a, b) => {
             const numA = (a.student_number || '').toString();
@@ -10676,24 +10676,27 @@ async function loadMasterStudentList(classId) {
             return collator.compare(a.name || '', b.name || '');
         });
 
-        // 渲染列表 (加入 📈 按鈕)
+        // 渲染列表
         let html = '<table style="width:100%; border-collapse:collapse; font-size:0.9rem;">';
         students.forEach(s => {
             let displayNum = s.student_number;
             if (displayNum && /^\d$/.test(displayNum)) displayNum = '0' + displayNum;
+            
             const safeName = escapeHtml(s.name);
             const safeId = s.id;
+            // [v18.0.1] 安全處理：防止名字有單引號導致按鈕失效
+            const nameForJs = (s.name || '').replace(/'/g, "\\'");
 
             html += `
             <tr style="border-bottom:1px dashed #eee;">
                 <td style="padding:8px; width:50px; font-weight:bold; color:#5A8F7B;">${escapeHtml(displayNum || '-')}</td>
                 <td style="padding:8px; display:flex; align-items:center; gap:8px;">
                     ${safeName}
-                    <!-- 🔥 新增：成長歷程按鈕 -->
-                    <button class="light-btn" style="padding:2px 6px; font-size:0.8rem;" onclick="showStudentHistory('${safeId}', '${safeName}')" title="查看 ${safeName} 的成長歷程">📈</button>
+                    <button class="light-btn" style="padding:2px 6px; font-size:0.8rem;" onclick="showStudentHistory('${safeId}', '${nameForJs}')" title="查看成長歷程">📈</button>
                 </td>
                 <td style="padding:8px; text-align:right;">
-                    <button class="danger-btn" style="padding:2px 8px; font-size:0.75rem;" onclick="deleteStudentFromMaster('${safeId}')">刪除</button>
+                    <!-- [v18.0.1] 傳入 nameForJs 以便顯示警示 -->
+                    <button class="danger-btn" style="padding:2px 8px; font-size:0.75rem;" onclick="deleteStudentFromMaster('${safeId}', '${nameForJs}')">刪除</button>
                 </td>
             </tr>`;
         });
@@ -10821,93 +10824,41 @@ async function addSingleStudentToMaster() {
     }
 }
 
-// [v18.0.2] Page 8: Render with Safe Quotes
-function renderStudentManagementList() {
-    const tbody = document.getElementById('student-management-tbody');
-    if (!tbody) return;
+// [v18.0.1] Page 8: Delete Logic (Red Alert)
+async function deleteStudentFromMaster(studentId, studentName) {
+    // 1. 強力防呆確認
+    const msg = `⚠️ 危險動作 ⚠️\n\n確定要從母名單移除學生 [${studentName}] 嗎？\n\n注意：這不會影響「已建立」的作業專案，\n但會影響之後的新增作業。`;
     
-    tbody.innerHTML = '';
-
-    // 確保有 currentAssignmentId
-    if (!window.currentAssignmentId) return;
-
-    // Filter 學生
-    const projectStudents = students.filter(s => s.assignment_id === window.currentAssignmentId);
-
-    // 排序
-    projectStudents.sort((a, b) => {
-        const numA = parseInt(a.student_id) || 0;
-        const numB = parseInt(b.student_id) || 0;
-        return numA - numB;
-    });
-
-    projectStudents.forEach((s) => {
-        const tr = document.createElement('tr');
-        
-        // 安全處理：防止 null
-        const safeId = s.id || ''; 
-        // 安全處理：防止學生名有單引號導致按鈕失效 (例如 Peter's)
-        const safeName = (s.name || '').replace(/'/g, "\\'");
-
-        tr.innerHTML = `
-            <td class="px-4 py-2 border text-center">${s.student_id}</td>
-            <td class="px-4 py-2 border text-center">${s.name}</td>
-            <td class="px-4 py-2 border text-center">
-                <button onclick="openEditStudentModal('${safeId}')" class="bg-blue-500 text-white px-2 py-1 rounded mr-2 hover:bg-blue-600 transition duration-150">
-                    <i class="fas fa-edit"></i> 編輯
-                </button>
-                <button onclick="confirmDeleteStudent('${safeId}', '${safeName}')" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition duration-150">
-                    <i class="fas fa-trash-alt"></i> 刪除
-                </button>
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
-
-// [v18.0.2] Page 8: Delete Logic with Debugging
-async function confirmDeleteStudent(studentDbId, studentName) {
-    // 測試有沒有反應
-    console.log("嘗試刪除:", studentName, "ID:", studentDbId);
-
-    // 1. 檢查 ID 是否存在 (舊資料可能無 ID)
-    if (!studentDbId || studentDbId === 'undefined') {
-        alert(`❌ 無法刪除 [${studentName}]\n\n原因：此學生是舊資料，沒有資料庫 ID。\n\n建議：請刪除整個 Project 重新建立，或手動在 Page 8 新增此學生。`);
-        return;
-    }
-
-    // 2. 紅色警告 Double Confirmation
-    const isConfirmed = confirm(`⚠️ 危險動作 ⚠️\n\n確定要刪除學生 [${studentName}] 嗎？\n\n此操作會永久刪除該學生及其所有分數，無法復原！`);
+    if (!confirm(msg)) return;
     
-    if (isConfirmed) {
-        try {
-            document.body.style.cursor = 'wait';
+    const classId = document.getElementById('manage-class-id').value;
+    const btn = event.target; // 鎖定按鈕防止連按
+    const originalText = btn.textContent;
+    btn.textContent = "..."; btn.disabled = true;
 
-            // 3. 呼叫 Supabase
-            const { error } = await supabaseClient
-                .from('students')
-                .delete()
-                .eq('id', studentDbId);
-
-            if (error) throw error;
-
-            // 4. 前端移除
-            students = students.filter(s => s.id !== studentDbId);
-
-            // 5. 重新渲染
-            renderStudentManagementList();
+    try {
+        const { error } = await supabaseClient
+            .from('students')
+            .delete()
+            .eq('id', studentId);
             
-            // 成功提示 (可選，目前保持安靜，只見列表少了一人)
-            // alert("已刪除。");
+        if (error) throw error;
+        
+        // 成功後刷新
+        await loadMasterStudentList(classId);
+        
+        // 如果有 Toast 就用，沒有就用 Alert
+        if(typeof showToast === 'function') showToast(`已移除：${studentName}`, "success");
 
-        } catch (err) {
-            console.error("Delete failed:", err);
-            alert("❌ 刪除失敗，請檢查網絡連線。\n" + err.message);
-        } finally {
-            document.body.style.cursor = 'default';
-        }
+    } catch (error) {
+        alert("刪除失敗：" + error.message);
+    } finally {
+        // 防止列表刷新太快導致按鈕不存在而報錯
+        if(btn) { btn.textContent = originalText; btn.disabled = false; }
     }
 }
+
+
 
 // ==========================================
 // ====== Phase 2.1 (Part 2): 班級頁邏輯 ======
@@ -12832,6 +12783,7 @@ function formatReportComment(text) {
 
 </script> <!-- 呢個係原本全個檔案唯一的結尾，保留佢 -->
 
-
+<!-- [v12.2] Back To Top (確保在最外層，不受干擾) -->
+<button id="back-to-top-btn" onclick="scrollToTop()" title="回到頂部" style="display: none;">⬆</button>
 </body>
 </html>
