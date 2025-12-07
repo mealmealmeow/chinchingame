@@ -4070,6 +4070,24 @@ header h1 {
   </div>
 </div>
 
+<!-- [Edition: v18.0-Step1-BasicSetup] 開新專案確認 Modal -->
+<div id="pop-confirm-create-modal" class="pop-overlay">
+  <div class="pop-modal">
+    <div class="pop-icon">🚀</div>
+    <h3>確認建立專案</h3>
+    <p class="pop-desc" style="text-align: left; background: #fdfbf7; padding: 15px; border-radius: 12px; border: 1px solid #e1d8c8;">
+      <strong style="color:#5b5044;">請核對以下資訊 (建立後無法修改)：</strong><br><br>
+      🏫 班別：<span id="confirm-create-class" style="color:#5A8F7B; font-weight:bold; font-size:1.1rem;"></span><br>
+      📝 題目：<span id="confirm-create-topic" style="color:#5A8F7B; font-weight:bold; font-size:1.1rem;"></span><br>
+      👥 學生：<span id="confirm-create-count" style="color:#5A8F7B; font-weight:bold; font-size:1.1rem;"></span> 人
+    </p>
+    <div class="pop-footer">
+      <button class="pop-btn pop-btn-cancel" onclick="document.getElementById('pop-confirm-create-modal').classList.remove('active')">返回修改</button>
+      <button class="pop-btn pop-btn-confirm" onclick="executeProjectCreation()">確定建立</button>
+    </div>
+  </div>
+</div>
+
 <!-- [Pro-v6.3] 通用輸入/確認 Modal (取代原生 prompt/confirm) -->
 <div id="pop-generic-modal" class="pop-overlay">
   <div class="pop-modal">
@@ -4161,41 +4179,49 @@ header h1 {
             
            <!-- ==================== Page 2 學生選擇區 (修復版) ==================== -->
 <div id="grading-section-student" class="section-box">
-    <!-- 1. 鎖定資訊區 -->
-    <div style="background: #fdfbf7; padding: 15px; border-radius: 12px; border: 1px solid #e1d8c8; margin-bottom: 20px;">
-        <div style="font-size: 0.85rem; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">Current Project</div>
-        
-        <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: baseline;">
-            <h2 id="page2-topic-display-text" style="margin: 0; color: #3d5c4f; font-size: 1.6rem; border: none; padding: 0;">(未載入題目)</h2>
-            <span id="page2-class-badge" style="background: #5A8F7B; color: white; padding: 2px 10px; border-radius: 99px; font-size: 0.9rem;">-</span>
-        </div>
-        
-        <!-- 隱藏的輸入框，用於保持原有 JS 邏輯兼容 -->
-        <input type="hidden" id="page2-topic-display">
-        <input type="hidden" id="student-class">
-        <input type="hidden" id="student-names">
+    <h2>一、選擇學生</h2>
+    <!-- [Pro-v9.8] 快速切換作業 (Smart Switcher) -->
+    <!-- [v11.8] Page 2 專用題目欄 (與 Page 1 同步) -->
+<div class="input-group" style="margin-bottom: 1rem; border-bottom: 1px dashed #ddd; padding-bottom: 1rem;">
+    <label for="page2-topic-display" style="color:#5A8F7B;">作文題目</label>
+    <input type="text" id="page2-topic-display" 
+           style="font-size: 1.2rem; font-weight: bold; color: #333; border: 2px solid #e0e0e0;" 
+           placeholder="未設定題目">
+</div>
+    
+    <div class="input-group" id="project-switcher-container" style="display:none; background:#f0f4c3; padding:10px; border-radius:8px; border:1px dashed #c0ca33; margin-bottom:15px;">
+        <label style="color:#827717; font-size:0.9rem;">🚀 切換至同班其他作業 (Auto-Save)</label>
+        <select id="project-switcher" onchange="switchProject(this.value)" style="border-color:#c0ca33; background:#fff;">
+            <option value="">(讀取中...)</option>
+        </select>
+    </div>
+    
+    <!-- 🛑 關鍵修復：這兩個 ID 必須存在，Page 1 才能傳資料過來 -->
+    <input type="hidden" id="student-class">
+    <div class="input-group">
+        <label for="student-names" style="color:#999; font-size:0.9rem;">
+            學生名單數據 (系統自動填寫，請勿手動修改)
+        </label>
+        <!-- ID 必須是 student-names -->
+        <textarea id="student-names" rows="3" readonly style="background:#eee; color:#555;" placeholder="等待數據載入..."></textarea>
+    </div>
+    <!-- 🛑 修復結束 -->
+
+    <!-- 下面是操作區 -->
+    <div class="btn-group" style="margin-bottom: 1rem;">
+        <!-- 保留 Excel 匯入功能給 Page 2 直接使用 -->
+        <label class="light-btn brown" for="import-student-list" style="cursor: pointer;">匯入名單 (Excel)</label>
+        <input type="file" id="import-student-list" accept=".xlsx, .xls" style="display:none;">
+        <!-- [v19.2] 快速班級管理按鈕 -->
+<button class="light-btn" onclick="showPage('page8')" style="margin-left: 5px;">
+    🏫 管理班級
+</button>
     </div>
 
-    <!-- 2. 進度與切換區 -->
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 10px;">
-        <!-- 進度顯示 (取代原本的管理按鈕) -->
-        <div style="font-size: 1rem; color: #5b5044;">
-            📊 批改進度：<span id="grading-progress-text" style="font-weight: bold; color: var(--accent-color);">0 / 0</span>
-        </div>
-
-        <!-- 快速切換 (保留) -->
-        <div id="project-switcher-container" style="display:none;">
-            <select id="project-switcher" onchange="switchProject(this.value)" style="padding: 6px; border-radius: 6px; border: 1px solid #ccc;">
-                <option value="">(切換作業)</option>
-            </select>
-        </div>
-    </div>
-
-    <!-- 3. 學生選擇區 -->
     <div class="input-group">
         <label for="student-select">當前批改學生</label>
         <select id="student-select" style="font-size:1.1rem; padding:10px; border:2px solid var(--accent-color);">
-            <option value="">(讀取中...)</option>
+            <option value="">(尚未載入名單)</option>
         </select>
     </div>
     
@@ -4979,28 +5005,6 @@ header h1 {
 <div id="print-container">
     <!-- JS 會在這裡動態生成 .report-page -->
 </div>
-
-
-<!-- [v18.0] 開新專案確認 Modal -->
-<div id="pop-confirm-create-modal" class="pop-overlay">
-  <div class="pop-modal">
-    <div class="pop-icon">🚀</div>
-    <h3>確認建立專案</h3>
-    <p class="pop-desc" style="text-align: left; background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #eee;">
-      <strong>請核對以下資訊 (建立後無法修改)：</strong><br><br>
-      📝 題目：<span id="confirm-create-topic" style="color:#5A8F7B; font-weight:bold;"></span><br>
-      🏫 班別：<span id="confirm-create-class" style="color:#5A8F7B; font-weight:bold;"></span><br>
-      👥 人數：<span id="confirm-create-count" style="color:#5A8F7B; font-weight:bold;"></span> 人
-    </p>
-    <div class="pop-footer">
-      <button class="pop-btn pop-btn-cancel" onclick="document.getElementById('pop-confirm-create-modal').classList.remove('active')">返回修改</button>
-      <button class="pop-btn pop-btn-confirm" onclick="executeProjectCreation()">確定建立</button>
-    </div>
-  </div>
-</div>
-
-<!-- 以下係function -->
-
 <script>
     (function() {
         const gate = document.getElementById('login-gate');
@@ -6046,18 +6050,8 @@ function switchMainTab(target) {
 // showPage 保持 v10.6 版本即可，它已經兼容這種父子結構
 // 唯一要刪除的是 toggleMobileMenu 函數，因為按鈕已經沒了
 
-/* [v18.0] 頁面切換 + Route Guard */
+/* [v17.0] 頁面切換 (Scroll Top + Analysis Trigger) */
 function showPage(pageId, focusElementId = null) {
-    // --- Route Guard: Page 2 安全檢查 ---
-    if (pageId === 'page2') {
-        if (!window.currentAssignmentId) {
-            alert("⛔ 找不到專案資料。\n請從首頁選擇「開新批改」或載入舊專案。");
-            showPage('page-home'); // 踢回首頁
-            return;
-        }
-    }
-    // ----------------------------------
-
     document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
     const page = document.getElementById(pageId);
     if(page) page.classList.add('active');
@@ -6078,6 +6072,7 @@ function showPage(pageId, focusElementId = null) {
         if(homeBtn) homeBtn.classList.add('active');
         document.getElementById('sub-nav-container').style.display = 'none';
         
+        // 🔥 Fix 3: 回首頁置頂
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -6085,8 +6080,11 @@ function showPage(pageId, focusElementId = null) {
     const fNav = document.getElementById('floating-nav');
     if(fNav) fNav.classList.toggle('visible', pageId === 'page2');
 
+    // 數據刷新與觸發
     if (pageId === 'page-home') setTimeout(() => { if(typeof loadDashboard === 'function') loadDashboard(); }, 50);
     if (pageId === 'page8') { if(typeof loadAllClasses === 'function') loadAllClasses(); }
+    
+    // 🔥 Fix 7: 進入分析頁時，強制重新計算數據
     if (pageId === 'page5') { if(typeof renderAnalysisPage === 'function') renderAnalysisPage(); }
 
     if (focusElementId) {
@@ -10012,35 +10010,35 @@ function renderClassCentricAccordion(classes, assignmentMap, container) {
     });
 }
 
-/* [v18.0] 動作：首頁點擊「開新批改」 -> 清潔表單並跳轉 */
+/* [Edition: v18.0-Step1-BasicSetup] 動作：首頁點擊「開新批改」 -> 清潔表單並跳轉 */
 function startNewProjectForClass(classId, className) {
     // 1. 強制重置 Page 1 表單 (Clean Form)
     const topicInput = document.getElementById('topic');
     if (topicInput) topicInput.value = '';
     
-    // 清空學生勾選
-    document.getElementById('setup-student-checklist').innerHTML = '';
-    document.getElementById('setup-student-area').style.display = 'none';
+    // 清空學生勾選區
+    const checklist = document.getElementById('setup-student-checklist');
+    const area = document.getElementById('setup-student-area');
+    if (checklist) checklist.innerHTML = '';
+    if (area) area.style.display = 'none';
     
+    // 重置班級選單 (回到第一項)
+    const select = document.getElementById('setup-class-select');
+    if (select) select.selectedIndex = 0;
+
     // 2. 轉去 Page 1
     showPage('page1');
     
-    // 3. 自動設定模式為「從班級名單」
-    const rb = document.querySelector('input[name="setup-mode"][value="registry"]');
-    if(rb) { rb.checked = true; toggleSetupMode(); }
-
-    // 4. 如果有指定班級，自動選取
-    if (classId) {
+    // 3. (如果有指定班級) 自動選取該班
+    // 延遲一點點，確保頁面切換動畫完成
+    if (classId && select) {
         setTimeout(() => {
-            const select = document.getElementById('setup-class-select');
-            if(select) {
-                select.value = classId;
-                handleClassSelectChange(); // 載入該班學生
-            }
+            select.value = classId;
+            handleClassSelectChange(); // 觸發載入該班學生
+            if(typeof showToast === 'function') showToast(`已為您選取：${className}`, "info");
         }, 300);
     }
 }
-
 
 /* [v17.2] 載入作業 (數據結構修復) */
 async function openAssignment(assignmentId) {
@@ -11271,30 +11269,163 @@ function toggleAllSetupStudents(checked) {
     });
 }
 
-/* [v18.0] 動作：Page 1 點擊「確定並開始」 -> 彈出確認 Modal */
+/* ================================================= */
+/* === [v16.1 Fix] Page 1 啟動批改 (純班級版) === */
+/* ================================================= */
+
+/* [Edition: v18.0-Step1-BasicSetup] 動作：Page 1 點擊「確定並開始」 -> 彈出確認 Modal */
 function startGradingWithSetup(actionType) {
     const topicInput = document.getElementById('topic');
     const select = document.getElementById('setup-class-select');
     
-    if (!topicInput || !topicInput.value.trim()) { alert("請輸入作文題目！"); topicInput.focus(); return; }
-    if (!select || !select.value) { alert("請選擇班級！"); return; }
+    // 1. 基本檢查
+    if (!topicInput || !topicInput.value.trim()) { 
+        alert("請輸入作文題目！"); 
+        topicInput.focus(); 
+        return; 
+    }
+    if (!select || !select.value) { 
+        alert("請選擇班級！"); 
+        return; 
+    }
 
+    // 2. 檢查有無揀學生
     const checkedCards = document.querySelectorAll('#setup-student-checklist .student-check-card.checked');
-    if (checkedCards.length === 0) { alert("⚠️ 請至少勾選一位學生！"); return; }
+    if (checkedCards.length === 0) {
+        alert("⚠️ 請至少勾選一位學生！");
+        return;
+    }
 
-    // 暫存 Action Type (default/manual)
+    // 3. 暫存 Action Type (因為下一步 executeProjectCreation 需要知道係 Default 定 Manual)
     window._tempActionType = actionType;
 
-    // 填寫確認 Modal 資訊
-    const className = select.options[select.selectedIndex].dataset.className || select.value;
+    // 4. 填寫確認 Modal 資訊
+    const className = select.options[select.selectedIndex].dataset.className || select.value; // 嘗試讀取 dataset.className，如果冇就用 value (兼容性)
+    // 修正：如果 dataset 讀唔到 (例如 manual mode)，確保顯示正確文字
+    let displayClass = className;
+    if (select.options[select.selectedIndex].text) {
+         // 解析一下 "6A (2024-2025)" 變成 "6A" 比較好睇，或者直接顯示全名
+         displayClass = select.options[select.selectedIndex].text.split('(')[0].trim();
+    }
+
     document.getElementById('confirm-create-topic').textContent = topicInput.value.trim();
-    document.getElementById('confirm-create-class').textContent = className;
+    document.getElementById('confirm-create-class').textContent = displayClass;
     document.getElementById('confirm-create-count').textContent = checkedCards.length;
 
-    // 顯示 Modal
+    // 5. 顯示 Modal
     document.getElementById('pop-confirm-create-modal').classList.add('active');
 }
 
+/* [Edition: v18.0-Step1-BasicSetup] 動作：Modal 點擊「確定建立」 -> 執行 DB 寫入與跳轉 */
+async function executeProjectCreation() {
+    const modal = document.getElementById('pop-confirm-create-modal');
+    const confirmBtn = modal.querySelector('.pop-btn-confirm');
+    
+    // UI 悲觀更新 (Loading)
+    const orgText = confirmBtn.textContent;
+    confirmBtn.textContent = "建立中..."; 
+    confirmBtn.disabled = true;
+
+    try {
+        if (!currentUser) throw new Error("尚未登入，無法建立雲端專案。");
+
+        // 1. 獲取資料
+        const topic = document.getElementById('topic').value.trim();
+        const select = document.getElementById('setup-class-select');
+        const classId = select.value;
+        // 獲取班級名稱 (用於 Header 顯示)
+        const className = select.options[select.selectedIndex].dataset.className || select.options[select.selectedIndex].text.split('(')[0].trim();
+        
+        // 2. 準備學生名單 (Memory)
+        const checkedCards = document.querySelectorAll('#setup-student-checklist .student-check-card.checked');
+        const tempRecords = [];
+        let rawStudentList = "";
+
+        checkedCards.forEach(card => {
+            const info = card.dataset.info; 
+            const dbId = card.dataset.dbId; // UUID
+            const p = parseStudentName(info); // 使用現有的 parseStudentName
+            rawStudentList += info + "\n";
+            tempRecords.push({
+                number: p.number,
+                name: p.name,
+                originalName: p.originalName,
+                dbId: dbId,
+                data: null
+            });
+        });
+
+        allStudentRecords = tempRecords;
+        sortStudents(allStudentRecords); // 使用現有的 sortStudents
+
+        // 3. 寫入 Supabase (Assignments)
+        const { data: newAssign, error } = await supabaseClient
+            .from('assignments')
+            .insert([{
+                user_id: currentUser.id,
+                class_id: classId,
+                title: topic,
+                created_at: new Date().toISOString(),
+                settings: { critiques: collectExportData() } // 存入當前評語庫快照
+            }])
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        // 4. 設定全域狀態
+        window.currentAssignmentId = newAssign.id;
+        window.currentClassId = classId;
+        window.currentProjectType = 'cloud';
+
+        // 5. 更新 Header 資訊 (重要：即時反映)
+        // 這裡我們手動更新 Header 的 DOM，不需要依賴 updateHeaderInfo 的 input 檢查
+        const headerInfo = document.getElementById('project-header-info');
+        const phClass = document.getElementById('ph-class');
+        const phTopic = document.getElementById('ph-topic');
+        
+        if (headerInfo && phClass && phTopic) {
+            phClass.textContent = className;
+            phTopic.textContent = topic;
+            headerInfo.style.display = 'inline-flex';
+        }
+
+        // 6. 同步資料到 Page 2 的隱藏欄位 (保持兼容性)
+        if(document.getElementById('student-class')) document.getElementById('student-class').value = className;
+        if(document.getElementById('student-names')) document.getElementById('student-names').value = rawStudentList;
+        // 同步 Page 2 專用題目欄
+        if(document.getElementById('page2-topic-display')) document.getElementById('page2-topic-display').value = topic;
+
+        // 7. 更新下拉選單
+        updateStudentDropdown();
+
+        // 8. 處理評語庫載入 (Default vs Manual)
+        if (window._tempActionType === 'default') {
+            loadCannedCritiquesAndFocus(); // 載入罐頭並跳轉
+        } else {
+            // 手動模式：清空評語庫，直接跳轉
+            const cData = document.getElementById('critique-data');
+            if(cData) cData.innerHTML = '';
+            buildChecklist();
+            buildOverviewPage();
+            showPage('page2', 'student-select');
+        }
+
+        // 9. 成功收尾
+        modal.classList.remove('active');
+        if(typeof showToast === 'function') showToast("🚀 專案已建立！", "success");
+
+        // 10. 刷新 Dashboard (讓首頁知道有新 Project)
+        if (typeof loadDashboard === 'function') loadDashboard();
+
+    } catch (err) {
+        console.error(err);
+        alert("建立失敗：" + err.message);
+    } finally {
+        confirmBtn.textContent = orgText; 
+        confirmBtn.disabled = false;
+    }
+}
 
 // 下載「手動模式」專用的簡單範本
 function downloadManualTemplate() {
@@ -12700,97 +12831,7 @@ function formatReportComment(text) {
 }
 
 
-/* [v18.0] 動作：Modal 點擊「確定建立」 -> 執行 DB 寫入與跳轉 */
-async function executeProjectCreation() {
-    const modal = document.getElementById('pop-confirm-create-modal');
-    const confirmBtn = modal.querySelector('.pop-btn-confirm');
-    
-    // UI 悲觀更新 (Loading)
-    const orgText = confirmBtn.textContent;
-    confirmBtn.textContent = "建立中..."; 
-    confirmBtn.disabled = true;
 
-    try {
-        if (!currentUser) throw new Error("尚未登入，無法建立雲端專案。");
-
-        const topic = document.getElementById('topic').value.trim();
-        const classId = document.getElementById('setup-class-select').value;
-        const className = document.getElementById('setup-class-select').options[document.getElementById('setup-class-select').selectedIndex].dataset.className;
-        
-        // 1. 準備學生名單 (Memory)
-        const checkedCards = document.querySelectorAll('#setup-student-checklist .student-check-card.checked');
-        const tempRecords = [];
-        let rawStudentList = "";
-
-        checkedCards.forEach(card => {
-            const info = card.dataset.info; 
-            const dbId = card.dataset.dbId; // UUID
-            const p = parseStudentName(info);
-            rawStudentList += info + "\n";
-            tempRecords.push({
-                number: p.number,
-                name: p.name,
-                originalName: p.originalName,
-                dbId: dbId,
-                data: null
-            });
-        });
-
-        allStudentRecords = tempRecords;
-        sortStudents(allStudentRecords);
-
-        // 2. 寫入 Supabase (Assignments)
-        const { data: newAssign, error } = await supabaseClient
-            .from('assignments')
-            .insert([{
-                user_id: currentUser.id,
-                class_id: classId,
-                title: topic,
-                created_at: new Date().toISOString(),
-                settings: { critiques: collectExportData() } // 預設評語庫 Snapshot
-            }])
-            .select()
-            .single();
-
-        if (error) throw error;
-
-        // 3. 設定全域狀態
-        window.currentAssignmentId = newAssign.id;
-        window.currentClassId = classId;
-        window.currentProjectType = 'cloud';
-
-        // 4. 同步 UI 資料到 Page 2
-        document.getElementById('page2-topic-display-text').textContent = topic;
-        document.getElementById('page2-class-badge').textContent = className;
-        document.getElementById('student-class').value = className; // 兼容舊邏輯
-        document.getElementById('student-names').value = rawStudentList; // 兼容舊邏輯
-        
-        // 更新下拉選單
-        updateStudentDropdown();
-        updateHeaderInfo();
-
-        // 5. 處理評語庫載入 (Default vs Manual)
-        if (window._tempActionType === 'default') {
-            loadCannedCritiquesAndFocus(); 
-        } else {
-            document.getElementById('critique-data').innerHTML = ''; // 清空
-            buildChecklist();
-            buildOverviewPage();
-            showPage('page2', 'student-select');
-        }
-
-        // 6. 成功收尾
-        modal.classList.remove('active');
-        if(typeof showToast === 'function') showToast("🚀 專案已建立！", "success");
-
-    } catch (err) {
-        console.error(err);
-        alert("建立失敗：" + err.message);
-    } finally {
-        confirmBtn.textContent = orgText; 
-        confirmBtn.disabled = false;
-    }
-}
 </script> <!-- 呢個係原本全個檔案唯一的結尾，保留佢 -->
 
 <!-- [v12.2] Back To Top (確保在最外層，不受干擾) -->
