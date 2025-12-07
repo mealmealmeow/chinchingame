@@ -11105,44 +11105,26 @@ async function addSingleStudentToMaster() {
     }
 }
 
-// [v18.1.1] Page 8: Delete Logic (Custom UI)
+// [v18.8.1] Page 8: Delete Logic (Safe)
 async function deleteStudentFromMaster(studentId, studentName) {
-    // 1. 使用自定義 Modal 取代原生 confirm
     const isConfirmed = await showCustomModal({
         icon: '🗑️',
         title: '危險動作',
-        desc: `確定要從母名單移除 [${studentName}] 嗎？\n此操作無法復原，且會影響日後的新增作業。`,
+        desc: `確定要從母名單移除 [${studentName}] 嗎？\n此操作無法復原。`,
         confirmText: '確認移除',
-        cancelText: '取消' // 按取消會回傳 false
+        cancelText: '取消'
     });
     
     if (!isConfirmed) return;
     
     const classId = document.getElementById('manage-class-id').value;
-    // 雖然 Custom Modal 無按鈕鎖定 (因為是 await)，但這裡可以加一點視覺反饋
-    if(typeof showToast === 'function') showToast("正在移除...", "info");
-
     try {
-        const { error } = await supabaseClient
-            .from('students')
-            .delete()
-            .eq('id', studentId);
-            
+        const { error } = await supabaseClient.from('students').delete().eq('id', studentId);
         if (error) throw error;
-        
-        // 成功後刷新列表
         await loadMasterStudentList(classId);
-        
         if(typeof showToast === 'function') showToast(`已移除：${studentName}`, "success");
-
     } catch (error) {
-        // 使用 Custom Modal 顯示錯誤 (比較一致)
-        showCustomModal({
-            icon: '❌',
-            title: '刪除失敗',
-            desc: error.message,
-            confirmText: '知道了'
-        });
+        alert("刪除失敗：" + error.message);
     }
 }
 
@@ -13208,6 +13190,236 @@ function resetCreationForm() {
     const btn = document.querySelector('#page1 .action-btn');
     if(btn) btn.disabled = false;
 }
+
+// ==========================================
+// ====== [v18.8.1] 核心邏輯覆蓋包 ======
+// ==========================================
+
+// 1. 強制清空 Page 1
+window.resetCreationForm = function() {
+    console.log("🧹 [v18.8.1] 重置 Page 1...");
+    if(document.getElementById('topic')) document.getElementById('topic').value = '';
+    const classSelect = document.getElementById('setup-class-select');
+    if (classSelect) classSelect.selectedIndex = 0;
+    const checklist = document.getElementById('setup-student-checklist');
+    if (checklist) checklist.innerHTML = '';
+    const area = document.getElementById('setup-student-area');
+    if (area) area.style.display = 'none';
+    window.currentClassId = null;
+    window.currentAssignmentId = null;
+    window.currentProjectType = null;
+    if(typeof allStudentRecords !== 'undefined') allStudentRecords = [];
+};
+
+// 2. 顯示頁面 (綁定清空)
+const originalShowPage = window.showPage;
+window.showPage = function(pageId, focusElementId = null) {
+    if (pageId === 'page1') resetCreationForm();
+    
+    // Page 2 守衛
+    if (pageId === 'page2') {
+        const hasProject = window.currentAssignmentId || (typeof allStudentRecords !== 'undefined' && allStudentRecords.length > 0);
+        if (!hasProject) {
+            if(typeof showToast === 'function') showToast("⚠️ 請先選擇或建立作業", "warning");
+            pageId = 'page-home'; 
+        }
+    }
+    // 執行舊有邏輯 (如果有定義，否則這裡簡單實作切換)
+    document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
+    const page = document.getElementById(pageId);
+    if(page) page.classList.add('active');
+
+    // 處理 Nav
+    document.querySelectorAll('.sub-nav-btn').forEach(n => n.classList.remove('active'));
+    const subBtn = document.getElementById('nav-' + pageId);
+    if (subBtn) subBtn.classList.add('active');
+
+    // 特殊處理
+    const fNav = document.getElementById('floating-nav');
+    if(fNav) fNav.classList.toggle('visible', pageId === 'page2');
+    
+    if (pageId === 'page-home') {
+        document.getElementById('sub-nav-container').style.display = 'none';
+        setTimeout(() => { if(typeof loadDashboard === 'function') loadDashboard(); }, 50);
+    } else {
+        const subNav = document.getElementById('sub-nav-container');
+        if(subNav) subNav.style.display = 'flex';
+    }
+    if (pageId === 'page8' && typeof loadAllClasses === 'function') loadAllClasses();
+    localStorage.setItem('idw_last_page', pageId);
+};
+
+// 3. 建立專案 (原子化 + 鎖定名單)
+window.executeProjectCreation = async function() {
+    const modal = document.getElementById('pop-preflight-modal');
+    const btn = modal.querySelector('.pop-btn-confirm');
+    btn.textContent = "建立中..."; btn.disabled = true;
+
+    try {
+        if (!currentUser) throw new Error("未登入");
+
+        const topicTitle = document.getElementById('topic').value.trim();
+        const actionType = window._pendingActionType || 'default';
+        const classId = window.currentClassId;
+        
+        // 鎖定名單
+        const selectedRecords = allStudentRecords.filter(r => r.dbId);
+        allStudentRecords = selectedRecords; 
+
+        // 準備 Settings
+        let defaultCritiques = [];
+        if (typeof cannedCritiques !== 'undefined' && cannedCritiques.common) defaultCritiques = cannedCritiques.common;
+        
+        const settingsPayload = {
+            critiques: (actionType === 'default') ? defaultCritiques : [],
+            target_count: selectedRecords.length
+        };
+
+        // 寫入 DB (Upsert)
+        let finalAssignmentId = null;
+        const { data: existing } = await supabaseClient.from('assignments').select('id').eq('user_id', currentUser.id).eq('class_id', classId).eq('title', topicTitle).maybeSingle();
+        
+        if (existing) {
+            await supabaseClient.from('assignments').update({ settings: settingsPayload }).eq('id', existing.id);
+            finalAssignmentId = existing.id;
+        } else {
+            const { data: newAssign, error } = await supabaseClient.from('assignments').insert([{ user_id: currentUser.id, class_id: classId, title: topicTitle, settings: settingsPayload, created_at: new Date().toISOString() }]).select().single();
+            if(error) throw error;
+            finalAssignmentId = newAssign.id;
+        }
+
+        window.currentAssignmentId = finalAssignmentId;
+        window.currentProjectType = 'cloud';
+
+        // 建立初始成績單 (鎖定)
+        const initialResults = selectedRecords.map(s => ({
+            assignment_id: finalAssignmentId,
+            student_id: s.dbId,
+            total_score: 0,
+            updated_at: new Date().toISOString()
+        }));
+        if (initialResults.length > 0) {
+            await supabaseClient.from('results').upsert(initialResults, { onConflict: 'assignment_id, student_id' });
+        }
+
+        // UI 同步
+        const className = document.getElementById('preflight-class').textContent;
+        if(document.getElementById('page2-topic-display')) document.getElementById('page2-topic-display').textContent = topicTitle;
+        if(document.getElementById('page2-class-display')) document.getElementById('page2-class-display').textContent = className;
+        
+        if (typeof updateStudentDropdown === 'function') updateStudentDropdown();
+        if (typeof updateHeaderInfo === 'function') updateHeaderInfo();
+        modal.classList.remove('active');
+
+        // 跳轉
+        if (actionType === 'default') {
+            if (typeof loadCannedCritiquesAndFocus === 'function') loadCannedCritiquesAndFocus(); 
+        } else {
+            document.getElementById('critique-data').innerHTML = '';
+            if (typeof buildChecklist === 'function') buildChecklist();
+            if (typeof buildOverviewPage === 'function') buildOverviewPage();
+            showPage('page2', 'student-select');
+        }
+
+        isDataDirty = false;
+        if (typeof updateUIBasedOnAuthState === 'function') updateUIBasedOnAuthState();
+        if(typeof showToast === 'function') showToast("🚀 專案已建立", "success");
+
+    } catch (err) {
+        console.error("Creation Error:", err);
+        alert("建立失敗：" + err.message);
+        btn.textContent = "確認並建立 🚀"; btn.disabled = false;
+    }
+};
+
+// 4. 嚴格同步 (Strict Cloud Save)
+window.saveCurrentStudentData = async function(mode = 'cloud') {
+  const studentSelect = document.getElementById('student-select');
+  if (!studentSelect.value) return;
+  const studentRecord = allStudentRecords.find(r => r.originalName === studentSelect.value);
+  if (!studentRecord) return;
+
+  // 收集數據
+  const getVal = (id) => document.getElementById(id) ? document.getElementById(id).value : '';
+  const checkedCritiques = [];
+  document.querySelectorAll('#checklist-container input[type="checkbox"]:checked').forEach(cb => {
+      const data = { id: cb.id, selectValues: [] };
+      const module = document.getElementById(`module-${cb.id}`);
+      if (module) {
+          module.querySelectorAll('select').forEach((s, i) => {
+              let v = s.value;
+              if (v === '其他') { const o = document.getElementById(`${cb.id}-other-${i+1}-text`); if(o) v = o.value; }
+              data.selectValues.push({ value: v });
+          });
+      }
+      checkedCritiques.push(data);
+  });
+
+  const scores = {
+      content: getVal('score-content'), expression: getVal('score-expression'),
+      structure: getVal('score-structure'), punctuation: getVal('score-punctuation'),
+      typos: getVal('score-typos'), total: getVal('score-total'),
+  };
+  
+  // 更新記憶體
+  studentRecord.data = {
+    class: getVal('student-class'), topic: getVal('topic'), uniqueComment: getVal('unique-comment'),
+    scores: scores, typos: [...currentTypos], checkedCritiques: checkedCritiques,
+    fullComment: getVal('full-output'), studentComment: getVal('student-report-output'),
+    pureFullComment: getVal('full-output'), pureStudentComment: getVal('student-report-output')
+  };
+
+  if (mode !== 'local') {
+      if (window.currentAssignmentId && currentUser) {
+          if (!navigator.onLine) {
+              if(typeof handleNetworkError === 'function') handleNetworkError("偵測到網絡中斷");
+              return; 
+          }
+          
+          // UI 反饋
+          const saveIndicator = document.getElementById('save-indicator');
+          if (saveIndicator) { saveIndicator.style.display = 'inline-block'; saveIndicator.textContent = '⏳'; }
+
+          try {
+              const payload = {
+                  assignment_id: window.currentAssignmentId, 
+                  student_id: studentRecord.dbId,
+                  content_score: parseFloat(scores.content)||0, expression_score: parseFloat(scores.expression)||0,
+                  structure_score: parseFloat(scores.structure)||0, punctuation_score: parseFloat(scores.punctuation)||0,
+                  typo_score: parseFloat(scores.typos)||0, total_score: parseFloat(scores.total)||0,
+                  comment_full: studentRecord.data.fullComment, comment_student: studentRecord.data.studentComment, 
+                  comment_data: studentRecord.data, 
+                  tags: checkedCritiques.map(c=>c.id), updated_at: new Date().toISOString()
+              };
+
+              const { error } = await supabaseClient.from('results').upsert(payload, { onConflict: 'assignment_id, student_id' });
+              if (error) throw error;
+
+              if(typeof showToast === 'function') showToast("☁️ 已同步", "success");
+              
+              // 綠剔更新
+              const opts = studentSelect.options;
+              for(let i=0; i<opts.length; i++) {
+                  if(opts[i].value === studentSelect.value && !opts[i].text.includes('✅')) {
+                      opts[i].text = `✅ ${opts[i].text.replace('✅ ', '')}`; break;
+                  }
+              }
+
+          } catch (e) {
+              if(typeof handleNetworkError === 'function') handleNetworkError(e.message);
+          } finally {
+              if (saveIndicator) saveIndicator.style.display = 'none';
+          }
+      }
+  }
+  if(typeof saveToLocalBackup === 'function') saveToLocalBackup();
+  if(typeof renderStudentOverviewTable === 'function') renderStudentOverviewTable();
+  isDataDirty = false;
+  if(typeof updateUIBasedOnAuthState === 'function') updateUIBasedOnAuthState();
+};
+
+console.log("✅ v18.8.1 核心修復包已載入");
+
 </script> <!-- 呢個係原本全個檔案唯一的結尾，保留佢 -->
 
 
