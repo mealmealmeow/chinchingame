@@ -4286,15 +4286,9 @@ header h1 {
     </div>
     <!-- 🛑 修復結束 -->
 
-    <!-- 下面是操作區 -->
-    <div class="btn-group" style="margin-bottom: 1rem;">
-        <!-- 保留 Excel 匯入功能給 Page 2 直接使用 -->
-        <label class="light-btn brown" for="import-student-list" style="cursor: pointer;">匯入名單 (Excel)</label>
-        <input type="file" id="import-student-list" accept=".xlsx, .xls" style="display:none;">
-        <!-- [v19.2] 快速班級管理按鈕 -->
-<button class="light-btn" onclick="showPage('page8')" style="margin-left: 5px;">
-    🏫 管理班級
-</button>
+  <!-- [v18.7.0] 進度顯示 (取代舊按鈕) -->
+    <div style="margin-bottom: 1rem; padding: 10px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; color: #15803d; font-size: 0.9rem; text-align: center;">
+        📊 批改進度：<span id="page2-progress-text">載入中...</span>
     </div>
 
     <div class="input-group">
@@ -6197,15 +6191,18 @@ function switchMainTab(target) {
 // showPage 保持 v10.6 版本即可，它已經兼容這種父子結構
 // 唯一要刪除的是 toggleMobileMenu 函數，因為按鈕已經沒了
 
-// [v18.1.0] Show Page with Route Guard
+// [v18.7.0] Show Page with Auto-Reset
 function showPage(pageId, focusElementId = null) {
-    // 🔥 Route Guard (守衛機制)
+    // 🔥 [Fix] 進入 Page 1 前，強制清空
+    if (pageId === 'page1') {
+        resetPage1();
+    }
+
+    // Route Guard (Page 2)
     if (pageId === 'page2') {
         const hasProject = window.currentAssignmentId || (allStudentRecords && allStudentRecords.length > 0);
         if (!hasProject) {
-            // 溫柔踢人
             if(typeof showToast === 'function') showToast("⚠️ 請先在首頁選擇或建立作業", "warning");
-            // 強制轉回首頁
             pageId = 'page-home'; 
         }
     }
@@ -6214,7 +6211,7 @@ function showPage(pageId, focusElementId = null) {
     const page = document.getElementById(pageId);
     if(page) page.classList.add('active');
 
-    // Nav 狀態更新
+    // Nav State
     document.querySelectorAll('.sub-nav-btn').forEach(n => n.classList.remove('active'));
     const subBtn = document.getElementById('nav-' + pageId);
     if (subBtn) {
@@ -6229,7 +6226,6 @@ function showPage(pageId, focusElementId = null) {
         const homeBtn = document.querySelector('.main-nav .nav-btn[data-target="home"]');
         if(homeBtn) homeBtn.classList.add('active');
         document.getElementById('sub-nav-container').style.display = 'none';
-        
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -6237,7 +6233,7 @@ function showPage(pageId, focusElementId = null) {
     const fNav = document.getElementById('floating-nav');
     if(fNav) fNav.classList.toggle('visible', pageId === 'page2');
 
-    // 數據刷新與觸發
+    // Data Loaders
     if (pageId === 'page-home') setTimeout(() => { if(typeof loadDashboard === 'function') loadDashboard(); }, 50);
     if (pageId === 'page8') { if(typeof loadAllClasses === 'function') loadAllClasses(); }
     if (pageId === 'page5') { if(typeof renderAnalysisPage === 'function') renderAnalysisPage(); }
@@ -6862,7 +6858,13 @@ function updateStudentDropdown() {
     renderStudentOverviewTable();
     updateHeaderInfo();
 }
-
+// 更新 Page 2 進度文字
+const p2Prog = document.getElementById('page2-progress-text');
+if (p2Prog && allStudentRecords.length > 0) {
+    // 簡單計算：有 data 就算已批改
+    const graded = allStudentRecords.filter(r => r.data && (r.data.scores.total || r.data.pureStudentComment)).length;
+    p2Prog.textContent = `${graded} / ${allStudentRecords.length} 位學生`;
+}
 
 function toggleOtherBlock(selectId, value) {
   const otherBlockId = selectId.replace('-select-', '-other-');
@@ -13128,82 +13130,73 @@ async function handleNetworkError(errorMsg) {
     }
 }
 
-// [v18.6.2] Step 2: Real Execution (Smart Check-Insert)
+// [v18.7.0] Creation: Insert Assignment + Initial Results
 async function executeProjectCreation() {
     const modal = document.getElementById('pop-preflight-modal');
     const btn = modal.querySelector('.pop-btn-confirm');
     const orgText = btn.textContent;
-    btn.textContent = "建立中..."; 
-    btn.disabled = true;
+    btn.textContent = "建立中..."; btn.disabled = true;
 
     try {
         if (!currentUser) throw new Error("未登入，無法建立雲端專案");
 
         const topicTitle = document.getElementById('topic').value.trim();
         const actionType = window._pendingActionType || 'default';
-        const targetCount = allStudentRecords.length;
+        const targetCount = allStudentRecords.length; // 已選人數
         const classId = window.currentClassId;
 
-        // 安全獲取評語庫
+        // 1. 準備 Settings
         let defaultCritiques = [];
         if (typeof cannedCritiques !== 'undefined' && cannedCritiques.common) {
             defaultCritiques = cannedCritiques.common;
         }
-
         const settingsPayload = {
             critiques: (actionType === 'default') ? defaultCritiques : [],
-            target_count: targetCount // 🔥 這是修復進度條的關鍵
+            target_count: targetCount
         };
 
-        // 🔥 [Fix] 改用 "先檢查，後寫入" (手動防撞)
+        // 2. 建立/更新 Assignment
         let finalAssignmentId = null;
-
-        // 1. 檢查是否已存在同班、同名的專案
+        
+        // Check existing
         const { data: existing, error: checkError } = await supabaseClient
-            .from('assignments')
-            .select('id')
-            .eq('user_id', currentUser.id)
-            .eq('class_id', classId)
-            .eq('title', topicTitle)
-            .maybeSingle();
-
+            .from('assignments').select('id').eq('user_id', currentUser.id).eq('class_id', classId).eq('title', topicTitle).maybeSingle();
+        
         if (checkError) throw checkError;
 
         if (existing) {
-            // 2A. 存在 -> 更新設定 (寫入正確人數)
-            console.log("專案已存在，更新設定...");
-            const { error: updateError } = await supabaseClient
-                .from('assignments')
-                .update({ settings: settingsPayload })
-                .eq('id', existing.id);
-            
+            const { error: updateError } = await supabaseClient.from('assignments').update({ settings: settingsPayload }).eq('id', existing.id);
             if (updateError) throw updateError;
             finalAssignmentId = existing.id;
         } else {
-            // 2B. 不存在 -> 插入新專案
-            console.log("建立新專案...");
             const { data: newAssign, error: insertError } = await supabaseClient
                 .from('assignments')
-                .insert([{
-                    user_id: currentUser.id,
-                    class_id: classId,
-                    title: topicTitle,
-                    settings: settingsPayload,
-                    created_at: new Date().toISOString()
-                }])
-                .select()
-                .single();
-            
+                .insert([{ user_id: currentUser.id, class_id: classId, title: topicTitle, settings: settingsPayload, created_at: new Date().toISOString() }])
+                .select().single();
             if (insertError) throw insertError;
             finalAssignmentId = newAssign.id;
         }
 
-        // 3. 成功後處理 (保持原樣)
         window.currentAssignmentId = finalAssignmentId;
-        
-        // 刷新 UI 隱藏欄位
+
+        // 🔥 [核心修復] 3. 立即為選中學生建立空白成績單 (鎖定名單)
+        // 這一步確保 Page 2 載入時，只會載入有 Result 的人，而不會載入全班
+        const initialResults = allStudentRecords.map(s => ({
+            assignment_id: finalAssignmentId,
+            student_id: s.dbId,
+            total_score: 0, // 初始 0 分
+            updated_at: new Date().toISOString()
+        }));
+
+        if (initialResults.length > 0) {
+            const { error: batchError } = await supabaseClient.from('results').upsert(initialResults, { onConflict: 'assignment_id, student_id' });
+            if (batchError) console.warn("初始化成績單失敗 (非致命):", batchError);
+        }
+
+        // 4. UI 同步 (Page 2 Header & Data)
         const rawList = allStudentRecords.map(r => r.originalName).join('\n');
         const className = document.getElementById('preflight-class').textContent;
+        
         if(document.getElementById('student-names')) document.getElementById('student-names').value = rawList;
         if(document.getElementById('student-class')) document.getElementById('student-class').value = className;
         if(document.getElementById('page2-topic-display')) document.getElementById('page2-topic-display').value = topicTitle;
@@ -13213,7 +13206,7 @@ async function executeProjectCreation() {
         
         modal.classList.remove('active');
 
-        // 跳轉
+        // 5. 評語庫處理
         if (actionType === 'default') {
             if (typeof loadCannedCritiquesAndFocus === 'function') loadCannedCritiquesAndFocus(); 
         } else {
@@ -13224,12 +13217,13 @@ async function executeProjectCreation() {
             showPage('page2', 'student-select');
         }
 
-        // 重置狀態
-        isDataDirty = false;
+        // 6. 重置狀態 (防止假斷線)
+        isDataDirty = false; // 剛建立，當然是乾淨的
         if (typeof updateUIBasedOnAuthState === 'function') updateUIBasedOnAuthState();
         
         if(typeof showToast === 'function') showToast("🚀 專案已建立", "success");
 
+        // 7. 更新 Dashboard 進度
         if (typeof loadDashboard === 'function') loadDashboard();
 
     } catch (err) {
@@ -13238,6 +13232,34 @@ async function executeProjectCreation() {
         btn.textContent = orgText; 
         btn.disabled = false;
     }
+}
+// [v18.7.0] Force Reset Page 1
+function resetPage1() {
+    console.log("🧹 清理 Page 1 表單...");
+    
+    // 1. 清空題目
+    const topicInput = document.getElementById('topic');
+    if (topicInput) topicInput.value = '';
+
+    // 2. 重置班級選擇 (變回第一項 "請選擇")
+    const classSelect = document.getElementById('setup-class-select');
+    if (classSelect) {
+        classSelect.selectedIndex = 0;
+        // 如果想更徹底，可以重新載入班級列表 (視乎需要)
+        // loadPage1ClassDropdown(true); 
+    }
+
+    // 3. 清空學生勾選區
+    const checklist = document.getElementById('setup-student-checklist');
+    if (checklist) checklist.innerHTML = '';
+    const studentArea = document.getElementById('setup-student-area');
+    if (studentArea) studentArea.style.display = 'none';
+
+    // 4. 重置全域暫存變數
+    window.currentClassId = null;
+    window.currentAssignmentId = null; 
+    window.currentProjectType = null;
+    allStudentRecords = []; // 清空記憶體學生名單
 }
 
 </script> <!-- 呢個係原本全個檔案唯一的結尾，保留佢 -->
