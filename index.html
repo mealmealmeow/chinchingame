@@ -5244,6 +5244,21 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const { createClient } = supabase;
 const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+/* [Edition: v18.0-Step7-EmergencyUnlock] 瀏覽器檢查與介面解鎖 */
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. 強制關閉所有卡死的 Modal
+    document.querySelectorAll('.pop-overlay').forEach(el => el.classList.remove('active'));
+    
+    // 2. 檢查儲存權限 (解決 Console 紅字 Error)
+    try {
+        localStorage.setItem('test_storage', '1');
+        localStorage.removeItem('test_storage');
+    } catch (e) {
+        alert("⚠️ 系統偵測到「存取被拒 (Access Denied)」\n\n原因：您可能開啟了「無痕模式」或瀏覽器封鎖了第三方 Cookie。\n後果：無法登入及同步雲端。\n\n建議：請轉用一般模式瀏覽器，或允許 Cookies。");
+    }
+});
+
+
 // --- 全域變數 ---
 let currentUser = null;
 let isDataDirty = false; 
@@ -7753,6 +7768,7 @@ function generateAIPrompt() {
 /* === [v11.4] AI 應用邏輯 (連帶開 Project) === */
 /* ========================================= */
 
+/* [Edition: v18.0-Step7-EmergencyUnlock] AI 應用邏輯 (廢除卡死 Modal，改為跳轉) */
 function applyAIJson() {
     const jsonInput = document.getElementById('ai-json-input').value.trim();
     if (!jsonInput) {
@@ -7773,35 +7789,24 @@ function applyAIJson() {
         return;
     }
 
-    // 🔥 攔截點：檢查是否有現行 Project
-    // 判斷標準：有無 currentAssignmentId (雲端) 或 student-select 有無選項 (本地)
-    const hasActiveProject = window.currentAssignmentId || (document.getElementById('student-select') && document.getElementById('student-select').options.length > 1);
+    // 檢查是否有現行 Project
+    const hasActiveProject = window.currentAssignmentId;
 
     if (!hasActiveProject) {
-        // --- 觸發補鑊流程 ---
+        // 🔥 核心修正：不再彈出 pop-quick-project-modal
+        // 而是暫存數據，然後跳轉去 Page 1 正規建立
         
-        // 1. 把 JSON 暫存起來
-        document.getElementById('quick-json-storage').value = jsonInput; // 存字串即可
-
-        // 2. 準備 Modal
-        const modal = document.getElementById('pop-quick-project-modal');
-        const select = document.getElementById('quick-class-select');
-        const manualArea = document.getElementById('quick-manual-area');
-
-        // 3. 判斷登入狀態載入班級
-        if (currentUser) {
-            select.style.display = 'block';
-            manualArea.style.display = 'none';
-            // 借用 Page 1 的邏輯載入班級，但塞入這個新的 Select
-            loadClassesToSelect(select); 
-        } else {
-            select.style.display = 'none';
-            manualArea.style.display = 'block';
+        if (confirm("尚未建立作業專案。\n\n是否前往「基本設定」頁面建立新專案？\n(建立後，剛才的 AI 評語將自動生效)")) {
+            // 1. 暫存 AI 數據 (用 window 全域變數，因為 localStorage 可能被鎖)
+            window._pendingAIData = importedData;
+            
+            // 2. 跳轉 Page 1
+            startNewProjectForClass(null, null); // 這是 Step 1/2 更新過的函數，會清空表單
+            
+            // 3. 提示
+            if(typeof showToast === 'function') showToast("請先建立專案，AI 評語已暫存 💾", "info");
         }
-
-        // 4. 顯示 Modal
-        modal.classList.add('active');
-        return; // 暫停執行，等待用戶在 Modal 按確認
+        return;
     }
 
     // --- 正常流程 (已有 Project) ---
@@ -11378,7 +11383,7 @@ function startGradingWithSetup(actionType) {
     document.getElementById('pop-confirm-create-modal').classList.add('active');
 }
 
-/* [v18.0-Step6-Rescue] 建立專案 (確保 UUID 正確傳遞) */
+/* [Edition: v18.0-Step7-FullReplace_Creation] 建立專案 (完整修復版) */
 async function executeProjectCreation() {
     const modal = document.getElementById('pop-confirm-create-modal');
     const confirmBtn = modal.querySelector('.pop-btn-confirm');
@@ -11390,12 +11395,13 @@ async function executeProjectCreation() {
         const topic = document.getElementById('topic').value.trim();
         const select = document.getElementById('setup-class-select');
         const classId = select.value;
+        // 獲取班級顯示名稱
         const className = select.options[select.selectedIndex].dataset.className || select.options[select.selectedIndex].text.split('(')[0].trim();
         
         // 1. 構建名單與 ID 陣列
         const checkedCards = document.querySelectorAll('#setup-student-checklist .student-check-card.checked');
         const tempRecords = [];
-        const selectedStudentIds = []; // 這是關鍵，必須是 UUID
+        const selectedStudentIds = []; 
 
         checkedCards.forEach(card => {
             const info = card.dataset.info; 
@@ -11413,10 +11419,12 @@ async function executeProjectCreation() {
                 number: p.number, 
                 name: p.name, 
                 originalName: p.originalName, 
-                dbId: dbId, // 🔥 確保這裡有值！Sync 靠佢！
+                dbId: dbId, 
                 data: null 
             });
         });
+
+        if (selectedStudentIds.length === 0) throw new Error("請至少選擇一位學生");
 
         // 2. 寫入 DB (Assignments)
         const { data: newAssign, error } = await supabaseClient
@@ -11427,7 +11435,7 @@ async function executeProjectCreation() {
                 title: topic,
                 created_at: new Date().toISOString(),
                 settings: { 
-                    critiques: collectExportData(),
+                    critiques: collectExportData(), // 存入當前評語庫
                     selected_students: selectedStudentIds // 🔥 存入名單 ID
                 }
             }])
@@ -11445,29 +11453,63 @@ async function executeProjectCreation() {
         allStudentRecords = tempRecords;
         sortStudents(allStudentRecords);
 
-        // 5. 更新 UI
+        // 5. 更新 UI (Page 2 鎖定介面)
         updatePage2Display(topic, className, allStudentRecords.length, 0);
+        
+        // 兼容舊欄位
+        if(document.getElementById('student-class')) document.getElementById('student-class').value = className;
+        if(document.getElementById('student-names')) document.getElementById('student-names').value = allStudentRecords.map(r => r.originalName).join('\n');
+        if(document.getElementById('page2-topic-display')) document.getElementById('page2-topic-display').value = topic;
+
         updateStudentDropdown();
         updateHeaderInfo();
 
         // 6. 處理評語庫
-        if (window._tempActionType === 'default') {
+        // 🔥 [v18.0-Step7] 檢查是否有暫存的 AI 數據 (補鑊邏輯)
+        if (window._pendingAIData) {
+            console.log("發現暫存 AI 數據，正在寫入...");
+            // 寫入 DOM
+            const cData = document.getElementById('critique-data');
+            cData.innerHTML = '';
+            
+            applyCritiquesToDOM(window._pendingAIData.map(c => ({
+                id: c.critique_id, category: c.category, type: c.type, title: c.title,
+                strengthSummary: c.strength_summary, problemCore: c.problem_core,
+                suggestion: c.suggestion, example: c.example, options: c.options,
+                optionsLabel: c.options_label
+            })));
+            
+            // 寫入後清空暫存
+            window._pendingAIData = null;
+            
+            // 觸發同步更新 (因為評語庫變了，需要更新返上剛建立的 Project)
+            isDataDirty = true; 
+            setTimeout(() => syncDataToCloud(), 1000); // 延遲一點點讓 UI 先跑完
+
+        } else if (window._tempActionType === 'default') {
             loadCannedCritiquesAndFocus(); 
         } else {
+            // 手動模式
             document.getElementById('critique-data').innerHTML = '';
-            buildChecklist();
-            buildOverviewPage();
-            // 自動選第一位
-            if(allStudentRecords.length > 0) {
-                const first = allStudentRecords[0];
-                document.getElementById('student-select').value = first.originalName;
-                loadStudentData(first.originalName);
-            }
-            showPage('page2', 'student-select');
         }
 
+        // 刷新評語介面
+        buildChecklist();
+        buildOverviewPage();
+
+        // 自動選第一位
+        if(allStudentRecords.length > 0) {
+            const first = allStudentRecords[0];
+            const sel = document.getElementById('student-select');
+            if(sel) sel.value = first.originalName;
+            loadStudentData(first.originalName);
+        }
+        
+        showPage('page2', 'student-select');
+
+        // 9. 成功收尾
         modal.classList.remove('active');
-        if(typeof showToast === 'function') showToast("🚀 專案已建立 (ID Check Passed)", "success");
+        if(typeof showToast === 'function') showToast("🚀 專案已建立", "success");
         if(typeof loadDashboard === 'function') loadDashboard();
 
     } catch (err) {
