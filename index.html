@@ -5970,18 +5970,19 @@ function applyCritiquesToDOM(critiques) {
 }
 
 
-/* [v17.0] 全域監聽 (題目同步修復) */
+/* [Edition: v18.0-Step3-FixCrash] 全域監聽 (移除舊 Import 監聽以防崩潰) */
 function attachGlobalListeners() {
-    // 登入登出按鈕
+    // 1. 登入登出按鈕
     const loginBtn = document.getElementById('login-btn'); if(loginBtn) loginBtn.addEventListener('click', handleLogin);
     const logoutBtn = document.getElementById('logout-btn'); if(logoutBtn) logoutBtn.addEventListener('click', handleLogout);
     const syncBtn = document.getElementById('sync-btn'); if(syncBtn) syncBtn.addEventListener('click', syncDataToCloud);
     const selProjBtn = document.getElementById('select-project-btn'); if(selProjBtn) selProjBtn.addEventListener('click', promptAndLoadCloudProject);
 
-    // 題目同步邏輯
+    // 2. 題目同步邏輯 (安全版)
     const syncTopic = (val) => {
         ['topic', 'ai-topic', 'page2-topic-display'].forEach(id => {
             const el = document.getElementById(id);
+            // 只有當元素存在，且值不同時才更新，避免無限迴圈
             if(el && el.value !== val) el.value = val;
         });
         updateHeaderInfo();
@@ -5994,10 +5995,11 @@ function attachGlobalListeners() {
         if(el) el.addEventListener('input', (e) => syncTopic(e.target.value));
     });
 
-    // 學生下拉選單
-    document.getElementById('student-select').addEventListener('change', (e) => loadStudentData(e.target.value));
+    // 3. 學生下拉選單
+    const stSelect = document.getElementById('student-select');
+    if(stSelect) stSelect.addEventListener('change', (e) => loadStudentData(e.target.value));
 
-    // 自動儲存與計算
+    // 4. 自動儲存與計算 (Body Delegate)
     document.body.addEventListener('input', (e) => {
         const page = e.target.closest('.page-content');
         if(!page) return;
@@ -6005,25 +6007,30 @@ function attachGlobalListeners() {
         
         if (page.id === 'page2') {
             if (e.target.closest('.score-main-grid')) calculateTotalScore();
-            // Checkbox 聯動文字
-            if (e.target.matches('input[type="checkbox"]') || e.target.closest('.interactive-module')) {
-                 // 這裡只觸發 Output 更新，不做 populateEditableTextarea 以免覆蓋手寫
-                 updateAllOutputs();
-            } else {
-                 updateAllOutputs();
-            }
+            // Checkbox 聯動文字或 Output 更新
+            updateAllOutputs();
             isDataDirty = true;
             updateUIBasedOnAuthState();
         }
     });
 
-    // 其他檔案輸入監聽 (保持不變)
-    document.getElementById('import-student-list').addEventListener('change', handleStudentListImport);
-    document.getElementById('import-progress-excel').addEventListener('change', handleProgressImportExcel);
-    document.getElementById('import-critique-excel').addEventListener('change', handleCritiqueImportExcel);
-    document.getElementById('import-critique-json').addEventListener('change', handleCritiqueImportJSON);
-    bindOverviewEvents();
-    initSwipeGestures();
+    // 5. 檔案輸入監聽 (安全檢查版)
+    // ⚠️ 修正重點：已移除 import-student-list，所以加個 if 檢查，防止報錯
+    const importStList = document.getElementById('import-student-list');
+    if (importStList) importStList.addEventListener('change', handleStudentListImport);
+
+    const importProg = document.getElementById('import-progress-excel');
+    if (importProg) importProg.addEventListener('change', handleProgressImportExcel);
+
+    const importCritExcel = document.getElementById('import-critique-excel');
+    if (importCritExcel) importCritExcel.addEventListener('change', handleCritiqueImportExcel);
+
+    const importCritJson = document.getElementById('import-critique-json');
+    if (importCritJson) importCritJson.addEventListener('change', handleCritiqueImportJSON);
+
+    // 6. 其他初始化
+    if(typeof bindOverviewEvents === 'function') bindOverviewEvents();
+    if(typeof initSwipeGestures === 'function') initSwipeGestures();
 }
 
 /* ===== [v10.3] 雙層導航邏輯 ===== */
