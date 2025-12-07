@@ -10821,20 +10821,20 @@ async function addSingleStudentToMaster() {
     }
 }
 
-// [v18.0.1] Page 8: Render Student List with UUIDs
+// [v18.0.2] Page 8: Render with Safe Quotes
 function renderStudentManagementList() {
     const tbody = document.getElementById('student-management-tbody');
     if (!tbody) return;
     
     tbody.innerHTML = '';
 
-    // 確保有 currentAssignmentId 才顯示該 Assignment 的學生
+    // 確保有 currentAssignmentId
     if (!window.currentAssignmentId) return;
 
     // Filter 學生
     const projectStudents = students.filter(s => s.assignment_id === window.currentAssignmentId);
 
-    // 排序 (按學號)
+    // 排序
     projectStudents.sort((a, b) => {
         const numA = parseInt(a.student_id) || 0;
         const numB = parseInt(b.student_id) || 0;
@@ -10844,8 +10844,10 @@ function renderStudentManagementList() {
     projectStudents.forEach((s) => {
         const tr = document.createElement('tr');
         
-        // 確保有 Database ID
+        // 安全處理：防止 null
         const safeId = s.id || ''; 
+        // 安全處理：防止學生名有單引號導致按鈕失效 (例如 Peter's)
+        const safeName = (s.name || '').replace(/'/g, "\\'");
 
         tr.innerHTML = `
             <td class="px-4 py-2 border text-center">${s.student_id}</td>
@@ -10854,7 +10856,7 @@ function renderStudentManagementList() {
                 <button onclick="openEditStudentModal('${safeId}')" class="bg-blue-500 text-white px-2 py-1 rounded mr-2 hover:bg-blue-600 transition duration-150">
                     <i class="fas fa-edit"></i> 編輯
                 </button>
-                <button onclick="confirmDeleteStudent('${safeId}', '${s.name}')" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition duration-150">
+                <button onclick="confirmDeleteStudent('${safeId}', '${safeName}')" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition duration-150">
                     <i class="fas fa-trash-alt"></i> 刪除
                 </button>
             </td>
@@ -10863,21 +10865,25 @@ function renderStudentManagementList() {
     });
 }
 
-// [v18.0.1] Page 8: Delete Student Logic (UUID)
+// [v18.0.2] Page 8: Delete Logic with Debugging
 async function confirmDeleteStudent(studentDbId, studentName) {
-    if (!studentDbId) {
-        alert("錯誤：找不到該學生的 ID，無法刪除。");
+    // 測試有沒有反應
+    console.log("嘗試刪除:", studentName, "ID:", studentDbId);
+
+    // 1. 檢查 ID 是否存在 (舊資料可能無 ID)
+    if (!studentDbId || studentDbId === 'undefined') {
+        alert(`❌ 無法刪除 [${studentName}]\n\n原因：此學生是舊資料，沒有資料庫 ID。\n\n建議：請刪除整個 Project 重新建立，或手動在 Page 8 新增此學生。`);
         return;
     }
 
-    // Double Confirmation
+    // 2. 紅色警告 Double Confirmation
     const isConfirmed = confirm(`⚠️ 危險動作 ⚠️\n\n確定要刪除學生 [${studentName}] 嗎？\n\n此操作會永久刪除該學生及其所有分數，無法復原！`);
     
     if (isConfirmed) {
         try {
             document.body.style.cursor = 'wait';
 
-            // Supabase Delete
+            // 3. 呼叫 Supabase
             const { error } = await supabaseClient
                 .from('students')
                 .delete()
@@ -10885,22 +10891,23 @@ async function confirmDeleteStudent(studentDbId, studentName) {
 
             if (error) throw error;
 
-            // 前端更新
+            // 4. 前端移除
             students = students.filter(s => s.id !== studentDbId);
 
-            // 重新渲染
+            // 5. 重新渲染
             renderStudentManagementList();
+            
+            // 成功提示 (可選，目前保持安靜，只見列表少了一人)
+            // alert("已刪除。");
 
         } catch (err) {
             console.error("Delete failed:", err);
-            alert("❌ 刪除失敗，請檢查網絡連線。");
+            alert("❌ 刪除失敗，請檢查網絡連線。\n" + err.message);
         } finally {
             document.body.style.cursor = 'default';
         }
     }
 }
-
-// ✅✅✅ 在這裡貼上 JavaScript ✅✅✅
 
 // ==========================================
 // ====== Phase 2.1 (Part 2): 班級頁邏輯 ======
