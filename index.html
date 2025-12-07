@@ -11619,89 +11619,113 @@ function toggleAllSetupStudents(checked) {
     });
 }
 
-// [v18.6.0] Step 2: Real Execution (Insert DB)
-async function executeProjectCreation() {
-    // 1. 鎖定按鈕
-    const modal = document.getElementById('pop-preflight-modal');
-    const btn = modal.querySelector('.pop-btn-confirm');
-    const orgText = btn.textContent;
-    btn.textContent = "建立中..."; 
-    btn.disabled = true;
+// [v18.6.1] Step 1: Pre-flight Check (Debug Mode)
+async function startGradingWithSetup(actionType) {
+    console.log("🚀 嘗試啟動專案建立流程...");
 
     try {
-        if (!currentUser) throw new Error("未登入，無法建立雲端專案");
-
-        const topicTitle = document.getElementById('topic').value.trim();
-        const actionType = window._pendingActionType || 'default';
-        const targetCount = allStudentRecords.length; // 🔥 關鍵數據
-
-        // 2. 準備 Settings (包含目標人數)
-        const settingsPayload = {
-            critiques: (actionType === 'default') ? cannedCritiques.common : [], // 預設只載入通用，或者之後 loadCanned
-            target_count: targetCount // 🔥 進度條分母修復
-        };
-
-        // 3. 寫入 Assignments
-        const { data: newAssign, error: assignError } = await supabaseClient
-            .from('assignments')
-            .upsert({
-                user_id: currentUser.id,
-                class_id: window.currentClassId,
-                title: topicTitle,
-                settings: settingsPayload,
-                created_at: new Date().toISOString()
-            }, { onConflict: 'class_id, title' })
-            .select()
-            .single();
-
-        if (assignError) throw assignError;
-
-        // 4. 成功後處理
-        window.currentAssignmentId = newAssign.id;
-        
-        // 確保 Page 2 的隱藏欄位同步
-        const rawList = allStudentRecords.map(r => r.originalName).join('\n');
-        const className = document.getElementById('preflight-class').textContent;
-        if(document.getElementById('student-names')) document.getElementById('student-names').value = rawList;
-        if(document.getElementById('student-class')) document.getElementById('student-class').value = className;
-        if(document.getElementById('page2-topic-display')) document.getElementById('page2-topic-display').value = topicTitle;
-
-        // 刷新 UI
-        updateStudentDropdown();
-        updateHeaderInfo();
-        
-        // 5. 關閉 Modal
-        modal.classList.remove('active');
-
-        // 6. 載入評語庫並跳轉 (依據 actionType)
-        if (actionType === 'default') {
-            loadCannedCritiquesAndFocus(); 
-        } else {
-            // 手動模式：清空評語庫
-            document.getElementById('critique-data').innerHTML = '';
-            buildChecklist();
-            buildOverviewPage();
-            showPage('page2', 'student-select');
+        // 1. 檢查 Modal 是否存在 (這是最常見的錯誤原因)
+        const modal = document.getElementById('pop-preflight-modal');
+        if (!modal) {
+            alert("❌ 系統錯誤：找不到「起飛前確認視窗」！\n\n請檢查您是否已將 v18.6.0 Step 1 的 HTML 代碼貼在 <body> 標籤內 (例如 print-container 上方)。");
+            return;
         }
 
-        // 7. 🔥 強制重置髒數據狀態 (修復假斷線)
-        isDataDirty = false;
-        updateUIBasedOnAuthState();
+        // 2. 驗證輸入
+        const topicInput = document.getElementById('topic');
+        if (!topicInput || !topicInput.value.trim()) {
+            alert("請輸入作文題目！");
+            if(topicInput) topicInput.focus();
+            return;
+        }
+
+        const select = document.getElementById('setup-class-select');
+        if (!select || !select.value) {
+            alert("請選擇班級！");
+            return;
+        }
+
+        // 3. 驗證學生勾選
+        const checkedCards = document.querySelectorAll('#setup-student-checklist .student-check-card.checked');
+        if (checkedCards.length === 0) {
+            alert("⚠️ 請至少勾選一位學生！");
+            return;
+        }
+
+        // 4. 準備數據
+        const sourceClass = select.options[select.selectedIndex].dataset.className || '';
+        window.currentClassId = select.value;
+        window.currentProjectType = 'cloud';
+        window._pendingActionType = actionType;
         
-        if(typeof showToast === 'function') showToast("🚀 專案已建立", "success");
+        // 處理名單
+        const tempRecords = [];
+        const namesForDisplay = [];
+        
+        // 確保 parseStudentName 存在 (防禦性編碼)
+        const safeParse = (info) => {
+            if (typeof parseStudentName === 'function') return parseStudentName(info);
+            // Fallback
+            return { number: null, name: info, originalName: info };
+        };
 
-        // 8. 刷新 Dashboard (背景執行)
-        if (typeof loadDashboard === 'function') loadDashboard();
+        checkedCards.forEach(card => {
+            const info = card.dataset.info || card.textContent; // Fallback
+            const dbId = card.dataset.dbId; 
+            const p = safeParse(info);
+            
+            namesForDisplay.push(p.name);
 
-    } catch (err) {
-        console.error("Creation Error:", err);
-        alert("建立失敗：" + err.message);
-        // 解鎖按鈕
-        btn.textContent = orgText; 
-        btn.disabled = false;
+            tempRecords.push({
+                number: p.number,
+                name: p.name,
+                originalName: p.originalName,
+                dbId: dbId,
+                data: null
+            });
+        });
+
+        // 更新全域變數
+        allStudentRecords = tempRecords;
+        if (typeof sortStudents === 'function') sortStudents(allStudentRecords);
+
+        // 5. 填入 Modal
+        document.getElementById('preflight-topic').textContent = topicInput.value.trim();
+        document.getElementById('preflight-class').textContent = sourceClass;
+        document.getElementById('preflight-count').textContent = `${tempRecords.length} 人`;
+        document.getElementById('preflight-student-list').innerHTML = namesForDisplay.join('、');
+
+        // 6. 打開 Modal
+        modal.classList.add('active');
+        console.log("✅ Pre-flight Modal 已打開");
+
+    } catch (e) {
+        console.error("Critical Error:", e);
+        alert("程式執行發生錯誤：\n" + e.message);
     }
 }
 
+// 下載「手動模式」專用的簡單範本
+function downloadManualTemplate() {
+    if (typeof XLSX === 'undefined') {
+        alert('Excel 功能未就緒，請稍後再試。');
+        return;
+    }
+    
+    // 簡單的單欄或雙欄格式
+    const templateData = [
+        { "學號": "01", "姓名": "陳大文 (範例)" },
+        { "學號": "02", "姓名": "李小美 (範例)" },
+        { "學號": "03", "姓名": "張志明 (範例)" }
+    ];
+
+    const ws = XLSX.utils.json_to_sheet(templateData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "學生名單");
+    
+    XLSX.writeFile(wb, "學生名單範本_手動輸入用.xlsx");
+}
+// 1. 下載班級名單範本
 function downloadMasterListTemplate() {
     if (typeof XLSX === 'undefined') {
         alert('Excel 功能未就緒。');
@@ -13104,9 +13128,92 @@ async function handleNetworkError(errorMsg) {
     }
 }
 
+// [v18.6.1] Step 2: Real Execution (Safe Mode)
+async function executeProjectCreation() {
+    const modal = document.getElementById('pop-preflight-modal');
+    const btn = modal.querySelector('.pop-btn-confirm');
+    const orgText = btn.textContent;
+    btn.textContent = "建立中..."; 
+    btn.disabled = true;
+
+    try {
+        if (!currentUser) throw new Error("未登入，無法建立雲端專案");
+
+        const topicTitle = document.getElementById('topic').value.trim();
+        const actionType = window._pendingActionType || 'default';
+        const targetCount = allStudentRecords.length;
+
+        // 安全獲取評語庫
+        let defaultCritiques = [];
+        if (typeof cannedCritiques !== 'undefined' && cannedCritiques.common) {
+            defaultCritiques = cannedCritiques.common;
+        }
+
+        // 準備 Settings
+        const settingsPayload = {
+            critiques: (actionType === 'default') ? defaultCritiques : [],
+            target_count: targetCount // 🔥 進度條分母
+        };
+
+        // 寫入 DB
+        const { data: newAssign, error: assignError } = await supabaseClient
+            .from('assignments')
+            .upsert({
+                user_id: currentUser.id,
+                class_id: window.currentClassId,
+                title: topicTitle,
+                settings: settingsPayload,
+                created_at: new Date().toISOString()
+            }, { onConflict: 'class_id, title' })
+            .select()
+            .single();
+
+        if (assignError) throw assignError;
+
+        // 成功後處理
+        window.currentAssignmentId = newAssign.id;
+        
+        // 刷新 UI
+        const rawList = allStudentRecords.map(r => r.originalName).join('\n');
+        const className = document.getElementById('preflight-class').textContent;
+        if(document.getElementById('student-names')) document.getElementById('student-names').value = rawList;
+        if(document.getElementById('student-class')) document.getElementById('student-class').value = className;
+        if(document.getElementById('page2-topic-display')) document.getElementById('page2-topic-display').value = topicTitle;
+
+        if (typeof updateStudentDropdown === 'function') updateStudentDropdown();
+        if (typeof updateHeaderInfo === 'function') updateHeaderInfo();
+        
+        modal.classList.remove('active');
+
+        // 跳轉
+        if (actionType === 'default') {
+            if (typeof loadCannedCritiquesAndFocus === 'function') loadCannedCritiquesAndFocus(); 
+        } else {
+            const cData = document.getElementById('critique-data');
+            if(cData) cData.innerHTML = '';
+            if (typeof buildChecklist === 'function') buildChecklist();
+            if (typeof buildOverviewPage === 'function') buildOverviewPage();
+            showPage('page2', 'student-select');
+        }
+
+        // 重置狀態
+        isDataDirty = false;
+        if (typeof updateUIBasedOnAuthState === 'function') updateUIBasedOnAuthState();
+        
+        if(typeof showToast === 'function') showToast("🚀 專案已建立", "success");
+
+        if (typeof loadDashboard === 'function') loadDashboard();
+
+    } catch (err) {
+        console.error("Creation Error:", err);
+        alert("建立失敗：" + err.message);
+        btn.textContent = orgText; 
+        btn.disabled = false;
+    }
+}
+
 </script> <!-- 呢個係原本全個檔案唯一的結尾，保留佢 -->
 
-<!-- [v12.2] Back To Top (確保在最外層，不受干擾) -->
-<button id="back-to-top-btn" onclick="scrollToTop()" title="回到頂部" style="display: none;">⬆</button>
+
 </body>
 </html>
