@@ -10515,11 +10515,11 @@ function startNewProjectForClass(classId, className) {
     }, 500);
 }
 
-// [v18.10] 載入作業 (精準過濾版：只顯示已分配學生)
+// [v19.7] 載入作業 (核心修復：正確讀取全班名單 + 成績合併)
 async function openAssignment(assignmentId) {
     if (!currentUser) return;
     try {
-        // 1. 讀取作業基本資料
+        // 1. 讀取作業基本資料 (獲取 class_id)
         const { data: assignment, error: assignError } = await supabaseClient
             .from('assignments')
             .select(`*, classes(class_name)`)
@@ -10527,17 +10527,28 @@ async function openAssignment(assignmentId) {
             .single();
         if (assignError) throw assignError;
 
-        // 2. 🔥 核心修正：只讀取該作業的 Results，並透過關聯讀取 Students
-        // 這樣就能過濾掉那些「同班但未被分配此作業」的學生
-        const { data: results, error: resError } = await supabaseClient
-            .from('results')
-            .select(`
-                *,
-                students (*) 
-            `)
-            .eq('assignment_id', assignmentId);
+        const classId = assignment.class_id;
+
+        // 2. 🔥 核心修正：平行讀取「全班學生」與「該作業成績」
+        const [studentsRes, resultsRes] = await Promise.all([
+            // A. 讀取該班所有學生 (Base Roster)
+            supabaseClient
+                .from('students')
+                .select('*')
+                .eq('class_id', classId),
             
-        if (resError) throw resError;
+            // B. 讀取該作業的所有成績 (Results)
+            supabaseClient
+                .from('results')
+                .select('*')
+                .eq('assignment_id', assignmentId)
+        ]);
+
+        if (studentsRes.error) throw studentsRes.error;
+        if (resultsRes.error) throw resultsRes.error;
+
+        const students = studentsRes.data; // 全班學生
+        const results = resultsRes.data;   // 已有成績
 
         // 3. 處理評語庫還原
         const documentContainer = document.getElementById('critique-data');
@@ -10554,33 +10565,34 @@ async function openAssignment(assignmentId) {
         window.currentAssignmentId = assignment.id;
         window.currentClassId = assignment.class_id;
         
-        // 安全地填寫欄位
         if(document.getElementById('student-class')) document.getElementById('student-class').value = assignment.classes ? assignment.classes.class_name : '未知班級';
         if(document.getElementById('topic')) document.getElementById('topic').value = assignment.title;
         if(document.getElementById('page2-topic-display')) document.getElementById('page2-topic-display').value = assignment.title;
 
-        // 5. 數據組裝
-        // results 陣列現在包含了學生成績 + 學生基本資料 (res.students)
-        allStudentRecords = results.map(res => {
-            const st = res.students; // 這是從關聯表抓出來的
+        // 5. 數據合併 (Merge)
+        // 遍歷所有學生，如果有成績就填入，冇就留空
+        allStudentRecords = students.map(st => {
+            // 尋找對應的成績紀錄
+            const res = results.find(r => r.student_id === st.id);
             
-            if (!st) return null; // 如果找不到學生資料，跳過
+            // 建立 Data 物件 (有成績用成績，無成績用預設空值)
+            const extraData = res && res.comment_data ? res.comment_data : {};
+            const scores = res ? {
+                content: res.content_score, expression: res.expression_score, structure: res.structure_score,
+                punctuation: res.punctuation_score, total: res.total_score, typos: res.typo_score || 0
+            } : { content:'', expression:'', structure:'', punctuation:'', typos:'', total:'' };
 
-            const extraData = res.comment_data || {};
             const dataObj = {
                 class: assignment.classes ? assignment.classes.class_name : '',
                 topic: assignment.title,
                 uniqueComment: extraData.uniqueComment || '',
-                scores: {
-                    content: res.content_score, expression: res.expression_score, structure: res.structure_score,
-                    punctuation: res.punctuation_score, total: res.total_score, typos: res.typo_score || 0
-                },
+                scores: scores,
                 typos: extraData.typos || [], 
                 checkedCritiques: extraData.checkedCritiques || [],
-                fullComment: res.comment_full || '', 
-                studentComment: res.comment_student || '', 
-                pureStudentComment: extraData.pureStudentComment || res.comment_student || '', 
-                pureFullComment: extraData.pureFullComment || res.comment_full || ''
+                fullComment: res ? (res.comment_full || '') : '', 
+                studentComment: res ? (res.comment_student || '') : '', 
+                pureStudentComment: extraData.pureStudentComment || (res ? res.comment_student : '') || '', 
+                pureFullComment: extraData.pureFullComment || (res ? res.comment_full : '') || ''
             };
 
             // 純學號處理
@@ -10593,9 +10605,9 @@ async function openAssignment(assignmentId) {
                 name: st.name, 
                 originalName: originalName,
                 dbId: st.id, 
-                data: dataObj
+                data: dataObj // 這裡即使是未批改學生，也有一個空的 data 物件
             };
-        }).filter(r => r !== null); // 過濾掉空值
+        });
 
         // 排序
         sortStudents(allStudentRecords);
@@ -10611,7 +10623,6 @@ async function openAssignment(assignmentId) {
         showPage('page2');
         if(typeof showToast === 'function') showToast(`已載入：${assignment.title}`, "success");
         
-        // 清除舊的跳轉目標
         localStorage.removeItem('idw_jump_target');
 
     } catch (error) {
@@ -13384,7 +13395,7 @@ function formatReportComment(text) {
     }).join('<br>');
 }
 
-// [v19.6] 渲染詳細版卡片 (修復按鈕功能與顯示)
+// [v19.7] 渲染簡約版卡片 (右上角只保留刪除 🗑️)
 function renderNewDetailCards(items, container) {
     if (items.length === 0) {
         container.style.display = 'block'; 
@@ -13406,66 +13417,29 @@ function renderNewDetailCards(items, container) {
     items.forEach(item => {
         const createDate = new Date(item.created_at).toLocaleDateString('zh-HK', {month:'2-digit', day:'2-digit'});
         
-        const updateDateObj = new Date(item.last_updated);
-        const today = new Date();
-        const isToday = updateDateObj.getDate() === today.getDate() && updateDateObj.getMonth() === today.getMonth();
-        const updateStr = isToday 
-            ? updateDateObj.toLocaleTimeString('zh-HK', {hour:'2-digit', minute:'2-digit'}) 
-            : updateDateObj.toLocaleDateString('zh-HK', {month:'2-digit', day:'2-digit'});
-
-        // 安全處理字串，防止單引號導致崩潰
-        const safeTopic = (item.topic || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
-        const safeClass = (item.class_name || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
-        const safeYear = (item.academic_year || '').replace(/'/g, "\\'");
-        const safeCreate = item.created_at;
-        const safeUpdate = item.last_updated;
-
-        // 🔥 綁定按鈕動作 (分開清楚)
-        // ⚙️ 編輯: 修改標題
-        const editAction = `event.stopPropagation(); openEditModal('${item.id}', '${item.source_type}', '${safeTopic}', '${safeClass}', '${safeYear}')`;
-        // 🗒 詳情: 查看名單
-        const detailsAction = `event.stopPropagation(); openProjectDetails('${item.id}', '${safeTopic}', '${safeClass}', '${safeCreate}', '${safeUpdate}', ${item.total_students}, ${item.graded_count})`;
+        // 字串安全處理
+        const safeTitle = (item.topic || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
         
-        let jumpHtml = '';
-        if (item.last_student) {
-            const safeStudent = item.last_student.replace(/'/g, "\\'");
-            const jumpAction = `event.stopPropagation(); localStorage.setItem('idw_jump_target', '${safeStudent}'); openAssignment('${item.id}');`;
-            jumpHtml = `
-                <div onclick="${jumpAction}" class="recent-proj-pill" 
-                     style="margin-top:15px; padding:6px 12px; background:#f7f9f8; color:#5A8F7B; border:1px solid #e8f0eb; border-radius:99px; font-size:0.85rem; display:flex; justify-content:space-between; align-items:center; cursor:pointer; transition:all 0.2s;">
-                    <span style="font-weight:500;">🖊️ ${escapeHtml(item.last_student)}</span>
-                    <span style="opacity:0.5; font-size:0.8rem;">${updateStr} ➜</span>
-                </div>
-            `;
-        } else {
-            jumpHtml = `
-                <div style="margin-top:15px; padding:6px 12px; border:1px dashed #eee; color:#ccc; border-radius:99px; font-size:0.8rem; text-align:center;">
-                    尚未開始批改
-                </div>
-            `;
-        }
+        // 刪除動作
+        const deleteAction = `event.stopPropagation(); confirmDeleteProjectDirectly('${item.id}', '${safeTitle}')`;
+        const loadAction = `openAssignment('${item.id}')`;
+
+        // 進度條顏色
+        const progressColor = item.progress === 100 ? '#5A8F7B' : (item.progress > 50 ? '#d4a373' : '#e0e0e0');
 
         html += `
-        <div class="cozy-folder" onclick="openAssignment('${item.id}')" 
+        <div class="cozy-folder" onclick="${loadAction}" 
              style="cursor:pointer; padding:24px; min-height:auto; background:#fff; border:1px solid rgba(0,0,0,0.04); box-shadow: 0 4px 24px rgba(0,0,0,0.03); transition: transform 0.2s, box-shadow 0.2s; border-radius:20px; position: relative;">
             
-            <!-- ⚙️ 編輯按鈕 (左上) -->
-            <button onclick="${editAction}" title="編輯標題" 
-                style="position:absolute; top:15px; right:45px; background:transparent; border:none; color:#ddd; font-size:1.1rem; cursor:pointer; transition:color 0.2s;">
-                ⚙️
+            <!-- 🔥 右上角：變回單一刪除按鈕 (🗑️) -->
+            <button onclick="${deleteAction}" title="刪除作業" 
+                style="position:absolute; top:15px; right:15px; background:transparent; border:none; color:#e0e0e0; font-size:1.1rem; cursor:pointer; transition:color 0.2s;">
+                🗑️
             </button>
-
-            <!-- 🗒 詳情按鈕 (右上) -->
-            <button onclick="${detailsAction}" title="專案詳情" 
-                style="position:absolute; top:15px; right:15px; background:transparent; border:none; color:#ddd; font-size:1.1rem; cursor:pointer; transition:color 0.2s;">
-                🗒
-            </button>
-            <style>
-                button[title="專案詳情"]:hover, button[title="編輯標題"]:hover { color: #5A8F7B !important; transform: scale(1.1); }
-            </style>
+            <style>button[title="刪除作業"]:hover { color: #c86a5a !important; transform: scale(1.1); }</style>
 
             <!-- 頂部：班級標籤 -->
-            <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:12px; padding-right: 60px;">
+            <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:12px; padding-right: 40px;">
                 <span style="font-size:0.75rem; letter-spacing:1px; color:#999; text-transform:uppercase; font-weight:600; border:1px solid #eee; padding:2px 8px; border-radius:6px;">
                     ${escapeHtml(item.class_name)}
                 </span>
@@ -13483,16 +13457,17 @@ function renderNewDetailCards(items, container) {
             <!-- 進度數據 -->
             <div style="display:flex; align-items:center; justify-content:space-between; color:#8c867a; font-size:0.9rem;">
                 <div style="display:flex; align-items:center; gap:6px;">
-                    <span>👥 作答人數：${item.total_students}</span>
-                    <span style="color:#aaa; font-size:0.8rem;">(已閱 ${item.graded_count})</span>
+                    <span>👥 ${item.graded_count} / ${item.total_students}</span>
                 </div>
-                <div style="font-weight:bold; color:${item.progress === 100 ? '#5A8F7B' : '#d4a373'};">
+                <div style="font-weight:bold; color:${progressColor};">
                     ${item.progress}%
                 </div>
             </div>
-
-            <!-- 底部：最新批改 -->
-            ${jumpHtml}
+            
+            <!-- 進度條 (視覺化) -->
+            <div style="width:100%; height:4px; background:#f5f5f5; border-radius:99px; margin-top:10px; overflow:hidden;">
+                <div style="width:${item.progress}%; height:100%; background:${progressColor};"></div>
+            </div>
         </div>`;
     });
     
