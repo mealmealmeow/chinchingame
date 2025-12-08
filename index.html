@@ -3943,6 +3943,48 @@ header h1 {
 #pop-manage-students-modal { z-index: 2147483640 !important; }
 /* 確保通用彈窗的底色更深一點，區分層次 */
 #pop-generic-modal .pop-modal { box-shadow: 0 25px 80px rgba(0,0,0,0.5); }
+
+/* [v20.4] 樣式修補包 */
+
+/* 1. 資訊欄 (美化版) */
+.context-banner {
+    background: linear-gradient(to right, rgba(90, 143, 123, 0.1), rgba(90, 143, 123, 0.02));
+    border-left: 5px solid var(--accent-color);
+    padding: 12px 18px;
+    margin-bottom: 25px;
+    border-radius: 6px;
+    font-size: 1.05rem;
+    color: #2c4c3f;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+}
+
+/* 2. 彈窗關閉掣 */
+.pop-close-x {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem;
+    color: #999;
+    cursor: pointer;
+    border-radius: 50%;
+    background: #f5f5f5;
+    transition: all 0.2s;
+    z-index: 10;
+}
+.pop-close-x:hover { background: #e0e0e0; color: #333; }
+
+/* 3. 手機版書籤修復 (強制顯示) */
+@media (max-width: 768px) {
+    .header-book-btn {
+        display: flex !important; /* 確保不被隱藏 */
+        z-index: 3001; /* 確保在最上層 */
+    }
+}
+
 </style>
 
 </head>
@@ -3969,9 +4011,11 @@ header h1 {
             </div>
         </div>
         
-        <div id="project-header-info" class="project-header-info" style="display:none; margin-top:2px;" onclick="promptAndLoadCloudProject()">
-            <span style="opacity:0.8">📂</span><span id="ph-class"></span><span class="ph-divider">|</span><span id="ph-topic"></span>
-        </div>
+       <div id="project-header-info" class="project-header-info" onclick="promptAndLoadCloudProject()">
+    <span id="ph-class">📂 點擊載入專案</span>
+    <span class="ph-divider" style="display:none;">|</span>
+    <span id="ph-topic"></span>
+</div>
     </div>
 
     <!-- 右邊：Setting 掣 -->
@@ -4487,6 +4531,7 @@ header h1 {
               <input type="file" id="import-progress-excel" accept=".xlsx, .xls, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" style="display:none;">
             </div>
           </div>
+          <div id="p4-banner" class="context-banner">📂 未載入專案</div>
           <h3 id="overview-class-display"></h3>
           <!-- 刪除舊的 div，換成這個： -->
 <div id="literary-progress" class="literary-progress-box">
@@ -4533,6 +4578,7 @@ header h1 {
         <button class="secondary-btn" onclick="exportAnalysisToWord()">📄 匯出分析 Word</button>
       </div>
     </div>
+    <div id="p4-banner" class="context-banner">📂 未載入專案</div>
     <p style="font-size:0.9rem;color:#777;">
       透過視覺化圖表，快速掌握全班的強弱項分佈及常見問題。
     </p>
@@ -4647,6 +4693,7 @@ header h1 {
  <div id="page7" class="page-content">
     <div class="overview-container">
         <h2>📝 AI 烘焙室：生成教學回饋</h2>
+        <div id="p4-banner" class="context-banner">📂 未載入專案</div>
         <div class="cozy-hint">
             這裡可以將全班的表現，轉化為一份溫暖而專業的跟進文件。<br>
             我們會為您生成老師專用的「教學詳案」和給學生的「鼓勵單張」。
@@ -4822,7 +4869,8 @@ header h1 {
 
 <!-- 自定義 Pop Art 風格 Project Selection Modal -->
 <div id="pop-project-modal" class="pop-overlay">
-  <div class="pop-modal">
+<div class="pop-modal">
+    <div class="pop-close-x" onclick="document.getElementById('pop-project-modal').classList.remove('active')">✕</div>
     <div class="pop-icon">📂</div>
     <h3>雲端專案讀取</h3>
     <p class="pop-desc">
@@ -5834,8 +5882,10 @@ function updateUIBasedOnAuthState() {
     const logoutBtn = document.getElementById('logout-btn');
     const syncBtn = document.getElementById('sync-btn');
     const selectProjectBtn = document.getElementById('select-project-btn');
-    const phContainer = document.getElementById('project-header-info');
-
+      if(phContainer) {
+            phContainer.style.display = 'inline-flex';
+            updateAllPageHeaders(); 
+        }
     if (currentUser) {
         // 已登入狀態
         if(authStatus) authStatus.textContent = `已登入: ${currentUser.email}`;
@@ -5866,7 +5916,7 @@ function updateUIBasedOnAuthState() {
         if(logoutBtn) logoutBtn.style.display = 'none';
         if(syncBtn) syncBtn.style.display = 'none';
         if(selectProjectBtn) selectProjectBtn.style.display = 'none';
-        if(phContainer) phContainer.style.display = 'none';
+           if(phContainer) phContainer.style.display = 'none';
     }
 }
 
@@ -12839,17 +12889,15 @@ function scrollToTop() {
 /* === [Edition: 書] Mobile Menu Logic === */
 /* ========================================= */
 
-// 1. 開關全螢幕目錄
+// [v20.4] 手機書籤開關
 function toggleBookMenu() {
     const overlay = document.getElementById('mobile-book-overlay');
-    const isActive = overlay.classList.contains('active');
-    
-    if (isActive) {
-        overlay.classList.remove('active');
-    } else {
-        overlay.classList.add('active');
-        // 打開時，自動展開當前所在的主分類
-        autoExpandCurrentSection();
+    if(overlay) {
+        overlay.classList.toggle('active');
+        if(overlay.classList.contains('active')) {
+            // 打開時自動展開當前章節
+            if(typeof autoExpandCurrentSection === 'function') autoExpandCurrentSection();
+        }
     }
 }
 
@@ -13619,6 +13667,43 @@ function deleteProjectFromDetails() {
     const title = document.getElementById('detail-project-title').value;
     document.getElementById('pop-project-details-modal').classList.remove('active');
     confirmDeleteProjectDirectly(id, title);
+}
+
+
+// [v20.4] 全域資訊同步 (Header + 頁面 Banner)
+function updateAllPageHeaders() {
+    // 讀取當前資訊
+    const className = document.getElementById('student-class').value;
+    const topic = document.getElementById('topic').value;
+    const hasProject = (className && className.trim() !== '') || (topic && topic.trim() !== '');
+
+    // 1. 更新 Header 按鈕
+    const phContainer = document.getElementById('project-header-info');
+    const phClass = document.getElementById('ph-class');
+    const phTopic = document.getElementById('ph-topic');
+    const phDivider = document.querySelector('.project-header-info .ph-divider');
+
+    if (phContainer && phClass) {
+        if (hasProject) {
+            phClass.textContent = `📂 ${className}`;
+            phTopic.textContent = topic;
+            if(phDivider) phDivider.style.display = 'inline';
+        } else {
+            phClass.textContent = '📂 點擊載入專案';
+            phTopic.textContent = '';
+            if(phDivider) phDivider.style.display = 'none';
+        }
+    }
+
+    // 2. 更新各頁 Banner
+    const bannerHtml = hasProject 
+        ? `<strong>${escapeHtml(className)}</strong> <span style="opacity:0.4; margin:0 10px;">|</span> 📝 ${escapeHtml(topic)}`
+        : '📂 尚未載入專案，請點擊上方按鈕選擇。';
+
+    ['p4-banner', 'p5-banner', 'p7-banner'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = bannerHtml;
+    });
 }
 </script> <!-- 呢個係原本全個檔案唯一的結尾，保留佢 -->
 
