@@ -3984,7 +3984,53 @@ header h1 {
         z-index: 3001; /* 確保在最上層 */
     }
 }
+/* [v20.5] 介面強制修復 */
 
+/* 1. 手機書籤 (強制置頂，防遮擋) */
+@media (max-width: 768px) {
+    .header-book-btn {
+        display: flex !important;
+        position: fixed !important; /* 改用 fixed 確保在視窗固定位置 */
+        bottom: 25px !important;    /* 放下面方便按 */
+        right: 20px !important;
+        top: auto !important;       /* 取消頂部定位 */
+        z-index: 2147483647 !important; /* 宇宙最高 */
+        background: rgba(255, 255, 255, 0.9);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border: 1px solid rgba(0,0,0,0.1);
+        width: 50px; height: 50px;
+        border-radius: 12px;
+    }
+}
+
+/* 2. 雲端彈窗關閉掣 (確保可見) */
+.pop-close-x {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 35px; height: 35px;
+    background: #f0f0f0;
+    border-radius: 50%;
+    color: #666;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 20;
+    border: 1px solid #ddd;
+}
+
+/* 3. 頁面資訊欄 (美化) */
+.context-banner {
+    background: linear-gradient(120deg, rgba(90, 143, 123, 0.1), rgba(255, 255, 255, 0.5));
+    border-left: 6px solid var(--accent-color);
+    padding: 12px 20px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    font-size: 1.05rem;
+    color: #2c4c3f;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+    display: flex; align-items: center; gap: 10px;
+}
 </style>
 
 </head>
@@ -5875,26 +5921,29 @@ async function syncDataToCloud() {
 // ====== 登入/介面狀態 強制修復版 ======
 // ==========================================
 
-// 1. 介面狀態更新函數 (v10.0-Auth-Core-Fix: 隱藏多餘登入制)
+// [v20.5] 介面狀態 (Header 按鈕常駐版)
 function updateUIBasedOnAuthState() {
     const authStatus = document.getElementById('auth-status');
     const loginBtn = document.getElementById('login-btn');
     const logoutBtn = document.getElementById('logout-btn');
     const syncBtn = document.getElementById('sync-btn');
-    const selectProjectBtn = document.getElementById('select-project-btn');
-      if(phContainer) {
-            phContainer.style.display = 'inline-flex';
-            updateAllPageHeaders(); 
-        }
+    const phContainer = document.getElementById('project-header-info');
+
+    // 🔥 強制顯示 Header 專案按鈕
+    if(phContainer) phContainer.style.display = 'inline-flex';
+
     if (currentUser) {
-        // 已登入狀態
-        if(authStatus) authStatus.textContent = `已登入: ${currentUser.email}`;
-        if(authStatus) authStatus.style.backgroundColor = "rgba(90, 143, 123, 0.2)";
-        
+        // 已登入
+        if(authStatus) {
+            authStatus.textContent = `已登入: ${currentUser.email}`;
+            authStatus.style.backgroundColor = "rgba(90, 143, 123, 0.2)";
+        }
         if(loginBtn) loginBtn.style.display = 'none';
         if(logoutBtn) logoutBtn.style.display = 'inline-flex';
         if(syncBtn) syncBtn.style.display = 'inline-flex';
-        if(selectProjectBtn) selectProjectBtn.style.display = 'inline-flex';
+
+        // 刷新內容
+        if(typeof updateAllPageHeaders === 'function') updateAllPageHeaders();
 
         if (isDataDirty) {
             syncBtn.disabled = false;
@@ -5906,17 +5955,22 @@ function updateUIBasedOnAuthState() {
             syncBtn.textContent = '資料已同步';
         }
     } else {
-        // 未登入狀態
-        if(authStatus) authStatus.textContent = '未連接';
-        if(authStatus) authStatus.style.backgroundColor = "rgba(0, 0, 0, 0.15)";
-
-        // 🔥 核心改動：因為有登入牆，Header 嘅「登入/註冊」按鈕隱藏，避免雙重入口
-        if(loginBtn) loginBtn.style.display = 'none';
-        
+        // 未登入
+        if(authStatus) {
+            authStatus.textContent = '未連接';
+            authStatus.style.backgroundColor = "rgba(0, 0, 0, 0.15)";
+        }
+        if(loginBtn) loginBtn.style.display = 'none'; // 登入牆接管
         if(logoutBtn) logoutBtn.style.display = 'none';
         if(syncBtn) syncBtn.style.display = 'none';
-        if(selectProjectBtn) selectProjectBtn.style.display = 'none';
-           if(phContainer) phContainer.style.display = 'none';
+        
+        // 未登入時，Header 按鈕顯示提示
+        const phClass = document.getElementById('ph-class');
+        const phTopic = document.getElementById('ph-topic');
+        const phDivider = document.querySelector('.project-header-info .ph-divider');
+        if(phClass) phClass.textContent = '🔒 請先登入';
+        if(phTopic) phTopic.textContent = '';
+        if(phDivider) phDivider.style.display = 'none';
     }
 }
 
@@ -10704,69 +10758,65 @@ function updateWelcomeMessage() {
 /* === [v16.1] 智能入口 (Selective Restore) === */
 /* ========================================= */
 
-// [v20.1] 初始化 (瞬間路由 + 非同步載入)
-document.addEventListener('DOMContentLoaded', () => { // 移除 async，確保立即執行
-    
-    // 🔥 1. 瞬間路由 (Instant Routing)
-    // 在載入任何數據前，立即決定顯示哪個頁面，杜絕閃爍
+// [v20.5] 系統啟動引擎 (Boot Engine)
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("🚀 System Booting...");
+
+    // 1. 瞬間路由 (Instant Routing) - 解決刷新跳首頁問題
     const lastPage = localStorage.getItem('idw_last_page');
-    const resetToHomePages = ['page1', 'page2']; // 這些頁面刷新必回首頁
+    // 定義哪些頁面刷新後「必須」回首頁 (因為依賴記憶體數據)
+    const resetToHomePages = ['page1', 'page2']; 
     let targetPageId = 'page-home';
 
     if (lastPage && !resetToHomePages.includes(lastPage)) {
-        targetPageId = lastPage;
+        targetPageId = lastPage; // 其他頁面 (P3-P8) 保持原位
     }
 
-    // 手動切換 Active Class (比 showPage 更快，不涉邏輯)
+    // 立即切換頁面 class
     document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
     const targetEl = document.getElementById(targetPageId);
     if(targetEl) targetEl.classList.add('active');
 
-    // 同步導航按鈕狀態
-    document.querySelectorAll('.main-nav .nav-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelectorAll('.sub-nav-btn').forEach(btn => btn.classList.remove('active'));
-    
-    // 簡單還原按鈕狀態 (詳細邏輯稍後由 showPage 補足)
-    if (targetPageId === 'page-home') {
-        const homeBtn = document.querySelector('.main-nav .nav-btn[data-target="home"]');
-        if(homeBtn) homeBtn.classList.add('active');
-        const subContainer = document.getElementById('sub-nav-container');
-        if(subContainer) subContainer.style.display = 'none';
-    } else {
+    // 2. 還原導航按鈕狀態
+    if (targetPageId !== 'page-home') {
         const subBtn = document.getElementById('nav-' + targetPageId);
-        if(subBtn) {
+        if (subBtn) {
             subBtn.classList.add('active');
-            // 嘗試顯示懸浮島
             const subContainer = document.getElementById('sub-nav-container');
             if(subContainer) subContainer.style.display = 'flex';
             const group = subBtn.closest('.sub-nav-group');
             if(group) {
                 document.querySelectorAll('.sub-nav-group').forEach(g => g.style.display = 'none');
                 group.style.display = 'flex';
-                // 反向激活主導航
+                // 亮起主導航
                 const mainTarget = group.id.replace('sub-nav-', '');
                 const mainBtn = document.querySelector(`.main-nav .nav-btn[data-target="${mainTarget}"]`);
-                if(mainBtn) mainBtn.classList.add('active');
+                if(mainBtn) {
+                    document.querySelectorAll('.main-nav .nav-btn').forEach(b => b.classList.remove('active'));
+                    mainBtn.classList.add('active');
+                }
             }
         }
     }
 
-    // 2. 執行初始化函數
-    loadFontSize();
-    initHotkeys();
-    attachGlobalListeners();
-    loadDefaultCritiques();
-    initFloatingNavObserver();
-    initScrollAutoShow();
+    // 3. 啟動所有功能模組
+    if(typeof loadFontSize === 'function') loadFontSize();
+    if(typeof initHotkeys === 'function') initHotkeys();
+    if(typeof attachGlobalListeners === 'function') attachGlobalListeners();
+    if(typeof loadDefaultCritiques === 'function') loadDefaultCritiques();
+    if(typeof initFloatingNavObserver === 'function') initFloatingNavObserver();
+    if(typeof initScrollAutoShow === 'function') initScrollAutoShow();
 
-    // 3. 非同步執行驗證與數據載入 (不阻擋 UI)
+    // 4. 身份驗證與數據載入 (這是您之前沒登入的原因)
     (async () => {
-        await checkUser(); 
-        if(typeof loadDashboard === 'function') loadDashboard();
+        await checkUser(); // 檢查登入
+        if(typeof loadDashboard === 'function') loadDashboard(); // 載入首頁
         
-        // 為了確保 showPage 的完整邏輯 (如 Scroll Listener) 被掛載，
-        // 我們在數據準備好後，安靜地再 Call 一次 showPage (不寫入 History)
+        // 確保 showPage 的滾動監聽器被掛載
         showPage(targetPageId, null, false);
+        
+        // 強制刷新一次資訊欄
+        if(typeof updateAllPageHeaders === 'function') updateAllPageHeaders();
     })();
 });
 
