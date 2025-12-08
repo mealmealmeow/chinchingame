@@ -4196,8 +4196,7 @@ header h1 {
 <input type="text" id="page2-topic-display" 
        style="font-size: 1.2rem; font-weight: bold; color: #555; border: 1px solid #e0e0e0; background-color: #f4f4f4; cursor: not-allowed;" 
        placeholder="未設定題目" readonly>
-           style="font-size: 1.2rem; font-weight: bold; color: #333; border: 2px solid #e0e0e0;" 
-           placeholder="未設定題目">
+      
 </div>
     
     
@@ -10034,7 +10033,7 @@ function restoreFromLocalBackup() {
    ========================================== */
 let isDashboardRendering = false; // 加入鎖定旗標
 
-// [v19.0] Dashboard 讀取 (含最新動態追蹤)
+// [v19.1] Dashboard 讀取 (修復純學號顯示問題)
 async function loadDashboard() {
     const focusList = document.getElementById('focus-task-list');
     const classContainer = document.getElementById('class-accordion-container');
@@ -10050,7 +10049,7 @@ async function loadDashboard() {
     }
 
     try {
-        console.log("📊 正在刷新 Dashboard (Details Mode)...");
+        console.log("📊 正在刷新 Dashboard (Hipster Mode)...");
 
         // 1. 讀取班級
         const { data: classesData, error: classError } = await supabaseClient
@@ -10066,16 +10065,16 @@ async function loadDashboard() {
             .order('created_at', { ascending: false });
         if (assignError) throw assignError;
 
-        // 3. 讀取成績 (加入 updated_at 和 student name 以便追蹤)
+        // 3. 讀取成績
         const assignmentIds = assignments ? assignments.map(a => a.id) : [];
         
-        // 🔥 關鍵修改：多讀取 updated_at 和 students(name)
+        // 🔥 關鍵修改：讀取 students 的 name 和 student_number
         const { data: resultsData } = await supabaseClient
             .from('results')
-            .select('assignment_id, total_score, comment_student, updated_at, students(name)')
+            .select('assignment_id, total_score, comment_student, updated_at, students(name, student_number)')
             .in('assignment_id', assignmentIds);
 
-        // 4. 計算統計 (找出最新的一位)
+        // 4. 計算統計
         const statsMap = {}; 
 
         if (resultsData) {
@@ -10085,20 +10084,26 @@ async function loadDashboard() {
                 }
                 
                 const stats = statsMap[r.assignment_id];
-                stats.total++; // 分母
+                stats.total++; 
 
-                // 判斷是否已批改
                 const hasScore = (r.total_score !== null && r.total_score !== '');
                 const hasComment = (r.comment_student && r.comment_student.trim().length > 0);
                 
                 if (hasScore || hasComment) {
                     stats.graded++;
                     
-                    // 🔥 追蹤最新批改
                     const rDate = new Date(r.updated_at);
                     if (!stats.lastUpdate || rDate > new Date(stats.lastUpdate)) {
                         stats.lastUpdate = r.updated_at;
-                        stats.lastStudent = r.students ? r.students.name : '未知學生';
+                        
+                        // 🔥 智能名字邏輯：如果沒名，就用學號，再沒就用 (號碼 X)
+                        let sName = r.students ? r.students.name : '';
+                        const sNum = r.students ? r.students.student_number : '';
+                        
+                        if (!sName || sName.trim() === '') {
+                            sName = sNum ? `${sNum}` : '未知學生';
+                        }
+                        stats.lastStudent = sName;
                     }
                 }
             });
@@ -10122,9 +10127,9 @@ async function loadDashboard() {
                     class_id: a.class_id,
                     class_name: cls.class_name,
                     academic_year: cls.academic_year,
-                    created_at: a.created_at, // 開啟日期
-                    last_updated: stats.lastUpdate || a.created_at, // 最新修訂日期 (如果無批改過，就係開啟日期)
-                    last_student: stats.lastStudent, // 最新同學
+                    created_at: a.created_at,
+                    last_updated: stats.lastUpdate || a.created_at,
+                    last_student: stats.lastStudent, 
                     graded_count: stats.graded,
                     total_students: stats.total,
                     progress: progress,
@@ -10140,13 +10145,10 @@ async function loadDashboard() {
         // 6. 渲染
         const focusItems = allProjectsFlat.filter(p => !p.isCompleted).slice(0, 5);
         focusList.innerHTML = ''; 
-        
-        // 使用新的渲染函數 (下面會定義)
         renderNewDetailCards(focusItems, focusList);
 
         if(classContainer) {
             classContainer.innerHTML = ''; 
-            // 班級列表也用新樣式 (傳入 true 代表使用詳細卡片)
             renderClassCentricAccordion(classesData, assignmentMap, classContainer, true);
         }
         
@@ -13235,26 +13237,29 @@ function formatReportComment(text) {
     }).join('<br>');
 }
 
-// [v19.0] 渲染詳細版卡片 (無編輯掣，有最新動態)
+// [v19.1] 渲染文青風卡片 (Hipster & Breathing Style)
 function renderNewDetailCards(items, container) {
     if (items.length === 0) {
         container.style.display = 'block'; 
         container.innerHTML = `
-            <div style="text-align:center; padding:3rem; color:#aaa; background:rgba(255,255,255,0.5); border-radius:16px; border:2px dashed #eee;">
-                <div style="font-size:2.5rem; margin-bottom:10px;">🍃</div>
-                案頭很乾淨。<br><span style="font-size:0.9rem;">(點擊上方按鈕開始新工作)</span>
+            <div style="text-align:center; padding:4rem 2rem; color:#b0a89e; border:1px dashed #e1d8c8; border-radius:24px; background:rgba(255,255,255,0.4);">
+                <div style="font-size:2.2rem; margin-bottom:15px; opacity:0.6;">☕</div>
+                <div style="font-size:1.1rem; color:#8d775f; margin-bottom:5px;">案頭清爽</div>
+                <div style="font-size:0.9rem; font-weight:300;">享受這片刻的寧靜，或點擊上方「+」開啟新篇章。</div>
             </div>`;
         return;
     }
     
     container.style.display = 'grid'; 
+    // 響應式 Grid 設定：手機 1 欄，電腦 2-3 欄
+    container.style.gridTemplateColumns = 'repeat(auto-fill, minmax(300px, 1fr))';
+    container.style.gap = '20px';
+
     let html = '';
 
     items.forEach(item => {
-        // 日期格式化
+        // 日期處理
         const createDate = new Date(item.created_at).toLocaleDateString('zh-HK', {month:'2-digit', day:'2-digit'});
-        
-        // 最新修訂時間 (如果是今天，顯示時間；否則顯示日期)
         const updateDateObj = new Date(item.last_updated);
         const today = new Date();
         const isToday = updateDateObj.getDate() === today.getDate() && updateDateObj.getMonth() === today.getMonth();
@@ -13262,44 +13267,59 @@ function renderNewDetailCards(items, container) {
             ? updateDateObj.toLocaleTimeString('zh-HK', {hour:'2-digit', minute:'2-digit'}) 
             : updateDateObj.toLocaleDateString('zh-HK', {month:'2-digit', day:'2-digit'});
 
-        // 點擊卡片本體：載入專案
         const loadAction = `openAssignment('${item.id}')`;
         
-        // 點擊「最新同學」：載入專案 + 跳轉
+        // 最新同學按鈕 (文青膠囊風格)
         let jumpHtml = '';
         if (item.last_student) {
             const jumpAction = `event.stopPropagation(); localStorage.setItem('idw_jump_target', '${item.last_student}'); openAssignment('${item.id}');`;
             jumpHtml = `
-                <div onclick="${jumpAction}" 
-                     style="margin-top:10px; padding:6px 10px; background:#e8f5e9; color:#2e7d32; border-radius:8px; font-size:0.85rem; display:flex; justify-content:space-between; align-items:center; cursor:pointer; transition:background 0.2s;">
-                    <span>📝 最新：<b>${escapeHtml(item.last_student)}</b></span>
-                    <span style="font-size:1.1em;">➔</span>
+                <div onclick="${jumpAction}" class="recent-proj-pill" 
+                     style="margin-top:15px; padding:6px 12px; background:#f7f9f8; color:#5A8F7B; border:1px solid #e8f0eb; border-radius:99px; font-size:0.85rem; display:flex; justify-content:space-between; align-items:center; cursor:pointer; transition:all 0.2s;">
+                    <span style="font-weight:500;">🖊️ ${escapeHtml(item.last_student)}</span>
+                    <span style="opacity:0.5; font-size:0.8rem;">${updateStr} ➜</span>
                 </div>
             `;
         } else {
             jumpHtml = `
-                <div style="margin-top:10px; padding:6px 10px; background:#f5f5f5; color:#aaa; border-radius:8px; font-size:0.85rem;">
-                    <span>(尚未開始批改)</span>
+                <div style="margin-top:15px; padding:6px 12px; border:1px dashed #eee; color:#ccc; border-radius:99px; font-size:0.8rem; text-align:center;">
+                    尚未開始批改
                 </div>
             `;
         }
 
         html += `
-        <div class="cozy-folder" onclick="${loadAction}" style="cursor:pointer; padding:1.2rem; min-height:auto;">
-            <!-- 頂部：班級與題目 -->
-            <div style="margin-bottom:8px;">
-                <span class="folder-class" style="font-size:0.8rem; color:#999;">${escapeHtml(item.class_name)}</span>
-                <div class="folder-title" style="font-size:1.15rem; margin-bottom:5px;">${escapeHtml(item.topic)}</div>
+        <div class="cozy-folder" onclick="${loadAction}" 
+             style="cursor:pointer; padding:24px; min-height:auto; background:#fff; border:1px solid rgba(0,0,0,0.04); box-shadow: 0 4px 24px rgba(0,0,0,0.03); transition: transform 0.2s, box-shadow 0.2s; border-radius:20px;">
+            
+            <!-- 頂部：班級標籤 -->
+            <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:12px;">
+                <span style="font-size:0.75rem; letter-spacing:1px; color:#999; text-transform:uppercase; font-weight:600; border:1px solid #eee; padding:2px 8px; border-radius:6px;">
+                    ${escapeHtml(item.class_name)}
+                </span>
+                <span style="font-size:0.8rem; color:#ccc;">${createDate}</span>
             </div>
 
-            <!-- 中間：資訊網格 -->
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; font-size:0.8rem; color:#666; background:#fafafa; padding:8px; border-radius:8px;">
-                <div>📅 開啟：${createDate}</div>
-                <div>📊 進度：${item.graded_count} / ${item.total_students}</div>
-                <div style="grid-column: span 2;">🔄 更新：${updateStr}</div>
+            <!-- 標題 -->
+            <div class="folder-title" style="font-size:1.3rem; font-weight:500; color:#5b5044; margin-bottom:15px; line-height:1.4;">
+                ${escapeHtml(item.topic)}
             </div>
 
-            <!-- 底部：最新批改跳轉按鈕 -->
+            <!-- 資訊分隔線 (呼吸感核心) -->
+            <div style="border-top:1px dashed #f0f0f0; margin:15px 0;"></div>
+
+            <!-- 進度數據 (清爽版) -->
+            <div style="display:flex; align-items:center; justify-content:space-between; color:#8c867a; font-size:0.9rem;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <span>📊</span>
+                    <span>${item.graded_count} / ${item.total_students}</span>
+                </div>
+                <div style="font-weight:bold; color:${item.progress === 100 ? '#5A8F7B' : '#d4a373'};">
+                    ${item.progress}%
+                </div>
+            </div>
+
+            <!-- 底部：最新批改 -->
             ${jumpHtml}
         </div>`;
     });
