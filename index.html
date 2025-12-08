@@ -5031,24 +5031,7 @@ header h1 {
     </div>
 </div>
         
-<!-- [v18.9] 未同步提醒 Modal -->
-<div id="pop-unsaved-guard-modal" class="pop-overlay">
-    <div class="pop-modal">
-        <div class="pop-icon">🍃</div>
-        <h3>還未同步喔</h3>
-        <p class="pop-desc">
-            您在批改頁的更動尚未同步至雲端。<br>
-            直接離開可能會遺失剛才的進度。
-        </p>
-        <div class="pop-footer">
-            <!-- 暫存目標頁面 ID -->
-            <input type="hidden" id="guard-target-page">
-            
-            <button class="pop-btn pop-btn-cancel" onclick="forceLeavePage()">👋 直接離開</button>
-            <button class="pop-btn pop-btn-confirm" onclick="stayAndSync()">☁️ 留低同步</button>
-        </div>
-    </div>
-</div>
+
 
  <div class="pop-footer">
    <button class="pop-btn pop-btn-cancel" onclick="document.getElementById('pop-setup-confirm-modal').classList.remove('active')">返回修改</button>
@@ -5237,6 +5220,26 @@ header h1 {
         <div class="pop-footer">
             <button class="pop-btn pop-btn-cancel" onclick="document.getElementById('pop-quick-project-modal').classList.remove('active')">取消</button>
             <button class="pop-btn pop-btn-confirm" onclick="confirmQuickProject()">🚀 建立並開始批改</button>
+        </div>
+    </div>
+</div>
+
+
+<!-- [v18.11] 未同步提醒 Modal (防 Hang 機版) -->
+<div id="pop-unsaved-guard-modal" class="pop-overlay" style="z-index: 2147483650;">
+    <div class="pop-modal">
+        <div class="pop-icon">🍃</div>
+        <h3>還未同步喔</h3>
+        <p class="pop-desc">
+            您在批改頁的更動尚未同步至雲端。<br>
+            直接離開可能會遺失剛才的進度。
+        </p>
+        <div class="pop-footer">
+            <!-- 暫存目標頁面 ID -->
+            <input type="hidden" id="guard-target-page">
+            
+            <button class="pop-btn pop-btn-cancel" onclick="forceLeavePage()">👋 直接離開</button>
+            <button class="pop-btn pop-btn-confirm" onclick="stayAndSync()">☁️ 留低同步</button>
         </div>
     </div>
 </div>
@@ -6126,88 +6129,125 @@ function switchMainTab(target) {
 // showPage 保持 v10.6 版本即可，它已經兼容這種父子結構
 // 唯一要刪除的是 toggleMobileMenu 函數，因為按鈕已經沒了
 
-// [v18.10] Show Page (路由守衛 + 離場檢查 + 歷史紀錄)
+// [v18.11] 頁面導航與同步攔截 (修復 Hang 機問題)
 function showPage(pageId, focusElementId = null, pushToHistory = true, forceBypass = false) {
-    
-    // 🔥 1. 離場檢查邏輯
-    // 如果正在 Page 2 (批改頁)，且有未儲存變更 (isDataDirty)，且不是強制跳轉
-    const currentPage = document.querySelector('.page-content.active');
-    
-    // 確保 isDataDirty 已定義
-    const isDirty = (typeof isDataDirty !== 'undefined') ? isDataDirty : false;
-
-    if (!forceBypass && currentPage && currentPage.id === 'page2' && pageId !== 'page2') {
-        if (isDirty) {
-            // 觸發攔截彈窗
-            const guardInput = document.getElementById('guard-target-page');
-            const guardModal = document.getElementById('pop-unsaved-guard-modal');
-            
-            if (guardInput && guardModal) {
-                guardInput.value = pageId; // 記住使用者想去邊
-                guardModal.classList.add('active'); // 彈出視窗
-                return; // ⛔️ 中止跳轉，停留在原頁
+    try {
+        // 1. 離場檢查 (Sync Guard)
+        const currentPage = document.querySelector('.page-content.active');
+        
+        // 只有當：正在 Page 2 + 資料未同步 (Dirty) + 不是強制離開 時，才攔截
+        if (!forceBypass && currentPage && currentPage.id === 'page2' && pageId !== 'page2') {
+            // 確保變數存在
+            if (typeof isDataDirty !== 'undefined' && isDataDirty === true) {
+                const guardModal = document.getElementById('pop-unsaved-guard-modal');
+                const guardInput = document.getElementById('guard-target-page');
+                
+                if (guardModal && guardInput) {
+                    guardInput.value = pageId; // 記住使用者原本想去邊
+                    guardModal.classList.add('active'); // 彈出視窗
+                    return; // ⛔️ 成功攔截，中止轉頁
+                } else {
+                    console.warn("⚠️ 找不到攔截彈窗 (ID: pop-unsaved-guard-modal)，自動放行。");
+                }
             }
         }
-    }
 
-    // 2. 權限檢查 (Route Guard)
-    if (pageId === 'page2') {
-        const hasProject = window.currentAssignmentId || (typeof allStudentRecords !== 'undefined' && allStudentRecords.length > 0);
-        if (!hasProject) {
-            if(typeof showToast === 'function') showToast("⚠️ 請先在首頁選擇或建立作業", "warning");
-            pageId = 'page-home'; 
+        // 2. 權限檢查 (Route Guard) - 防止未開 Project 入 Page 2
+        if (pageId === 'page2') {
+            const hasProject = window.currentAssignmentId || (typeof allStudentRecords !== 'undefined' && allStudentRecords.length > 0);
+            if (!hasProject) {
+                if(typeof showToast === 'function') showToast("⚠️ 請先在首頁選擇或建立作業", "warning");
+                pageId = 'page-home'; 
+            }
         }
-    }
 
-    // 3. 執行換頁
-    document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
-    const page = document.getElementById(pageId);
-    if(page) page.classList.add('active');
+        // 3. 執行轉頁 (隱藏舊頁，顯示新頁)
+        document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
+        const targetPage = document.getElementById(pageId);
+        if(targetPage) targetPage.classList.add('active');
 
-    // 4. 更新導航狀態
-    document.querySelectorAll('.sub-nav-btn').forEach(n => n.classList.remove('active'));
-    const subBtn = document.getElementById('nav-' + pageId);
-    if (subBtn) {
-        subBtn.classList.add('active');
-        const group = subBtn.closest('.sub-nav-group');
-        if(group) {
-            if(typeof switchMainTab === 'function') switchMainTab(group.id.replace('sub-nav-', ''));
-            document.getElementById('nav-' + pageId).classList.add('active');
+        // 4. 更新導航按鈕狀態 (Nav)
+        document.querySelectorAll('.sub-nav-btn').forEach(n => n.classList.remove('active'));
+        const subBtn = document.getElementById('nav-' + pageId);
+        
+        // 如果是子頁面 (Page 1-8)
+        if (subBtn) {
+            subBtn.classList.add('active');
+            const group = subBtn.closest('.sub-nav-group');
+            if(group && typeof switchMainTab === 'function') {
+                switchMainTab(group.id.replace('sub-nav-', ''));
+            }
+        } 
+        // 如果是首頁
+        else if (pageId === 'page-home') {
+            document.querySelectorAll('.main-nav .nav-btn').forEach(b => b.classList.remove('active'));
+            const homeBtn = document.querySelector('.main-nav .nav-btn[data-target="home"]');
+            if(homeBtn) homeBtn.classList.add('active');
+            
+            const subNav = document.getElementById('sub-nav-container');
+            if(subNav) subNav.style.display = 'none';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
-    } else if (pageId === 'page-home') {
-        document.querySelectorAll('.main-nav .nav-btn').forEach(b => b.classList.remove('active'));
-        const homeBtn = document.querySelector('.main-nav .nav-btn[data-target="home"]');
-        if(homeBtn) homeBtn.classList.add('active');
-        const subNav = document.getElementById('sub-nav-container');
-        if(subNav) subNav.style.display = 'none';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        // 5. 處理懸浮導覽列 (只在 Page 2 顯示)
+        if (typeof autoExpandCurrentSection === 'function') autoExpandCurrentSection();
+        const fNav = document.getElementById('floating-nav');
+        if(fNav) fNav.classList.toggle('visible', pageId === 'page2');
+
+        // 6. 頁面初始化數據
+        if (pageId === 'page-home') setTimeout(() => { if(typeof loadDashboard === 'function') loadDashboard(); }, 50);
+        if (pageId === 'page8') { if(typeof loadAllClasses === 'function') loadAllClasses(); }
+        if (pageId === 'page5') { if(typeof renderAnalysisPage === 'function') renderAnalysisPage(); }
+
+        // 7. 自動滾動到指定元素
+        if (focusElementId) {
+            setTimeout(() => {
+                const el = document.getElementById(focusElementId);
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 150);
+        }
+        
+        localStorage.setItem('idw_last_page', pageId);
+
+        // 8. 瀏覽器歷史紀錄
+        if (pushToHistory) {
+            const state = { pageId: pageId };
+            if (window.location.hash !== '#' + pageId) {
+                history.pushState(state, '', '#' + pageId);
+            }
+        }
+
+    } catch (e) {
+        console.error("ShowPage Error:", e);
+        // 如果出錯，至少讓人轉到首頁，不要卡死
+        window.location.hash = "#page-home";
+        window.location.reload();
     }
+}
 
-    if (typeof autoExpandCurrentSection === 'function') autoExpandCurrentSection();
-    const fNav = document.getElementById('floating-nav');
-    if(fNav) fNav.classList.toggle('visible', pageId === 'page2');
-
-    // 5. 頁面初始化與觸發
-    if (pageId === 'page-home') setTimeout(() => { if(typeof loadDashboard === 'function') loadDashboard(); }, 50);
-    if (pageId === 'page8') { if(typeof loadAllClasses === 'function') loadAllClasses(); }
-    if (pageId === 'page5') { if(typeof renderAnalysisPage === 'function') renderAnalysisPage(); }
-
-    if (focusElementId) {
-        setTimeout(() => {
-            const el = document.getElementById(focusElementId);
-            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 150);
-    }
+// [v18.11] 攔截彈窗按鈕功能
+function forceLeavePage() {
+    const modal = document.getElementById('pop-unsaved-guard-modal');
+    const targetInput = document.getElementById('guard-target-page');
     
-    localStorage.setItem('idw_last_page', pageId);
+    if(modal) modal.classList.remove('active');
+    
+    // 重置髒狀態 (因為用戶選擇「直接離開」，代表放棄未儲存更動)
+    isDataDirty = false;
+    updateUIBasedOnAuthState();
+    
+    const target = targetInput ? targetInput.value : 'page-home';
+    
+    // 強制轉頁 (forceBypass = true)
+    showPage(target, null, true, true);
+}
 
-    // 6. 瀏覽器歷史紀錄 (上一頁功能)
-    if (pushToHistory) {
-        const state = { pageId: pageId };
-        if (window.location.hash !== '#' + pageId) {
-            history.pushState(state, '', '#' + pageId);
-        }
-    }
+function stayAndSync() {
+    const modal = document.getElementById('pop-unsaved-guard-modal');
+    if(modal) modal.classList.remove('active');
+    
+    // 執行同步
+    saveCurrentStudentData('cloud');
 }
 
 // [v18.9] 攔截器按鈕功能
