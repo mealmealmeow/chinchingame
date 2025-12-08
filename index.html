@@ -7876,38 +7876,59 @@ function jumpToStudentFromOverview(originalName) {
   sel.focus();
 }
 
-/* ---------------- 評語分析 ---------------- */
+// [v19.8] 評語分析數據獲取 (核心修復：嚴格篩選已批改學生)
 function getAnalysisData() {
-  const records = allStudentRecords.filter(r => r.data);
+  // 🔥 關鍵修正：不再只看 r.data 是否存在，而是檢查內容是否為空
+  const records = allStudentRecords.filter(r => {
+      if (!r.data) return false;
+      const s = r.data.scores || {};
+      // 判斷標準：有總分 OR 有評語內容
+      const hasScore = (s.total !== '' && s.total !== null && s.total !== undefined);
+      const hasComment = (r.data.pureStudentComment || r.data.studentComment || '').trim().length > 0;
+      return hasScore || hasComment;
+  });
+
   if (!records.length) return null;
+
   let sums = { content:0, expression:0, structure:0, punctuation:0, typos:0, total:0 };
   let counts = { content:0, expression:0, structure:0, punctuation:0, typos:0, total:0 };
-  records.forEach(r=>{
+
+  records.forEach(r => {
     const s = r.data.scores || {};
     Object.keys(sums).forEach(key => {
         const val = parseFloat(s[key]);
         if (!isNaN(val)) { sums[key] += val; counts[key]++; }
     });
   });
-  const avgFn = (sum,cnt)=> cnt? (sum/cnt) : null;
+
+  const avgFn = (sum, cnt) => cnt ? (sum / cnt) : null;
+  
   const scoreSummary = [
-    { 指標:'內容', 平均分: avgFn(sums.content, counts.content) }, { 指標:'表達', 平均分: avgFn(sums.expression, counts.expression) },
-    { 指標:'結構', 平均分: avgFn(sums.structure, counts.structure) }, { 指標:'標點及字體', 平均分: avgFn(sums.punctuation, counts.punctuation) },
-    { 指標:'錯別字加減分', 平均分: avgFn(sums.typos, counts.typos) }, { 指標:'總分', 平均分: avgFn(sums.total, counts.total) },
+    { 指標:'內容', 平均分: avgFn(sums.content, counts.content) }, 
+    { 指標:'表達', 平均分: avgFn(sums.expression, counts.expression) },
+    { 指標:'結構', 平均分: avgFn(sums.structure, counts.structure) }, 
+    { 指標:'標點及字體', 平均分: avgFn(sums.punctuation, counts.punctuation) },
+    { 指標:'錯別字加減分', 平均分: avgFn(sums.typos, counts.typos) }, 
+    { 指標:'總分', 平均分: avgFn(sums.total, counts.total) },
   ];
+
   const freq = {};
-  records.forEach(r=>{
+  records.forEach(r => {
     const seen = new Set();
-    (r.data.checkedCritiques || []).forEach(item=>{
-      const title = getCritiqueData(item.id,'title');
+    (r.data.checkedCritiques || []).forEach(item => {
+      const title = getCritiqueData(item.id, 'title');
       if (title && !seen.has(title)) {
         seen.add(title);
-        freq[title]=(freq[title]||0)+1;
+        freq[title] = (freq[title] || 0) + 1;
       }
     });
   });
-  const topEntries = Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,10)
-                      .map(([title,count],idx)=>({ 排名: idx+1, 評語標題: title, 被選次數: count }));
+
+  const topEntries = Object.entries(freq)
+                      .sort((a,b) => b[1] - a[1])
+                      .slice(0, 10)
+                      .map(([title, count], idx) => ({ 排名: idx + 1, 評語標題: title, 被選次數: count }));
+
   return { scoreSummary, topEntries, studentCount: records.length };
 }
 
