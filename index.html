@@ -6087,7 +6087,7 @@ function applyCritiquesToDOM(critiques) {
 }
 
 
-// [v18.2.0] Global Listeners (With Pessimistic Hook)
+// [v19.5] 全域監聽 (修復下拉選單更新 & Checkbox)
 function attachGlobalListeners() {
     // 登入登出按鈕
     const loginBtn = document.getElementById('login-btn'); if(loginBtn) loginBtn.addEventListener('click', handleLogin);
@@ -6114,38 +6114,44 @@ function attachGlobalListeners() {
     // 學生下拉選單
     document.getElementById('student-select').addEventListener('change', (e) => loadStudentData(e.target.value));
 
-    // --- [v18.2.0] 分數輸入框專用監聽 (悲觀更新) ---
+    // 分數輸入框專用監聽
     const scoreInputs = ['score-content', 'score-expression', 'score-structure', 'score-punctuation', 'score-typos'];
     scoreInputs.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
-            // 1. 打字時：只計算總分 (不存 DB，避免太頻繁)
-            el.addEventListener('input', () => {
-                calculateTotalScore();
-            });
-            // 2. 離開/Enter 時：執行悲觀儲存
-            el.addEventListener('change', (e) => {
-                handlePessimisticScoreSave(e.target);
-            });
+            el.addEventListener('input', () => calculateTotalScore());
+            el.addEventListener('change', (e) => handlePessimisticScoreSave(e.target));
         }
     });
-// 自動儲存與計算 (排除分數輸入框，避免衝突)
+
+    // 🔥 監聽 A: Input 事件 (打字時)
     document.body.addEventListener('input', (e) => {
         const page = e.target.closest('.page-content');
         if(!page) return;
-        
-        // 如果是分數框，上面已經處理了，這裡忽略
         if (e.target.id && e.target.id.startsWith('score-')) return;
-
-        // [v19.4] 修復 Checkbox 展開/收合邏輯
-        if (page.id === 'page2' && e.target.matches('input[type="checkbox"]')) {
-            // 這一行是關鍵：明確呼叫處理函數來切換 display block/none
-            handleCheckboxChange(e.target, true); 
-        }
 
         triggerAutoSave();
         
         if (page.id === 'page2') {
+            updateAllOutputs();
+            isDataDirty = true;
+            updateUIBasedOnAuthState();
+        }
+    });
+
+    // 🔥 監聽 B: Change 事件 (下拉選單 / Checkbox 改變時)
+    // 這是修復下拉選單沒反應的關鍵
+    document.body.addEventListener('change', (e) => {
+        const page = e.target.closest('.page-content');
+        if(!page) return;
+
+        // 處理 Checkbox 展開/收合
+        if (page.id === 'page2' && e.target.matches('input[type="checkbox"]')) {
+            handleCheckboxChange(e.target, true); 
+        }
+
+        // 處理 Select 下拉選單更新
+        if (page.id === 'page2' && e.target.tagName === 'SELECT') {
             updateAllOutputs();
             isDataDirty = true;
             updateUIBasedOnAuthState();
@@ -10800,14 +10806,17 @@ async function handleForgotPassword() {
 // ====== Dashboard 編輯功能 (新) ======
 // ==========================================
 
-function openEditModal(project) {
-    document.getElementById('edit-project-id').value = project.id;
-    document.getElementById('edit-source-type').value = project.source_type;
-    document.getElementById('edit-class-id').value = project.class_id || ''; 
+// [v19.5] 開啟編輯 Modal (接收獨立參數)
+function openEditModal(id, sourceType, topic, className, year) {
+    document.getElementById('edit-project-id').value = id;
+    document.getElementById('edit-source-type').value = sourceType;
+    // class-id 這裡暫時無法獲取，如果是修改標題通常不需要 class-id (除非要連動 classes table)
+    // 我們可以根據 className 去撞，或者對於 Assignments 表來說，修改 Title 不需要 ClassID
+    document.getElementById('edit-class-id').value = ''; 
     
-    document.getElementById('edit-year').value = project.normalizedYear || project.academic_year || '';
-    document.getElementById('edit-class').value = project.class_name || '';
-    document.getElementById('edit-topic').value = project.topic || '';
+    document.getElementById('edit-year').value = year || '';
+    document.getElementById('edit-class').value = className || '';
+    document.getElementById('edit-topic').value = topic || '';
 
     document.getElementById('pop-edit-modal').classList.add('active');
 }
@@ -13361,7 +13370,7 @@ function formatReportComment(text) {
     }).join('<br>');
 }
 
-// [v19.9] 渲染詳細版卡片 (右上角為詳情按鈕)
+// [v19.5] 渲染詳細版卡片 (修復 Gear 按鈕參數傳遞)
 function renderNewDetailCards(items, container) {
     if (items.length === 0) {
         container.style.display = 'block'; 
@@ -13395,9 +13404,12 @@ function renderNewDetailCards(items, container) {
         // 準備詳情資料
         const safeTopic = escapeHtmlAttr(item.topic);
         const safeClass = escapeHtmlAttr(item.class_name);
+        const safeYear = escapeHtmlAttr(item.academic_year || '');
         const safeCreate = escapeHtmlAttr(item.created_at);
         const safeUpdate = escapeHtmlAttr(item.last_updated);
-        // 🔥 右上角動作：打開詳情 Modal
+        
+        // 🔥 關鍵修正：拆開參數傳送，防止 JSON.stringify 導致 HTML 結構崩壞
+        const editAction = `event.stopPropagation(); openEditModal('${item.id}', '${item.source_type}', '${safeTopic}', '${safeClass}', '${safeYear}')`;
         const detailsAction = `event.stopPropagation(); openProjectDetails('${item.id}', '${safeTopic}', '${safeClass}', '${safeCreate}', '${safeUpdate}', ${item.total_students}, ${item.graded_count})`;
         
         let jumpHtml = '';
@@ -13422,15 +13434,23 @@ function renderNewDetailCards(items, container) {
         <div class="cozy-folder" onclick="${loadAction}" 
              style="cursor:pointer; padding:24px; min-height:auto; background:#fff; border:1px solid rgba(0,0,0,0.04); box-shadow: 0 4px 24px rgba(0,0,0,0.03); transition: transform 0.2s, box-shadow 0.2s; border-radius:20px; position: relative;">
             
-            <!-- 🔥 右上角：詳情按鈕 (🗒) -->
-            <button onclick="${detailsAction}" title="專案詳情與設定" 
-                style="position:absolute; top:15px; right:15px; background:transparent; border:none; color:#ddd; font-size:1.2rem; cursor:pointer; transition:color 0.2s;">
+            <!-- ⚙️ 編輯按鈕 (左上) -->
+            <button onclick="${editAction}" title="編輯標題" 
+                style="position:absolute; top:15px; right:45px; background:transparent; border:none; color:#ddd; font-size:1.1rem; cursor:pointer; transition:color 0.2s;">
+                ⚙️
+            </button>
+
+            <!-- 🗒 詳情按鈕 (右上) -->
+            <button onclick="${detailsAction}" title="專案詳情" 
+                style="position:absolute; top:15px; right:15px; background:transparent; border:none; color:#ddd; font-size:1.1rem; cursor:pointer; transition:color 0.2s;">
                 🗒
             </button>
-            <style>button[title="專案詳情與設定"]:hover { color: #5A8F7B !important; transform: scale(1.1); }</style>
+            <style>
+                button[title="專案詳情"]:hover, button[title="編輯標題"]:hover { color: #5A8F7B !important; transform: scale(1.1); }
+            </style>
 
             <!-- 頂部：班級標籤 -->
-            <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:12px; padding-right: 30px;">
+            <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:12px; padding-right: 60px;">
                 <span style="font-size:0.75rem; letter-spacing:1px; color:#999; text-transform:uppercase; font-weight:600; border:1px solid #eee; padding:2px 8px; border-radius:6px;">
                     ${escapeHtml(item.class_name)}
                 </span>
