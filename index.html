@@ -3372,7 +3372,7 @@ header h1 {
 
 #mobile-book-trigger, #mobile-book-overlay { display: none; }
 /* 1. 書籤按鈕：移至 Header (隱藏原本底部的) */
-#mobile-book-trigger { display: flex; }
+#mobile-book-trigger { display: none !important; }
 
 /* 2. 手機版書籤掣 (實色高對比版) */
 .header-book-btn {
@@ -3426,7 +3426,7 @@ header h1 {
   /* [Edition v13.2] 玻璃書籤按鈕 (Glass Bookmark) */
     #mobile-book-trigger {
         /* 定位 (保持不變) */
-display: flex !important; /* 🔥 這裡加上 !important 確保它會彈出來 */
+        display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
@@ -3943,38 +3943,27 @@ display: flex !important; /* 🔥 這裡加上 !important 確保它會彈出來 
 #pop-manage-students-modal { z-index: 2147483640 !important; }
 /* 確保通用彈窗的底色更深一點，區分層次 */
 #pop-generic-modal .pop-modal { box-shadow: 0 25px 80px rgba(0,0,0,0.5); }
-
-/* 🔥 強制修復手機版書籤功能 (貼在 CSS 最底) */
-
-/* 1. 確保按鈕可見且可點擊 */
-@media (max-width: 768px) {
-    #mobile-book-trigger {
-        display: flex !important;
-        visibility: visible !important; 
-        opacity: 1 !important;
-        z-index: 2147483647 !important; /* 確保在最上層 */
-        pointer-events: auto !important; /* 確保收得到 Click */
-        cursor: pointer !important;
-    }
-
-    /* 2. 確保目錄選單 (Overlay) 存在於頁面上 (但預設透明) */
-    #mobile-book-overlay {
-        display: flex !important; /* 關鍵：不能是 none，否則 JS 加 active 都沒用 */
-        visibility: visible;      /* 讓它存在 */
-        opacity: 0;               /* 但預設透明 */
-        pointer-events: none;     /* 預設穿透 */
-        z-index: 2147483646 !important; /* 在按鈕下面一層 */
-        
-        /* 確保位置正確 */
-        position: fixed;
-        top: 0; left: 0; right: 0; bottom: 0;
-    }
-
-    /* 3. 當 JS 加上 .active 時，顯示出來 */
-    #mobile-book-overlay.active {
-        opacity: 1 !important;
-        pointer-events: auto !important;
-    }
+/* [v20.0] 批改頁未載入遮罩 */
+.page-lock-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(255,255,255,0.9);
+    backdrop-filter: blur(5px);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2rem;
+}
+.page-lock-content {
+    background: #fff;
+    padding: 2rem;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    border: 1px solid #eee;
+    max-width: 400px;
 }
 </style>
 
@@ -3985,7 +3974,7 @@ display: flex !important; /* 🔥 這裡加上 !important 確保它會彈出來 
 
   <div class="main-container">
     <div class="sticky-top-bar">
-<!-- [v12.1] Header 最x返、終版 -->
+<!-- [v12.1] Header 最終版 -->
 <header>
     <!-- 左邊：標題 & 身份 -->
     <div class="header-left">
@@ -4253,6 +4242,19 @@ display: flex !important; /* 🔥 這裡加上 !important 確保它會彈出來 
 
       <!-- ==================== 第二頁：批改頁 (新) ==================== -->
       <div id="page2" class="page-content">
+        <!-- [v20.0] 未載入專案時的溫暖提醒 -->
+<div id="page2-lock" class="page-lock-overlay" style="display:none;">
+    <div class="page-lock-content">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">☕</div>
+        <h3 style="color: #5b5044; margin-bottom: 0.5rem;">尚未載入作業</h3>
+        <p style="color: #888; margin-bottom: 1.5rem;">
+            請先回到咖啡廳 (首頁) 選擇一份作業，<br>或是建立一個新的批改專案。
+        </p>
+        <button class="action-btn" onclick="showPage('page-home')">
+            🏠 回到咖啡廳
+        </button>
+    </div>
+</div>
         <div class="grading-page-grid">
             
            <!-- ==================== Page 2 學生選擇區 (修復版) ==================== -->
@@ -4395,10 +4397,15 @@ display: flex !important; /* 🔥 這裡加上 !important 確保它會彈出來 
             </div>
 
            <!-- [Pro-v9.4-FunctionalFix] 單一同步按鈕 -->
-<!-- [Pro-v9.4-FunctionalFix] 單一同步按鈕 (已移除清空按鈕) -->
 <div class="btn-group" style="justify-content: center; gap: 15px;">
+    <!-- 只保留同步按鈕 -->
     <button class="action-btn" onclick="saveCurrentStudentData('cloud')" title="儲存並同步至雲端資料庫">
         ☁️ 同步上雲
+    </button>
+    
+    <!-- 清空按鈕 -->
+    <button class="action-btn clear-all" onclick="confirmUI('確定清空當前所有輸入？', () => clearAllCore())">
+        清空
     </button>
 </div>
 
@@ -5110,39 +5117,6 @@ display: flex !important; /* 🔥 這裡加上 !important 確保它會彈出來 
 <!-- [v19.0] 列印專用容器 (平時隱藏) -->
 <div id="print-container">
     <!-- JS 會在這裡動態生成 .report-page -->
-</div>
-
-<!-- [v19.4] 專案詳情 Modal (補回) -->
-<div id="pop-project-details-modal" class="pop-overlay">
-  <div class="pop-modal">
-    <div class="pop-icon">🗒</div>
-    <h3>專案詳情</h3>
-    
-    <!-- 隱藏欄位：儲存 ID 用於刪除 -->
-    <input type="hidden" id="detail-project-id">
-    <input type="hidden" id="detail-project-title">
-
-    <div style="text-align: left; margin: 15px 0; font-size: 0.95rem; line-height: 1.8; color: #555;">
-        <div><strong>題目：</strong><span id="detail-topic"></span></div>
-        <div><strong>班別：</strong><span id="detail-class"></span></div>
-        <div><strong>進度：</strong><span id="detail-count"></span></div>
-        <div style="border-top: 1px dashed #eee; margin: 8px 0;"></div>
-        <div style="font-size: 0.85rem; color: #999;">
-            建立日期：<span id="detail-create-date"></span><br>
-            最後更新：<span id="detail-update-date"></span>
-        </div>
-    </div>
-
-    <!-- 已有學生名單預覽 -->
-    <div class="pop-scroll-area" id="detail-student-list" style="height: 150px; background: #fafafa; border: 1px solid #eee;">
-        <!-- JS 動態填入 -->
-    </div>
-
-    <div class="pop-footer" style="justify-content: space-between;">
-        <button class="pop-btn danger-btn" onclick="deleteProjectFromDetails()" style="background:#ffebee; color:#c62828;">🗑️ 刪除此作業</button>
-        <button class="pop-btn pop-btn-confirm" onclick="document.getElementById('pop-project-details-modal').classList.remove('active')">關閉</button>
-    </div>
-  </div>
 </div>
 <script>
     (function() {
@@ -6120,15 +6094,15 @@ function applyCritiquesToDOM(critiques) {
 }
 
 
-// [v19.6] 全域監聽 (修復下拉選單即時更新)
+// [v18.2.0] Global Listeners (With Pessimistic Hook)
 function attachGlobalListeners() {
-    // 按鈕監聽
+    // 登入登出按鈕
     const loginBtn = document.getElementById('login-btn'); if(loginBtn) loginBtn.addEventListener('click', handleLogin);
     const logoutBtn = document.getElementById('logout-btn'); if(logoutBtn) logoutBtn.addEventListener('click', handleLogout);
     const syncBtn = document.getElementById('sync-btn'); if(syncBtn) syncBtn.addEventListener('click', syncDataToCloud);
     const selProjBtn = document.getElementById('select-project-btn'); if(selProjBtn) selProjBtn.addEventListener('click', promptAndLoadCloudProject);
 
-    // 題目同步
+    // 題目同步邏輯
     const syncTopic = (val) => {
         ['topic', 'ai-topic', 'page2-topic-display'].forEach(id => {
             const el = document.getElementById(id);
@@ -6138,6 +6112,7 @@ function attachGlobalListeners() {
         isDataDirty = true;
         updateUIBasedOnAuthState();
     };
+
     ['topic', 'ai-topic', 'page2-topic-display'].forEach(id => {
         const el = document.getElementById(id);
         if(el) el.addEventListener('input', (e) => syncTopic(e.target.value));
@@ -6146,67 +6121,44 @@ function attachGlobalListeners() {
     // 學生下拉選單
     document.getElementById('student-select').addEventListener('change', (e) => loadStudentData(e.target.value));
 
-    // 分數欄位
-    ['score-content', 'score-expression', 'score-structure', 'score-punctuation', 'score-typos'].forEach(id => {
+    // --- [v18.2.0] 分數輸入框專用監聽 (悲觀更新) ---
+    const scoreInputs = ['score-content', 'score-expression', 'score-structure', 'score-punctuation', 'score-typos'];
+    scoreInputs.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
-            el.addEventListener('input', () => calculateTotalScore());
-            el.addEventListener('change', (e) => handlePessimisticScoreSave(e.target));
+            // 1. 打字時：只計算總分 (不存 DB，避免太頻繁)
+            el.addEventListener('input', () => {
+                calculateTotalScore();
+            });
+            // 2. 離開/Enter 時：執行悲觀儲存
+            el.addEventListener('change', (e) => {
+                handlePessimisticScoreSave(e.target);
+            });
         }
     });
 
-    // 🔥 核心修復：監聽所有變更
-    document.body.addEventListener('change', (e) => {
-        const page = e.target.closest('.page-content');
-        if(!page || page.id !== 'page2') return;
-
-        // A. 下拉選單變更 -> 立即更新文字框
-        if (e.target.tagName === 'SELECT' && e.target.closest('.interactive-module')) {
-            const moduleDiv = e.target.closest('.interactive-module');
-            const critiqueId = moduleDiv.id.replace('module-', '');
-            
-            // 1. 處理「其他」選項的顯示
-            toggleOtherBlock(e.target.id, e.target.value);
-            
-            // 2. 更新該評語的文字框 (Textarea)
-            populateEditableTextarea(critiqueId);
-            
-            // 3. 更新總評語 (Output)
-            updateAllOutputs();
-            isDataDirty = true;
-            updateUIBasedOnAuthState();
-        }
-
-        // B. Checkbox 變更
-        if (e.target.matches('input[type="checkbox"]')) {
-            handleCheckboxChange(e.target, true);
-        }
-    });
-
-    // 監聽打字 (Input)
+    // 自動儲存與計算 (排除分數輸入框，避免衝突)
     document.body.addEventListener('input', (e) => {
         const page = e.target.closest('.page-content');
         if(!page) return;
-        if (e.target.id && e.target.id.startsWith('score-')) return; // 分數已處理
-
-        // 如果係「其他」輸入框打字，都要更新 Textarea
-        if (page.id === 'page2' && e.target.matches('.other-input input')) {
-             const moduleDiv = e.target.closest('.interactive-module');
-             if(moduleDiv) {
-                 const critiqueId = moduleDiv.id.replace('module-', '');
-                 populateEditableTextarea(critiqueId);
-             }
-        }
+        
+        // 如果是分數框，上面已經處理了，這裡忽略
+        if (e.target.id && e.target.id.startsWith('score-')) return;
 
         triggerAutoSave();
+        
         if (page.id === 'page2') {
-            updateAllOutputs();
+            if (e.target.matches('input[type="checkbox"]') || e.target.closest('.interactive-module')) {
+                 updateAllOutputs();
+            } else {
+                 updateAllOutputs();
+            }
             isDataDirty = true;
             updateUIBasedOnAuthState();
         }
     });
 
-    // 檔案匯入
+    // 其他檔案輸入監聽
     document.getElementById('import-student-list').addEventListener('change', handleStudentListImport);
     document.getElementById('import-progress-excel').addEventListener('change', handleProgressImportExcel);
     document.getElementById('import-critique-excel').addEventListener('change', handleCritiqueImportExcel);
@@ -6214,6 +6166,7 @@ function attachGlobalListeners() {
     bindOverviewEvents();
     initSwipeGestures();
 }
+
 /* ===== [v10.3] 雙層導航邏輯 ===== */
 
 /* ========================================= */
@@ -6250,23 +6203,15 @@ function switchMainTab(target) {
 // showPage 保持 v10.6 版本即可，它已經兼容這種父子結構
 // 唯一要刪除的是 toggleMobileMenu 函數，因為按鈕已經沒了
 
-// [v19.0] Show Page (穩定版：移除攔截，保留瀏覽器上一頁功能)
+// [v20.0] Show Page (導航修復 + Page 2 鎖定)
 function showPage(pageId, focusElementId = null, pushToHistory = true) {
-    // 1. 權限檢查 (Route Guard)
-    if (pageId === 'page2') {
-        const hasProject = window.currentAssignmentId || (typeof allStudentRecords !== 'undefined' && allStudentRecords.length > 0);
-        if (!hasProject) {
-            if(typeof showToast === 'function') showToast("⚠️ 請先在首頁選擇或建立作業", "warning");
-            pageId = 'page-home'; 
-        }
-    }
-
-    // 2. 執行轉頁
+    // 1. 執行轉頁 (先隱藏所有)
     document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
+    
     const targetPage = document.getElementById(pageId);
-    if(targetPage) targetPage.classList.add('active');
+    if (targetPage) targetPage.classList.add('active');
 
-    // 3. 更新導航按鈕狀態
+    // 2. 導航按鈕狀態更新
     document.querySelectorAll('.sub-nav-btn').forEach(n => n.classList.remove('active'));
     const subBtn = document.getElementById('nav-' + pageId);
     
@@ -6274,29 +6219,38 @@ function showPage(pageId, focusElementId = null, pushToHistory = true) {
         subBtn.classList.add('active');
         const group = subBtn.closest('.sub-nav-group');
         if(group && typeof switchMainTab === 'function') {
-            switchMainTab(group.id.replace('sub-nav-', ''));
+            const groupId = group.id.replace('sub-nav-', '');
+            switchMainTab(groupId); // 確保上方 Tab 正確
         }
     } else if (pageId === 'page-home') {
-        document.querySelectorAll('.main-nav .nav-btn').forEach(b => b.classList.remove('active'));
-        const homeBtn = document.querySelector('.main-nav .nav-btn[data-target="home"]');
-        if(homeBtn) homeBtn.classList.add('active');
-        
-        const subNav = document.getElementById('sub-nav-container');
-        if(subNav) subNav.style.display = 'none';
+        switchMainTab('home');
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // 4. 處理懸浮導覽列 (只在 Page 2 顯示)
-    if (typeof autoExpandCurrentSection === 'function') autoExpandCurrentSection();
-    const fNav = document.getElementById('floating-nav');
-    if(fNav) fNav.classList.toggle('visible', pageId === 'page2');
+    // 3. Page 2 特別檢查 (溫暖提醒鎖)
+    if (pageId === 'page2') {
+        const lock = document.getElementById('page2-lock');
+        // 檢查是否有 assignmentId (雲端) 或 allStudentRecords (本地)
+        const hasProject = window.currentAssignmentId || (allStudentRecords && allStudentRecords.length > 0);
+        
+        if (lock) {
+            lock.style.display = hasProject ? 'none' : 'flex';
+        }
+        
+        // 懸浮導航列
+        const fNav = document.getElementById('floating-nav');
+        if(fNav) fNav.classList.add('visible');
+    } else {
+        const fNav = document.getElementById('floating-nav');
+        if(fNav) fNav.classList.remove('visible');
+    }
 
-    // 5. 頁面初始化
+    // 4. 頁面初始化 hook
     if (pageId === 'page-home') setTimeout(() => { if(typeof loadDashboard === 'function') loadDashboard(); }, 50);
     if (pageId === 'page8') { if(typeof loadAllClasses === 'function') loadAllClasses(); }
     if (pageId === 'page5') { if(typeof renderAnalysisPage === 'function') renderAnalysisPage(); }
 
-    // 6. 自動滾動
+    // 5. 滾動聚焦
     if (focusElementId) {
         setTimeout(() => {
             const el = document.getElementById(focusElementId);
@@ -6304,13 +6258,14 @@ function showPage(pageId, focusElementId = null, pushToHistory = true) {
         }, 150);
     }
     
+    // 6. 記錄最後頁面 (供 F5 用)
     localStorage.setItem('idw_last_page', pageId);
 
-    // 7. 瀏覽器歷史紀錄
+    // 7. 瀏覽器歷史紀錄 (修復上一頁)
     if (pushToHistory) {
-        const state = { pageId: pageId };
-        if (window.location.hash !== '#' + pageId) {
-            history.pushState(state, '', '#' + pageId);
+        // 如果當前 state 已經係呢頁，就唔好 push
+        if (!window.history.state || window.history.state.pageId !== pageId) {
+            history.pushState({ pageId: pageId }, '', '#' + pageId);
         }
     }
 }
@@ -7391,23 +7346,12 @@ function deleteCommonTypo(id) {
 
 /* --- 學生資料儲存、讀取與總覽 --- */
 
-// [v19.4] 導航切換：先儲存，後跳轉
-async function navigateToStudent(direction) {
+function navigateToStudent(direction) {
   const select = document.getElementById('student-select');
   if (select.options.length <= 1) return;
-
-  // 1. 先執行雲端同步 (顯示 Toast)
-  if (typeof saveCurrentStudentData === 'function') {
-      // 使用 await 確保儲存完成才轉頁
-      await saveCurrentStudentData('cloud');
-  }
-
-  // 2. 計算新索引
   let newIndex = select.selectedIndex + (direction === 'next' ? 1 : -1);
   if (newIndex >= select.options.length) newIndex = 0; 
   if (newIndex < 0) newIndex = select.options.length - 1; 
-  
-  // 3. 執行切換
   select.selectedIndex = newIndex;
   select.dispatchEvent(new Event('change'));
 }
@@ -7909,59 +7853,38 @@ function jumpToStudentFromOverview(originalName) {
   sel.focus();
 }
 
-// [v19.8] 評語分析數據獲取 (核心修復：嚴格篩選已批改學生)
+/* ---------------- 評語分析 ---------------- */
 function getAnalysisData() {
-  // 🔥 關鍵修正：不再只看 r.data 是否存在，而是檢查內容是否為空
-  const records = allStudentRecords.filter(r => {
-      if (!r.data) return false;
-      const s = r.data.scores || {};
-      // 判斷標準：有總分 OR 有評語內容
-      const hasScore = (s.total !== '' && s.total !== null && s.total !== undefined);
-      const hasComment = (r.data.pureStudentComment || r.data.studentComment || '').trim().length > 0;
-      return hasScore || hasComment;
-  });
-
+  const records = allStudentRecords.filter(r => r.data);
   if (!records.length) return null;
-
   let sums = { content:0, expression:0, structure:0, punctuation:0, typos:0, total:0 };
   let counts = { content:0, expression:0, structure:0, punctuation:0, typos:0, total:0 };
-
-  records.forEach(r => {
+  records.forEach(r=>{
     const s = r.data.scores || {};
     Object.keys(sums).forEach(key => {
         const val = parseFloat(s[key]);
         if (!isNaN(val)) { sums[key] += val; counts[key]++; }
     });
   });
-
-  const avgFn = (sum, cnt) => cnt ? (sum / cnt) : null;
-  
+  const avgFn = (sum,cnt)=> cnt? (sum/cnt) : null;
   const scoreSummary = [
-    { 指標:'內容', 平均分: avgFn(sums.content, counts.content) }, 
-    { 指標:'表達', 平均分: avgFn(sums.expression, counts.expression) },
-    { 指標:'結構', 平均分: avgFn(sums.structure, counts.structure) }, 
-    { 指標:'標點及字體', 平均分: avgFn(sums.punctuation, counts.punctuation) },
-    { 指標:'錯別字加減分', 平均分: avgFn(sums.typos, counts.typos) }, 
-    { 指標:'總分', 平均分: avgFn(sums.total, counts.total) },
+    { 指標:'內容', 平均分: avgFn(sums.content, counts.content) }, { 指標:'表達', 平均分: avgFn(sums.expression, counts.expression) },
+    { 指標:'結構', 平均分: avgFn(sums.structure, counts.structure) }, { 指標:'標點及字體', 平均分: avgFn(sums.punctuation, counts.punctuation) },
+    { 指標:'錯別字加減分', 平均分: avgFn(sums.typos, counts.typos) }, { 指標:'總分', 平均分: avgFn(sums.total, counts.total) },
   ];
-
   const freq = {};
-  records.forEach(r => {
+  records.forEach(r=>{
     const seen = new Set();
-    (r.data.checkedCritiques || []).forEach(item => {
-      const title = getCritiqueData(item.id, 'title');
+    (r.data.checkedCritiques || []).forEach(item=>{
+      const title = getCritiqueData(item.id,'title');
       if (title && !seen.has(title)) {
         seen.add(title);
-        freq[title] = (freq[title] || 0) + 1;
+        freq[title]=(freq[title]||0)+1;
       }
     });
   });
-
-  const topEntries = Object.entries(freq)
-                      .sort((a,b) => b[1] - a[1])
-                      .slice(0, 10)
-                      .map(([title, count], idx) => ({ 排名: idx + 1, 評語標題: title, 被選次數: count }));
-
+  const topEntries = Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,10)
+                      .map(([title,count],idx)=>({ 排名: idx+1, 評語標題: title, 被選次數: count }));
   return { scoreSummary, topEntries, studentCount: records.length };
 }
 
@@ -10230,7 +10153,7 @@ function restoreFromLocalBackup() {
    ========================================== */
 let isDashboardRendering = false; // 加入鎖定旗標
 
-// [v19.1] Dashboard 讀取 (修復純學號顯示問題)
+// [v20.0] Dashboard 讀取 (進度條 = Selected Students)
 async function loadDashboard() {
     const focusList = document.getElementById('focus-task-list');
     const classContainer = document.getElementById('class-accordion-container');
@@ -10246,9 +10169,9 @@ async function loadDashboard() {
     }
 
     try {
-        console.log("📊 正在刷新 Dashboard (Hipster Mode)...");
+        console.log("📊 正在刷新 Dashboard...");
 
-        // 1. 讀取班級
+        // 1. 讀取班級 (用作名稱對照)
         const { data: classesData, error: classError } = await supabaseClient
             .from('classes').select('*').eq('user_id', currentUser.id)
             .order('academic_year', { ascending: false });
@@ -10257,21 +10180,28 @@ async function loadDashboard() {
         // 2. 讀取作業
         const { data: assignments, error: assignError } = await supabaseClient
             .from('assignments')
-            .select('id, title, created_at, class_id, classes(class_name)') 
+            .select('id, title, created_at, class_id') 
             .eq('user_id', currentUser.id)
             .order('created_at', { ascending: false });
         if (assignError) throw assignError;
 
-        // 3. 讀取成績
-        const assignmentIds = assignments ? assignments.map(a => a.id) : [];
-        
-        // 🔥 關鍵修改：讀取 students 的 name 和 student_number
-        const { data: resultsData } = await supabaseClient
+        if (!assignments || assignments.length === 0) {
+            renderEmptyState(focusList);
+            return;
+        }
+
+        const assignmentIds = assignments.map(a => a.id);
+
+        // 3. 讀取成績 (只讀取 assignment_id, 確保分母係「已建立 Result 的學生」)
+        // 這是關鍵：我們計算該作業在 results 表中有多少行，這就是分母 (Selected Students)
+        const { data: resultsData, error: resError } = await supabaseClient
             .from('results')
             .select('assignment_id, total_score, comment_student, updated_at, students(name, student_number)')
             .in('assignment_id', assignmentIds);
+            
+        if (resError) throw resError;
 
-        // 4. 計算統計
+        // 4. 統計數據
         const statsMap = {}; 
 
         if (resultsData) {
@@ -10281,25 +10211,20 @@ async function loadDashboard() {
                 }
                 
                 const stats = statsMap[r.assignment_id];
-                stats.total++; 
+                stats.total++; // 這就是分母：Selected Students
 
                 const hasScore = (r.total_score !== null && r.total_score !== '');
                 const hasComment = (r.comment_student && r.comment_student.trim().length > 0);
                 
                 if (hasScore || hasComment) {
-                    stats.graded++;
+                    stats.graded++; // 分子
                     
                     const rDate = new Date(r.updated_at);
                     if (!stats.lastUpdate || rDate > new Date(stats.lastUpdate)) {
                         stats.lastUpdate = r.updated_at;
-                        
-                        // 🔥 智能名字邏輯：如果沒名，就用學號，再沒就用 (號碼 X)
                         let sName = r.students ? r.students.name : '';
                         const sNum = r.students ? r.students.student_number : '';
-                        
-                        if (!sName || sName.trim() === '') {
-                            sName = sNum ? `${sNum}` : '未知學生';
-                        }
+                        if (!sName || sName.trim() === '') sName = sNum ? `${sNum}` : '未知學生';
                         stats.lastStudent = sName;
                     }
                 }
@@ -10310,42 +10235,44 @@ async function loadDashboard() {
         const assignmentMap = {};
         const allProjectsFlat = [];
 
-        if (assignments) {
-            assignments.forEach(a => {
-                const cls = classesData.find(c => c.id === a.class_id) || { class_name: '未知', academic_year: '' };
-                const stats = statsMap[a.id] || { total: 0, graded: 0, lastUpdate: null, lastStudent: null };
-                
-                const progress = stats.total > 0 ? Math.round((stats.graded / stats.total) * 100) : 0;
-                
-                const richProject = {
-                    id: a.id,
-                    source_type: 'new',
-                    topic: a.title,
-                    class_id: a.class_id,
-                    class_name: cls.class_name,
-                    academic_year: cls.academic_year,
-                    created_at: a.created_at,
-                    last_updated: stats.lastUpdate || a.created_at,
-                    last_student: stats.lastStudent, 
-                    graded_count: stats.graded,
-                    total_students: stats.total,
-                    progress: progress,
-                    isCompleted: (stats.total > 0 && stats.graded >= stats.total)
-                };
+        assignments.forEach(a => {
+            const cls = classesData.find(c => c.id === a.class_id) || { class_name: '未知', academic_year: '' };
+            // 如果 statsMap 沒數據，代表雖然開了 Project 但未有 Student Results (可能剛開)，total 為 0
+            const stats = statsMap[a.id] || { total: 0, graded: 0, lastUpdate: null, lastStudent: null };
+            
+            const progress = stats.total > 0 ? Math.round((stats.graded / stats.total) * 100) : 0;
+            
+            const richProject = {
+                id: a.id,
+                source_type: 'new',
+                topic: a.title,
+                class_id: a.class_id,
+                class_name: cls.class_name,
+                academic_year: cls.academic_year,
+                created_at: a.created_at,
+                last_updated: stats.lastUpdate || a.created_at, // 如果沒更新過，用建立時間
+                last_student: stats.lastStudent, 
+                graded_count: stats.graded,
+                total_students: stats.total, // 正確的分母
+                progress: progress,
+                isCompleted: (stats.total > 0 && stats.graded >= stats.total)
+            };
 
-                allProjectsFlat.push(richProject);
-                if (!assignmentMap[a.class_id]) assignmentMap[a.class_id] = [];
-                assignmentMap[a.class_id].push(richProject);
-            });
-        }
+            allProjectsFlat.push(richProject);
+            if (!assignmentMap[a.class_id]) assignmentMap[a.class_id] = [];
+            assignmentMap[a.class_id].push(richProject);
+        });
 
         // 6. 渲染
+        // 只顯示未完成的前 5 個
         const focusItems = allProjectsFlat.filter(p => !p.isCompleted).slice(0, 5);
         focusList.innerHTML = ''; 
         renderNewDetailCards(focusItems, focusList);
 
         if(classContainer) {
             classContainer.innerHTML = ''; 
+            // 注意：這裡我加了一個參數 false，因為我們不想在 Archive 裡用 Progress Bar Card (太逼)
+            // 不過既然你沒特別要求 Archive，我們暫時保持原樣
             renderClassCentricAccordion(classesData, assignmentMap, classContainer, true);
         }
         
@@ -10569,7 +10496,7 @@ function startNewProjectForClass(classId, className) {
     }, 500);
 }
 
-// [v20.1] 載入作業 (嚴格模式：分母只計算作業內的學生)
+// [v18.10] 載入作業 (精準過濾版：只顯示已分配學生)
 async function openAssignment(assignmentId) {
     if (!currentUser) return;
     try {
@@ -10581,13 +10508,13 @@ async function openAssignment(assignmentId) {
             .single();
         if (assignError) throw assignError;
 
-        // 2. 🔥 核心修正：只讀取 results 表 (這是唯一的真理)
-        // 絕對不讀取 classes/students 表來合併，確保分母 = 建立時的人數
+        // 2. 🔥 核心修正：只讀取該作業的 Results，並透過關聯讀取 Students
+        // 這樣就能過濾掉那些「同班但未被分配此作業」的學生
         const { data: results, error: resError } = await supabaseClient
             .from('results')
             .select(`
                 *,
-                students (id, name, student_number) 
+                students (*) 
             `)
             .eq('assignment_id', assignmentId);
             
@@ -10608,17 +10535,19 @@ async function openAssignment(assignmentId) {
         window.currentAssignmentId = assignment.id;
         window.currentClassId = assignment.class_id;
         
+        // 安全地填寫欄位
         if(document.getElementById('student-class')) document.getElementById('student-class').value = assignment.classes ? assignment.classes.class_name : '未知班級';
         if(document.getElementById('topic')) document.getElementById('topic').value = assignment.title;
         if(document.getElementById('page2-topic-display')) document.getElementById('page2-topic-display').value = assignment.title;
 
-        // 5. 數據組裝 (Strict Mapping)
+        // 5. 數據組裝
+        // results 陣列現在包含了學生成績 + 學生基本資料 (res.students)
         allStudentRecords = results.map(res => {
-            const st = res.students; 
-            if (!st) return null; // 資料庫關聯防爆
+            const st = res.students; // 這是從關聯表抓出來的
+            
+            if (!st) return null; // 如果找不到學生資料，跳過
 
             const extraData = res.comment_data || {};
-            
             const dataObj = {
                 class: assignment.classes ? assignment.classes.class_name : '',
                 topic: assignment.title,
@@ -10647,12 +10576,12 @@ async function openAssignment(assignmentId) {
                 dbId: st.id, 
                 data: dataObj
             };
-        }).filter(r => r !== null);
+        }).filter(r => r !== null); // 過濾掉空值
 
         // 排序
         sortStudents(allStudentRecords);
 
-        // 填寫名單文字框
+        // 填寫名單文字框 (這會觸發下拉選單更新)
         document.getElementById('student-names').value = allStudentRecords.map(r => r.originalName).join('\n');
         
         // 強制刷新 UI
@@ -10663,6 +10592,7 @@ async function openAssignment(assignmentId) {
         showPage('page2');
         if(typeof showToast === 'function') showToast(`已載入：${assignment.title}`, "success");
         
+        // 清除舊的跳轉目標
         localStorage.removeItem('idw_jump_target');
 
     } catch (error) {
@@ -10687,54 +10617,9 @@ function updateWelcomeMessage() {
 /* === [v16.1] 智能入口 (Selective Restore) === */
 /* ========================================= */
 
-// [v20.1] 初始化 (瞬間路由 + 非同步載入)
-document.addEventListener('DOMContentLoaded', () => { // 移除 async，確保立即執行
-    
-    // 🔥 1. 瞬間路由 (Instant Routing)
-    // 在載入任何數據前，立即決定顯示哪個頁面，杜絕閃爍
-    const lastPage = localStorage.getItem('idw_last_page');
-    const resetToHomePages = ['page1', 'page2']; // 這些頁面刷新必回首頁
-    let targetPageId = 'page-home';
-
-    if (lastPage && !resetToHomePages.includes(lastPage)) {
-        targetPageId = lastPage;
-    }
-
-    // 手動切換 Active Class (比 showPage 更快，不涉邏輯)
-    document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
-    const targetEl = document.getElementById(targetPageId);
-    if(targetEl) targetEl.classList.add('active');
-
-    // 同步導航按鈕狀態
-    document.querySelectorAll('.main-nav .nav-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelectorAll('.sub-nav-btn').forEach(btn => btn.classList.remove('active'));
-    
-    // 簡單還原按鈕狀態 (詳細邏輯稍後由 showPage 補足)
-    if (targetPageId === 'page-home') {
-        const homeBtn = document.querySelector('.main-nav .nav-btn[data-target="home"]');
-        if(homeBtn) homeBtn.classList.add('active');
-        const subContainer = document.getElementById('sub-nav-container');
-        if(subContainer) subContainer.style.display = 'none';
-    } else {
-        const subBtn = document.getElementById('nav-' + targetPageId);
-        if(subBtn) {
-            subBtn.classList.add('active');
-            // 嘗試顯示懸浮島
-            const subContainer = document.getElementById('sub-nav-container');
-            if(subContainer) subContainer.style.display = 'flex';
-            const group = subBtn.closest('.sub-nav-group');
-            if(group) {
-                document.querySelectorAll('.sub-nav-group').forEach(g => g.style.display = 'none');
-                group.style.display = 'flex';
-                // 反向激活主導航
-                const mainTarget = group.id.replace('sub-nav-', '');
-                const mainBtn = document.querySelector(`.main-nav .nav-btn[data-target="${mainTarget}"]`);
-                if(mainBtn) mainBtn.classList.add('active');
-            }
-        }
-    }
-
-    // 2. 執行初始化函數
+// [v20.0] 初始化 (Fix Refresh & Hash Logic)
+document.addEventListener('DOMContentLoaded', async () => {
+    // 1. 基礎初始化
     loadFontSize();
     initHotkeys();
     attachGlobalListeners();
@@ -10742,15 +10627,29 @@ document.addEventListener('DOMContentLoaded', () => { // 移除 async，確保�
     initFloatingNavObserver();
     initScrollAutoShow();
 
-    // 3. 非同步執行驗證與數據載入 (不阻擋 UI)
-    (async () => {
-        await checkUser(); 
-        if(typeof loadDashboard === 'function') loadDashboard();
-        
-        // 為了確保 showPage 的完整邏輯 (如 Scroll Listener) 被掛載，
-        // 我們在數據準備好後，安靜地再 Call 一次 showPage (不寫入 History)
-        showPage(targetPageId, null, false);
-    })();
+    // 2. 身份驗證 (優先)
+    await checkUser(); 
+
+    // 3. 確保 Dashboard 載入
+    if(typeof loadDashboard === 'function') loadDashboard();
+    
+    // 4. 路由處理
+    // 優先檢查 URL Hash (例如使用者按了上一頁/下一頁)
+    const hashPage = window.location.hash.replace('#', '');
+    
+    if (hashPage && document.getElementById(hashPage)) {
+        // 如果有 hash，直接去該頁 (不 push history，以免覆蓋)
+        showPage(hashPage, null, false);
+    } else {
+        // 如果沒有 hash，檢查 localStorage 記憶 (F5 刷新)
+        const lastPage = localStorage.getItem('idw_last_page');
+        if (lastPage && document.getElementById(lastPage)) {
+            showPage(lastPage, null, false);
+        } else {
+            // 預設首頁
+            showPage('page-home', null, false);
+        }
+    }
 });
 
 // [Helper] 確認還原
@@ -10910,17 +10809,14 @@ async function handleForgotPassword() {
 // ====== Dashboard 編輯功能 (新) ======
 // ==========================================
 
-// [v19.5] 開啟編輯 Modal (接收獨立參數)
-function openEditModal(id, sourceType, topic, className, year) {
-    document.getElementById('edit-project-id').value = id;
-    document.getElementById('edit-source-type').value = sourceType;
-    // class-id 這裡暫時無法獲取，如果是修改標題通常不需要 class-id (除非要連動 classes table)
-    // 我們可以根據 className 去撞，或者對於 Assignments 表來說，修改 Title 不需要 ClassID
-    document.getElementById('edit-class-id').value = ''; 
+function openEditModal(project) {
+    document.getElementById('edit-project-id').value = project.id;
+    document.getElementById('edit-source-type').value = project.source_type;
+    document.getElementById('edit-class-id').value = project.class_id || ''; 
     
-    document.getElementById('edit-year').value = year || '';
-    document.getElementById('edit-class').value = className || '';
-    document.getElementById('edit-topic').value = topic || '';
+    document.getElementById('edit-year').value = project.normalizedYear || project.academic_year || '';
+    document.getElementById('edit-class').value = project.class_name || '';
+    document.getElementById('edit-topic').value = project.topic || '';
 
     document.getElementById('pop-edit-modal').classList.add('active');
 }
@@ -13474,7 +13370,7 @@ function formatReportComment(text) {
     }).join('<br>');
 }
 
-// [v19.7] 渲染簡約版卡片 (右上角只保留刪除 🗑️)
+// [v19.9] 渲染詳細版卡片 (右上角為詳情按鈕)
 function renderNewDetailCards(items, container) {
     if (items.length === 0) {
         container.style.display = 'block'; 
@@ -13496,29 +13392,54 @@ function renderNewDetailCards(items, container) {
     items.forEach(item => {
         const createDate = new Date(item.created_at).toLocaleDateString('zh-HK', {month:'2-digit', day:'2-digit'});
         
-        // 字串安全處理
-        const safeTitle = (item.topic || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
-        
-        // 刪除動作
-        const deleteAction = `event.stopPropagation(); confirmDeleteProjectDirectly('${item.id}', '${safeTitle}')`;
+        const updateDateObj = new Date(item.last_updated);
+        const today = new Date();
+        const isToday = updateDateObj.getDate() === today.getDate() && updateDateObj.getMonth() === today.getMonth();
+        const updateStr = isToday 
+            ? updateDateObj.toLocaleTimeString('zh-HK', {hour:'2-digit', minute:'2-digit'}) 
+            : updateDateObj.toLocaleDateString('zh-HK', {month:'2-digit', day:'2-digit'});
+
         const loadAction = `openAssignment('${item.id}')`;
 
-        // 進度條顏色
-        const progressColor = item.progress === 100 ? '#5A8F7B' : (item.progress > 50 ? '#d4a373' : '#e0e0e0');
+        // 準備詳情資料
+        const safeTopic = escapeHtmlAttr(item.topic);
+        const safeClass = escapeHtmlAttr(item.class_name);
+        const safeCreate = escapeHtmlAttr(item.created_at);
+        const safeUpdate = escapeHtmlAttr(item.last_updated);
+        // 🔥 右上角動作：打開詳情 Modal
+        const detailsAction = `event.stopPropagation(); openProjectDetails('${item.id}', '${safeTopic}', '${safeClass}', '${safeCreate}', '${safeUpdate}', ${item.total_students}, ${item.graded_count})`;
+        
+        let jumpHtml = '';
+        if (item.last_student) {
+            const jumpAction = `event.stopPropagation(); localStorage.setItem('idw_jump_target', '${item.last_student}'); openAssignment('${item.id}');`;
+            jumpHtml = `
+                <div onclick="${jumpAction}" class="recent-proj-pill" 
+                     style="margin-top:15px; padding:6px 12px; background:#f7f9f8; color:#5A8F7B; border:1px solid #e8f0eb; border-radius:99px; font-size:0.85rem; display:flex; justify-content:space-between; align-items:center; cursor:pointer; transition:all 0.2s;">
+                    <span style="font-weight:500;">🖊️ ${escapeHtml(item.last_student)}</span>
+                    <span style="opacity:0.5; font-size:0.8rem;">${updateStr} ➜</span>
+                </div>
+            `;
+        } else {
+            jumpHtml = `
+                <div style="margin-top:15px; padding:6px 12px; border:1px dashed #eee; color:#ccc; border-radius:99px; font-size:0.8rem; text-align:center;">
+                    尚未開始批改
+                </div>
+            `;
+        }
 
         html += `
         <div class="cozy-folder" onclick="${loadAction}" 
              style="cursor:pointer; padding:24px; min-height:auto; background:#fff; border:1px solid rgba(0,0,0,0.04); box-shadow: 0 4px 24px rgba(0,0,0,0.03); transition: transform 0.2s, box-shadow 0.2s; border-radius:20px; position: relative;">
             
-            <!-- 🔥 右上角：變回單一刪除按鈕 (🗑️) -->
-            <button onclick="${deleteAction}" title="刪除作業" 
-                style="position:absolute; top:15px; right:15px; background:transparent; border:none; color:#e0e0e0; font-size:1.1rem; cursor:pointer; transition:color 0.2s;">
-                🗑️
+            <!-- 🔥 右上角：詳情按鈕 (🗒) -->
+            <button onclick="${detailsAction}" title="專案詳情與設定" 
+                style="position:absolute; top:15px; right:15px; background:transparent; border:none; color:#ddd; font-size:1.2rem; cursor:pointer; transition:color 0.2s;">
+                🗒
             </button>
-            <style>button[title="刪除作業"]:hover { color: #c86a5a !important; transform: scale(1.1); }</style>
+            <style>button[title="專案詳情與設定"]:hover { color: #5A8F7B !important; transform: scale(1.1); }</style>
 
             <!-- 頂部：班級標籤 -->
-            <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:12px; padding-right: 40px;">
+            <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:12px; padding-right: 30px;">
                 <span style="font-size:0.75rem; letter-spacing:1px; color:#999; text-transform:uppercase; font-weight:600; border:1px solid #eee; padding:2px 8px; border-radius:6px;">
                     ${escapeHtml(item.class_name)}
                 </span>
@@ -13536,17 +13457,16 @@ function renderNewDetailCards(items, container) {
             <!-- 進度數據 -->
             <div style="display:flex; align-items:center; justify-content:space-between; color:#8c867a; font-size:0.9rem;">
                 <div style="display:flex; align-items:center; gap:6px;">
-                    <span>👥 ${item.graded_count} / ${item.total_students}</span>
+                    <span>👥 作答人數：${item.total_students}</span>
+                    <span style="color:#aaa; font-size:0.8rem;">(已閱 ${item.graded_count})</span>
                 </div>
-                <div style="font-weight:bold; color:${progressColor};">
+                <div style="font-weight:bold; color:${item.progress === 100 ? '#5A8F7B' : '#d4a373'};">
                     ${item.progress}%
                 </div>
             </div>
-            
-            <!-- 進度條 (視覺化) -->
-            <div style="width:100%; height:4px; background:#f5f5f5; border-radius:99px; margin-top:10px; overflow:hidden;">
-                <div style="width:${item.progress}%; height:100%; background:${progressColor};"></div>
-            </div>
+
+            <!-- 底部：最新批改 -->
+            ${jumpHtml}
         </div>`;
     });
     
@@ -13581,69 +13501,52 @@ async function confirmDeleteProjectDirectly(id, title) {
 
 
 
-// [v19.6] 專案詳情與名單預覽
+// [v19.3] 開啟專案詳情 Modal
 async function openProjectDetails(id, topic, className, created, updated, total, graded) {
     const modal = document.getElementById('pop-project-details-modal');
     
-    // 填入基本資料
+    // 填入資料
     document.getElementById('detail-topic').textContent = topic;
     document.getElementById('detail-class').textContent = className;
-    
-    const cDate = new Date(created);
-    const uDate = new Date(updated);
-    document.getElementById('detail-create-date').textContent = `${cDate.toLocaleDateString()} ${cDate.toLocaleTimeString()}`;
-    document.getElementById('detail-update-date').textContent = `${uDate.toLocaleDateString()} ${uDate.toLocaleTimeString()}`;
-    document.getElementById('detail-count').textContent = `${graded} / ${total} (完成度 ${total>0 ? Math.round(graded/total*100):0}%)`;
+    document.getElementById('detail-create-date').textContent = new Date(created).toLocaleString('zh-HK');
+    document.getElementById('detail-update-date').textContent = new Date(updated).toLocaleString('zh-HK');
+    document.getElementById('detail-count').textContent = `${graded} / ${total}`;
     
     document.getElementById('detail-project-id').value = id;
     document.getElementById('detail-project-title').value = topic;
 
-    // 清空並顯示 Loading
+    // 讀取名單
     const listDiv = document.getElementById('detail-student-list');
-    listDiv.innerHTML = '<div style="color:#999; padding:20px; text-align:center;">🔄 正在讀取學生名單...</div>';
-    
+    listDiv.innerHTML = '<div style="color:#999;">🔄 正在讀取名單...</div>';
     modal.classList.add('active');
 
-    // 讀取已批改名單 (從 Results 抓)
     try {
         const { data: results, error } = await supabaseClient
             .from('results')
-            .select('updated_at, students(name, student_number)')
-            .eq('assignment_id', id)
-            .order('updated_at', { ascending: false }); // 最近批改在上
+            .select('students(name, student_number)')
+            .eq('assignment_id', id);
 
         if (error) throw error;
 
         if (!results || results.length === 0) {
-            listDiv.innerHTML = '<div style="padding:20px; text-align:center; color:#ccc;">尚未有批改記錄</div>';
+            listDiv.innerHTML = '無資料';
         } else {
-            let html = '<div style="display:flex; flex-direction:column; gap:5px; padding:10px;">';
-            results.forEach(r => {
+            const names = results.map(r => {
                 const s = r.students;
-                if (!s) return;
-                
-                let sName = s.name;
-                let sNum = s.student_number;
-                if (sNum && /^\d$/.test(sNum)) sNum = '0' + sNum;
-                const displayName = sNum ? `${sNum} ${sName}` : sName;
-                
-                // 格式化時間 (只顯示月/日)
-                const d = new Date(r.updated_at);
-                const timeStr = `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${d.getMinutes()<10?'0'+d.getMinutes():d.getMinutes()}`;
+                if (!s) return '未知';
+                let num = s.student_number;
+                if (num && /^\d$/.test(num)) num = '0' + num;
+                return num ? `${num} ${s.name}` : s.name;
+            }).sort();
 
-                html += `
-                    <div style="display:flex; justify-content:space-between; border-bottom:1px dashed #eee; padding:4px 0;">
-                        <span style="color:#333;">${escapeHtml(displayName)}</span>
-                        <span style="color:#999; font-size:0.8rem;">${timeStr}</span>
-                    </div>
-                `;
-            });
-            html += '</div>';
-            listDiv.innerHTML = html;
+            listDiv.innerHTML = `
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;">
+                    ${names.map(n => `<div>• ${escapeHtml(n)}</div>`).join('')}
+                </div>
+            `;
         }
     } catch (e) {
-        console.error(e);
-        listDiv.innerHTML = `<span style="color:red; padding:10px;">讀取失敗: ${e.message}</span>`;
+        listDiv.innerHTML = `<span style="color:red;">讀取失敗</span>`;
     }
 }
 
