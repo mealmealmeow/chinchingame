@@ -3762,19 +3762,20 @@ header h1 {
 /* 1. 平時隱藏列印容器 */
 #print-container { display: none; }
 
-/* [v19.4] PDF 列印修復 (強制重置高度與溢出) */
+/* [v19.5] PDF 列印修復 (Visibility 隱形法) */
 @media print {
-    /* 1. 隱藏頁面原有內容 */
+    /* 1. 隱藏所有元素 (但保留佔位，防止佈局崩壞) */
     body * {
         visibility: hidden;
     }
 
-    /* 2. 顯示列印容器 */
-    #print-container, #print-container * {
+    /* 2. 唯獨讓列印容器及其子孫「顯形」 */
+    #print-container, 
+    #print-container * {
         visibility: visible;
     }
 
-    /* 3. 強制容器定位 */
+    /* 3. 將列印容器強制拉到視窗最左上角，蓋過其他隱形元素 */
     #print-container {
         position: absolute;
         left: 0;
@@ -3782,15 +3783,17 @@ header h1 {
         width: 100%;
         margin: 0;
         padding: 0;
-        background-color: white; 
+        background-color: white !important; 
+        z-index: 9999;
     }
 
-    /* 4. 關鍵修正：重置滾動條與高度，防止內容被截斷 */
+    /* 4. 強制重置頁面邊距與滾動 */
     html, body {
         height: auto !important;
         overflow: visible !important;
         margin: 0 !important;
         padding: 0 !important;
+        background: #fff !important;
     }
 
     /* 5. 隱藏瀏覽器預設頁眉頁腳 */
@@ -5075,40 +5078,6 @@ header h1 {
 <!-- [v19.0] 列印專用容器 (平時隱藏) -->
 <div id="print-container">
     <!-- JS 會在這裡動態生成 .report-page -->
-</div>
-
-<!-- [v19.3] 專案詳情 Modal -->
-<div id="pop-project-details-modal" class="pop-overlay">
-    <div class="pop-modal">
-        <div class="pop-icon">ℹ️</div>
-        <h3 id="detail-topic" style="margin-bottom:5px;"></h3>
-        <p id="detail-class" style="color:#888; font-size:0.9rem; margin-bottom:20px;"></p>
-
-        <!-- 資訊網格 -->
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; text-align:left; background:#f9f9f9; padding:15px; border-radius:12px; margin-bottom:15px; font-size:0.9rem;">
-            <div>📅 <strong>建立日期：</strong><br><span id="detail-create-date">-</span></div>
-            <div>🔄 <strong>最後更新：</strong><br><span id="detail-update-date">-</span></div>
-            <div style="grid-column: span 2; border-top:1px dashed #ddd; margin-top:5px; padding-top:5px;">
-                👥 <strong>作答人數：</strong> <span id="detail-count">-</span>
-            </div>
-        </div>
-
-        <!-- 學生名單預覽 -->
-        <div style="text-align:left; margin-bottom:20px;">
-            <label style="font-size:0.85rem; color:#888; font-weight:bold;">已分配學生名單：</label>
-            <div id="detail-student-list" style="max-height:150px; overflow-y:auto; border:1px solid #eee; padding:10px; border-radius:8px; margin-top:5px; font-size:0.9rem; color:#555;">
-                讀取中...
-            </div>
-        </div>
-
-        <input type="hidden" id="detail-project-id">
-        <input type="hidden" id="detail-project-title">
-
-        <div class="pop-footer" style="justify-content: space-between;">
-            <button class="pop-btn danger-btn" onclick="deleteProjectFromDetails()">🗑️ 刪除專案</button>
-            <button class="pop-btn pop-btn-confirm" onclick="document.getElementById('pop-project-details-modal').classList.remove('active')">關閉</button>
-        </div>
-    </div>
 </div>
 <script>
     (function() {
@@ -6492,7 +6461,7 @@ document.addEventListener('click', (e) => {
 
 
 
-// [v19.3] 評語清單渲染 (修復即時編輯與下拉更新)
+// [v19.2] 評語清單渲染 (支援即時編輯監聽)
 function buildChecklist() {
     const dataContainer = document.getElementById('critique-data');
     const checklistContainer = document.getElementById('checklist-container');
@@ -6541,26 +6510,12 @@ function buildChecklist() {
                 itemDiv.className = `check-item ${type==='problem'?'is-problem':'is-excellent'}`;
                 
                 itemDiv.innerHTML = `<div class="check-item-header"><input type="checkbox" id="${id}"><label for="${id}">${title}</label></div>`;
-                
-                if (hasOptions) {
-                    // 建立下拉選單模組
-                    const module = createInteractiveModule(id);
-                    // 🔥 綁定事件：當選單改變時，更新 Textarea 內容
-                    module.querySelectorAll('select, input').forEach(input => {
-                        input.addEventListener('change', () => {
-                            populateEditableTextarea(id); // 更新 Textarea 文字
-                            updateAllOutputs();           // 更新總評語
-                            isDataDirty = true;
-                            updateUIBasedOnAuthState();
-                        });
-                    });
-                    itemDiv.appendChild(module);
-                }
+                if (hasOptions) itemDiv.appendChild(createInteractiveModule(id));
                 
                 // 編輯區 (預覽與修改)
                 const editDiv = document.createElement('div'); 
                 editDiv.className = 'editable-comment';
-                // 🔥 綁定 Textarea：打字時直接更新總評語
+                // 🔥 加入 oninput 事件，打字即觸發更新
                 editDiv.innerHTML = `<textarea id="text-${id}" placeholder="點擊此處編輯評語內容..." oninput="updateAllOutputs(); isDataDirty=true; updateUIBasedOnAuthState();"></textarea>`;
                 
                 itemDiv.appendChild(editDiv);
@@ -6571,8 +6526,9 @@ function buildChecklist() {
                     if(hasOptions) itemDiv.querySelector('.interactive-module').style.display = 'block';
                     editDiv.style.display = 'block';
                     const ta = editDiv.querySelector('textarea');
-                    // 如果有舊輸入，優先還原；否則產生預設內容
+                    // 如果有舊輸入，優先還原
                     if(ta && editedTexts[id]) ta.value = editedTexts[id];
+                    // 如果冇舊輸入，產生預設內容
                     else if(ta) ta.value = composeStudentFromConcise(id);
                 }
             });
@@ -6581,7 +6537,26 @@ function buildChecklist() {
         }
     } else {
         checklistContainer.style.display = 'block';
-        checklistContainer.innerHTML = `<div class="rescue-card">... (Empty State HTML) ...</div>`;
+        checklistContainer.innerHTML = `
+            <div class="rescue-card">
+                <div class="rescue-title">尚未有評語項目</div>
+                <div class="rescue-desc">請選擇載入方式：</div>
+                <div class="rescue-grid">
+                    <div class="rescue-btn" onclick="quickLoadPresets()">
+                        <div class="rescue-icon">📚</div>
+                        <div class="rescue-label">載入預設</div>
+                    </div>
+                    <div class="rescue-btn" onclick="showPage('page6')">
+                        <div class="rescue-icon">✨</div>
+                        <div class="rescue-label">AI 生成</div>
+                    </div>
+                    <div class="rescue-btn" onclick="showPage('page3')">
+                        <div class="rescue-icon">✍️</div>
+                        <div class="rescue-label">手動新增</div>
+                    </div>
+                </div>
+            </div>
+        `;
     }
 }
 
@@ -6941,17 +6916,29 @@ function calculateTotalScore() {
   return total;
 }
 
+// [v19.5] Checkbox 狀態處理 (修復 Re-tick 顯示問題)
 function handleCheckboxChange(checkbox, doUpdate = true) {
   const id = checkbox.id;
   const isChecked = checkbox.checked;
   const checkItem = checkbox.closest('.check-item');
+  
+  // 1. 獲取控制目標
   const interactiveModule = checkItem.querySelector('.interactive-module');
   const editableComment = checkItem.querySelector('.editable-comment');
 
+  // 2. 切換顯示狀態
   if (interactiveModule) interactiveModule.style.display = isChecked ? 'block' : 'none';
   if (editableComment) editableComment.style.display = isChecked ? 'block' : 'none';
 
-  if (isChecked) populateEditableTextarea(id);
+  // 3. 🔥 關鍵修復：當剔選時，如果編輯框是空的，自動填入預設內容
+  if (isChecked) {
+      const textarea = document.getElementById(`text-${id}`);
+      if (textarea && !textarea.value.trim()) {
+          populateEditableTextarea(id);
+      }
+  }
+
+  // 4. 更新總評語 (可選，視乎 doUpdate 參數)
   if (doUpdate) updateAllOutputs();
 }
 
@@ -13122,13 +13109,14 @@ document.addEventListener('DOMContentLoaded', () => {
 /* === [v19.3] 報告引擎 (歷程圖 + 雜誌風) === */
 /* ========================================= */
 
+// [v19.5] 報告生成引擎 (無動畫圖表 + 延遲列印)
 async function printReport(mode) {
     const container = document.getElementById('print-container');
     if (!container) return;
 
-    if (typeof showToast === 'function') showToast("📊 正在分析歷史數據...", "info");
+    if (typeof showToast === 'function') showToast("📊 正在準備列印格式...", "info");
 
-    // 1. 自動同步 (確保當前數據最新)
+    // 1. 自動同步
     if (currentUser && document.getElementById('page2').classList.contains('active')) {
         await saveCurrentStudentData('cloud_silent');
     }
@@ -13152,11 +13140,9 @@ async function printReport(mode) {
     const dateStr = new Date().toLocaleDateString('zh-HK');
 
     container.innerHTML = '';
-    const chartsToRender = []; // 待繪製的圖表清單
+    const chartsToRender = []; 
 
-    // 3. 逐個處理學生 (Async Loop 讀取歷史)
-    // 為了不卡死，我們用 Promise.all 平行讀取，但要注意 Supabase Rate Limit，這裡量少應該還好
-    
+    // 3. 生成 HTML
     for (let i = 0; i < targets.length; i++) {
         const student = targets[i];
         const d = student.data || {};
@@ -13164,28 +13150,26 @@ async function printReport(mode) {
         const comment = d.pureStudentComment || d.studentComment || "（暫無評語）";
         const canvasId = `history-chart-${i}`;
 
-        // --- 3a. 讀取該生的歷史成績 ---
+        // 讀取歷史
         let historyData = [];
         if (student.dbId) {
             const { data: hist } = await supabaseClient
                 .from('results')
                 .select('total_score, assignments!inner(title, created_at)')
                 .eq('student_id', student.dbId)
-                .order('assignments(created_at)', { ascending: true }); // 按時間排
+                .order('assignments(created_at)', { ascending: true });
             
             if (hist) {
-                // 整理數據，確保按時間排序
                 historyData = hist
                     .map(h => ({
                         title: h.assignments.title,
                         score: h.total_score,
                         date: new Date(h.assignments.created_at)
                     }))
-                    .sort((a, b) => a.date - b.date); // 二次確保排序
+                    .sort((a, b) => a.date - b.date);
             }
         }
 
-        // --- 3b. 生成 HTML (雜誌風) ---
         const pageHtml = `
         <div class="report-page">
             <div class="report-header">
@@ -13200,12 +13184,10 @@ async function printReport(mode) {
                 </div>
             </div>
 
-            <!-- 歷程圖 (如果有歷史數據) -->
             <div class="chart-section" style="display: ${historyData.length > 1 ? 'block' : 'none'}">
                 <canvas id="${canvasId}"></canvas>
             </div>
 
-            <!-- 分數表 -->
             <table class="score-table">
                 <thead>
                     <tr><th>內容 (40)</th><th>表達 (30)</th><th>結構 (20)</th><th>標點 (10)</th><th>錯別字</th><th>總分</th></tr>
@@ -13222,7 +13204,6 @@ async function printReport(mode) {
                 </tbody>
             </table>
 
-            <!-- 評語區 -->
             <div class="comment-section">
                 <div class="comment-label">教師評語</div>
                 <div class="comment-content">${formatReportComment(comment)}</div>
@@ -13236,18 +13217,18 @@ async function printReport(mode) {
         
         container.insertAdjacentHTML('beforeend', pageHtml);
 
-        // --- 3c. 準備繪圖數據 ---
         if (historyData.length > 1) {
             chartsToRender.push({
                 id: canvasId,
-                labels: historyData.map(h => h.title), // X軸：題目
-                data: historyData.map(h => h.score)    // Y軸：分數
+                labels: historyData.map(h => h.title),
+                data: historyData.map(h => h.score)
             });
         }
     }
 
     // 4. 繪製圖表 (關閉動畫)
-    setTimeout(() => {
+    // 使用 requestAnimationFrame 確保 DOM 已更新
+    requestAnimationFrame(() => {
         chartsToRender.forEach(c => {
             const ctx = document.getElementById(c.id).getContext('2d');
             new Chart(ctx, {
@@ -13257,20 +13238,21 @@ async function printReport(mode) {
                     datasets: [{
                         label: '得分走勢',
                         data: c.data,
-                        borderColor: '#5A8F7B', // 文青綠
+                        borderColor: '#5A8F7B', 
                         backgroundColor: 'rgba(90, 143, 123, 0.1)',
                         borderWidth: 2,
                         pointBackgroundColor: '#fff',
                         pointBorderColor: '#5A8F7B',
                         pointRadius: 4,
                         fill: true,
-                        tension: 0.3 // 曲線平滑度
+                        tension: 0.3
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    animation: false, // 🔥 關鍵：無動畫，列印即出
+                    // 🔥 核心修正：關閉動畫，確保列印時圖表已畫好
+                    animation: false, 
                     scales: {
                         y: { beginAtZero: true, suggestedMax: 100, grid: { color: '#eee' } },
                         x: { grid: { display: false } }
@@ -13283,12 +13265,11 @@ async function printReport(mode) {
             });
         });
 
-        // 5. 喚醒列印
+        // 5. 喚醒列印 (稍微延遲，確保 Canvas 渲染完成)
         setTimeout(() => {
             window.print();
-        }, 800);
-
-    }, 200);
+        }, 500);
+    });
 }
 
 // [Helper] 格式化評語 (如之前已加可忽略)
@@ -13301,7 +13282,7 @@ function formatReportComment(text) {
     }).join('<br>');
 }
 
-// [v19.4] 渲染詳細版卡片 (還原設計 + 詳情按鈕)
+// [v19.2] 渲染詳細版卡片 (含刪除按鈕 & 清晰人數)
 function renderNewDetailCards(items, container) {
     if (items.length === 0) {
         container.style.display = 'block'; 
@@ -13315,14 +13296,12 @@ function renderNewDetailCards(items, container) {
     }
     
     container.style.display = 'grid'; 
-    // 響應式 Grid
     container.style.gridTemplateColumns = 'repeat(auto-fill, minmax(300px, 1fr))';
     container.style.gap = '20px';
 
     let html = '';
 
     items.forEach(item => {
-        // 日期處理
         const createDate = new Date(item.created_at).toLocaleDateString('zh-HK', {month:'2-digit', day:'2-digit'});
         
         const updateDateObj = new Date(item.last_updated);
@@ -13333,16 +13312,9 @@ function renderNewDetailCards(items, container) {
             : updateDateObj.toLocaleDateString('zh-HK', {month:'2-digit', day:'2-digit'});
 
         const loadAction = `openAssignment('${item.id}')`;
-
-        // 🔥 [修改點] 右上角按鈕：改為打開詳情 Modal
-        const safeTopic = escapeHtmlAttr(item.topic);
-        const safeClass = escapeHtmlAttr(item.class_name);
-        const safeCreate = escapeHtmlAttr(item.created_at);
-        const safeUpdate = escapeHtmlAttr(item.last_updated);
-        // 注意：這裡使用 🗒 (Page facing up) 作為詳情圖示
-        const detailsAction = `event.stopPropagation(); openProjectDetails('${item.id}', '${safeTopic}', '${safeClass}', '${safeCreate}', '${safeUpdate}', ${item.total_students}, ${item.graded_count})`;
+        // 直接刪除專案的邏輯
+        const deleteAction = `event.stopPropagation(); confirmDeleteProjectDirectly('${item.id}', '${escapeHtmlAttr(item.topic)}')`;
         
-        // 底部最新同學按鈕
         let jumpHtml = '';
         if (item.last_student) {
             const jumpAction = `event.stopPropagation(); localStorage.setItem('idw_jump_target', '${item.last_student}'); openAssignment('${item.id}');`;
@@ -13365,12 +13337,12 @@ function renderNewDetailCards(items, container) {
         <div class="cozy-folder" onclick="${loadAction}" 
              style="cursor:pointer; padding:24px; min-height:auto; background:#fff; border:1px solid rgba(0,0,0,0.04); box-shadow: 0 4px 24px rgba(0,0,0,0.03); transition: transform 0.2s, box-shadow 0.2s; border-radius:20px; position: relative;">
             
-            <!-- 🔥 右上角詳情按鈕 (還原位置，改圖示) -->
-            <button onclick="${detailsAction}" title="專案詳情與設定" 
-                style="position:absolute; top:15px; right:15px; background:transparent; border:none; color:#ddd; font-size:1.2rem; cursor:pointer; transition:color 0.2s;">
-                🗒
+            <!-- 🗑️ 刪除按鈕 (右上角) -->
+            <button onclick="${deleteAction}" title="刪除專案" 
+                style="position:absolute; top:15px; right:15px; background:transparent; border:none; color:#ddd; font-size:1.1rem; cursor:pointer; transition:color 0.2s;">
+                🗑️
             </button>
-            <style>button[title="專案詳情與設定"]:hover { color: #5A8F7B !important; transform: scale(1.1); }</style>
+            <style>button[title="刪除專案"]:hover { color: #c86a5a !important; transform: scale(1.1); }</style>
 
             <!-- 頂部：班級標籤 -->
             <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:12px; padding-right: 30px;">
@@ -13432,70 +13404,7 @@ async function confirmDeleteProjectDirectly(id, title) {
         alert("刪除失敗：" + error.message);
     }
 }
-// [v19.3] 開啟專案詳情 Modal
-async function openProjectDetails(id, topic, className, created, updated, total, graded) {
-    const modal = document.getElementById('pop-project-details-modal');
-    
-    // 1. 填入基本資料
-    document.getElementById('detail-topic').textContent = topic;
-    document.getElementById('detail-class').textContent = className;
-    document.getElementById('detail-create-date').textContent = new Date(created).toLocaleString('zh-HK');
-    document.getElementById('detail-update-date').textContent = new Date(updated).toLocaleString('zh-HK');
-    document.getElementById('detail-count').textContent = `${graded} / ${total}`;
-    
-    document.getElementById('detail-project-id').value = id;
-    document.getElementById('detail-project-title').value = topic;
 
-    // 2. 顯示 Modal (Loading 狀態)
-    const listDiv = document.getElementById('detail-student-list');
-    listDiv.innerHTML = '<div style="color:#999;">🔄 正在讀取名單...</div>';
-    modal.classList.add('active');
-
-    // 3. 非同步讀取學生名單
-    try {
-        const { data: results, error } = await supabaseClient
-            .from('results')
-            .select('students(name, student_number)')
-            .eq('assignment_id', id);
-
-        if (error) throw error;
-
-        if (!results || results.length === 0) {
-            listDiv.innerHTML = '無資料';
-        } else {
-            // 整理名單
-            const names = results.map(r => {
-                const s = r.students;
-                if (!s) return '未知';
-                // 格式：01 陳大文
-                let num = s.student_number;
-                if (num && /^\d$/.test(num)) num = '0' + num;
-                return num ? `${num} ${s.name}` : s.name;
-            }).sort(); // 簡單排序
-
-            // 渲染點列
-            listDiv.innerHTML = `
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;">
-                    ${names.map(n => `<div>• ${escapeHtml(n)}</div>`).join('')}
-                </div>
-            `;
-        }
-    } catch (e) {
-        listDiv.innerHTML = `<span style="color:red;">讀取失敗</span>`;
-        console.error(e);
-    }
-}
-
-// [v19.3] 從詳情頁刪除專案
-function deleteProjectFromDetails() {
-    const id = document.getElementById('detail-project-id').value;
-    const title = document.getElementById('detail-project-title').value;
-    
-    // 先關閉詳情 Modal，再彈出確認 (避免重疊)
-    document.getElementById('pop-project-details-modal').classList.remove('active');
-    
-    confirmDeleteProjectDirectly(id, title);
-}
 </script> <!-- 呢個係原本全個檔案唯一的結尾，保留佢 -->
 
 <!-- [v12.2] Back To Top (確保在最外層，不受干擾) -->
