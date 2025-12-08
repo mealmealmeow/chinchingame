@@ -4192,7 +4192,10 @@ header h1 {
     <!-- [v11.8] Page 2 專用題目欄 (與 Page 1 同步) -->
 <div class="input-group" style="margin-bottom: 1rem; border-bottom: 1px dashed #ddd; padding-bottom: 1rem;">
     <label for="page2-topic-display" style="color:#5A8F7B;">作文題目</label>
-    <input type="text" id="page2-topic-display" 
+   <!-- [v19.0] 題目鎖定 (Read-only) -->
+<input type="text" id="page2-topic-display" 
+       style="font-size: 1.2rem; font-weight: bold; color: #555; border: 1px solid #e0e0e0; background-color: #f4f4f4; cursor: not-allowed;" 
+       placeholder="未設定題目" readonly>
            style="font-size: 1.2rem; font-weight: bold; color: #333; border: 2px solid #e0e0e0;" 
            placeholder="未設定題目">
 </div>
@@ -6129,99 +6132,68 @@ function switchMainTab(target) {
 // showPage 保持 v10.6 版本即可，它已經兼容這種父子結構
 // 唯一要刪除的是 toggleMobileMenu 函數，因為按鈕已經沒了
 
-// [v18.11] 頁面導航與同步攔截 (修復 Hang 機問題)
-function showPage(pageId, focusElementId = null, pushToHistory = true, forceBypass = false) {
-    try {
-        // 1. 離場檢查 (Sync Guard)
-        const currentPage = document.querySelector('.page-content.active');
+// [v19.0] Show Page (穩定版：移除攔截，保留瀏覽器上一頁功能)
+function showPage(pageId, focusElementId = null, pushToHistory = true) {
+    // 1. 權限檢查 (Route Guard)
+    if (pageId === 'page2') {
+        const hasProject = window.currentAssignmentId || (typeof allStudentRecords !== 'undefined' && allStudentRecords.length > 0);
+        if (!hasProject) {
+            if(typeof showToast === 'function') showToast("⚠️ 請先在首頁選擇或建立作業", "warning");
+            pageId = 'page-home'; 
+        }
+    }
+
+    // 2. 執行轉頁
+    document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
+    const targetPage = document.getElementById(pageId);
+    if(targetPage) targetPage.classList.add('active');
+
+    // 3. 更新導航按鈕狀態
+    document.querySelectorAll('.sub-nav-btn').forEach(n => n.classList.remove('active'));
+    const subBtn = document.getElementById('nav-' + pageId);
+    
+    if (subBtn) {
+        subBtn.classList.add('active');
+        const group = subBtn.closest('.sub-nav-group');
+        if(group && typeof switchMainTab === 'function') {
+            switchMainTab(group.id.replace('sub-nav-', ''));
+        }
+    } else if (pageId === 'page-home') {
+        document.querySelectorAll('.main-nav .nav-btn').forEach(b => b.classList.remove('active'));
+        const homeBtn = document.querySelector('.main-nav .nav-btn[data-target="home"]');
+        if(homeBtn) homeBtn.classList.add('active');
         
-        // 只有當：正在 Page 2 + 資料未同步 (Dirty) + 不是強制離開 時，才攔截
-        if (!forceBypass && currentPage && currentPage.id === 'page2' && pageId !== 'page2') {
-            // 確保變數存在
-            if (typeof isDataDirty !== 'undefined' && isDataDirty === true) {
-                const guardModal = document.getElementById('pop-unsaved-guard-modal');
-                const guardInput = document.getElementById('guard-target-page');
-                
-                if (guardModal && guardInput) {
-                    guardInput.value = pageId; // 記住使用者原本想去邊
-                    guardModal.classList.add('active'); // 彈出視窗
-                    return; // ⛔️ 成功攔截，中止轉頁
-                } else {
-                    console.warn("⚠️ 找不到攔截彈窗 (ID: pop-unsaved-guard-modal)，自動放行。");
-                }
-            }
+        const subNav = document.getElementById('sub-nav-container');
+        if(subNav) subNav.style.display = 'none';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // 4. 處理懸浮導覽列 (只在 Page 2 顯示)
+    if (typeof autoExpandCurrentSection === 'function') autoExpandCurrentSection();
+    const fNav = document.getElementById('floating-nav');
+    if(fNav) fNav.classList.toggle('visible', pageId === 'page2');
+
+    // 5. 頁面初始化
+    if (pageId === 'page-home') setTimeout(() => { if(typeof loadDashboard === 'function') loadDashboard(); }, 50);
+    if (pageId === 'page8') { if(typeof loadAllClasses === 'function') loadAllClasses(); }
+    if (pageId === 'page5') { if(typeof renderAnalysisPage === 'function') renderAnalysisPage(); }
+
+    // 6. 自動滾動
+    if (focusElementId) {
+        setTimeout(() => {
+            const el = document.getElementById(focusElementId);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 150);
+    }
+    
+    localStorage.setItem('idw_last_page', pageId);
+
+    // 7. 瀏覽器歷史紀錄
+    if (pushToHistory) {
+        const state = { pageId: pageId };
+        if (window.location.hash !== '#' + pageId) {
+            history.pushState(state, '', '#' + pageId);
         }
-
-        // 2. 權限檢查 (Route Guard) - 防止未開 Project 入 Page 2
-        if (pageId === 'page2') {
-            const hasProject = window.currentAssignmentId || (typeof allStudentRecords !== 'undefined' && allStudentRecords.length > 0);
-            if (!hasProject) {
-                if(typeof showToast === 'function') showToast("⚠️ 請先在首頁選擇或建立作業", "warning");
-                pageId = 'page-home'; 
-            }
-        }
-
-        // 3. 執行轉頁 (隱藏舊頁，顯示新頁)
-        document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
-        const targetPage = document.getElementById(pageId);
-        if(targetPage) targetPage.classList.add('active');
-
-        // 4. 更新導航按鈕狀態 (Nav)
-        document.querySelectorAll('.sub-nav-btn').forEach(n => n.classList.remove('active'));
-        const subBtn = document.getElementById('nav-' + pageId);
-        
-        // 如果是子頁面 (Page 1-8)
-        if (subBtn) {
-            subBtn.classList.add('active');
-            const group = subBtn.closest('.sub-nav-group');
-            if(group && typeof switchMainTab === 'function') {
-                switchMainTab(group.id.replace('sub-nav-', ''));
-            }
-        } 
-        // 如果是首頁
-        else if (pageId === 'page-home') {
-            document.querySelectorAll('.main-nav .nav-btn').forEach(b => b.classList.remove('active'));
-            const homeBtn = document.querySelector('.main-nav .nav-btn[data-target="home"]');
-            if(homeBtn) homeBtn.classList.add('active');
-            
-            const subNav = document.getElementById('sub-nav-container');
-            if(subNav) subNav.style.display = 'none';
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        // 5. 處理懸浮導覽列 (只在 Page 2 顯示)
-        if (typeof autoExpandCurrentSection === 'function') autoExpandCurrentSection();
-        const fNav = document.getElementById('floating-nav');
-        if(fNav) fNav.classList.toggle('visible', pageId === 'page2');
-
-        // 6. 頁面初始化數據
-        if (pageId === 'page-home') setTimeout(() => { if(typeof loadDashboard === 'function') loadDashboard(); }, 50);
-        if (pageId === 'page8') { if(typeof loadAllClasses === 'function') loadAllClasses(); }
-        if (pageId === 'page5') { if(typeof renderAnalysisPage === 'function') renderAnalysisPage(); }
-
-        // 7. 自動滾動到指定元素
-        if (focusElementId) {
-            setTimeout(() => {
-                const el = document.getElementById(focusElementId);
-                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 150);
-        }
-        
-        localStorage.setItem('idw_last_page', pageId);
-
-        // 8. 瀏覽器歷史紀錄
-        if (pushToHistory) {
-            const state = { pageId: pageId };
-            if (window.location.hash !== '#' + pageId) {
-                history.pushState(state, '', '#' + pageId);
-            }
-        }
-
-    } catch (e) {
-        console.error("ShowPage Error:", e);
-        // 如果出錯，至少讓人轉到首頁，不要卡死
-        window.location.hash = "#page-home";
-        window.location.reload();
     }
 }
 
@@ -10062,7 +10034,7 @@ function restoreFromLocalBackup() {
    ========================================== */
 let isDashboardRendering = false; // 加入鎖定旗標
 
-// [Pro-v18.3] Dashboard 讀取 (以分配學生為分母)
+// [v19.0] Dashboard 讀取 (含最新動態追蹤)
 async function loadDashboard() {
     const focusList = document.getElementById('focus-task-list');
     const classContainer = document.getElementById('class-accordion-container');
@@ -10078,9 +10050,9 @@ async function loadDashboard() {
     }
 
     try {
-        console.log("📊 正在刷新 Dashboard (Assigned-Base Mode)...");
+        console.log("📊 正在刷新 Dashboard (Details Mode)...");
 
-        // 1. 讀取班級 (顯示用)
+        // 1. 讀取班級
         const { data: classesData, error: classError } = await supabaseClient
             .from('classes').select('*').eq('user_id', currentUser.id)
             .order('academic_year', { ascending: false });
@@ -10094,32 +10066,40 @@ async function loadDashboard() {
             .order('created_at', { ascending: false });
         if (assignError) throw assignError;
 
-        // 3. 讀取成績與狀態 (核心改動：只讀 Results)
+        // 3. 讀取成績 (加入 updated_at 和 student name 以便追蹤)
         const assignmentIds = assignments ? assignments.map(a => a.id) : [];
         
-        // 讀取 assignment_id 用於分組，讀取 total_score/comment_student 用於判斷進度
+        // 🔥 關鍵修改：多讀取 updated_at 和 students(name)
         const { data: resultsData } = await supabaseClient
             .from('results')
-            .select('assignment_id, total_score, comment_student')
+            .select('assignment_id, total_score, comment_student, updated_at, students(name)')
             .in('assignment_id', assignmentIds);
 
-        // 4. 計算統計 (Client-side aggregation)
-        const statsMap = {}; // { assignId: { total: 0, graded: 0 } }
+        // 4. 計算統計 (找出最新的一位)
+        const statsMap = {}; 
 
         if (resultsData) {
             resultsData.forEach(r => {
-                if (!statsMap[r.assignment_id]) statsMap[r.assignment_id] = { total: 0, graded: 0 };
+                if (!statsMap[r.assignment_id]) {
+                    statsMap[r.assignment_id] = { total: 0, graded: 0, lastUpdate: null, lastStudent: null };
+                }
                 
-                // 只要有一條 record，就代表一位學生被分配了 (分母 +1)
-                statsMap[r.assignment_id].total++;
+                const stats = statsMap[r.assignment_id];
+                stats.total++; // 分母
 
-                // 判斷是否已批改 (分子 +1)
-                // 邏輯：有總分 OR 有評語
+                // 判斷是否已批改
                 const hasScore = (r.total_score !== null && r.total_score !== '');
                 const hasComment = (r.comment_student && r.comment_student.trim().length > 0);
                 
                 if (hasScore || hasComment) {
-                    statsMap[r.assignment_id].graded++;
+                    stats.graded++;
+                    
+                    // 🔥 追蹤最新批改
+                    const rDate = new Date(r.updated_at);
+                    if (!stats.lastUpdate || rDate > new Date(stats.lastUpdate)) {
+                        stats.lastUpdate = r.updated_at;
+                        stats.lastStudent = r.students ? r.students.name : '未知學生';
+                    }
                 }
             });
         }
@@ -10131,9 +10111,8 @@ async function loadDashboard() {
         if (assignments) {
             assignments.forEach(a => {
                 const cls = classesData.find(c => c.id === a.class_id) || { class_name: '未知', academic_year: '' };
-                const stats = statsMap[a.id] || { total: 0, graded: 0 };
+                const stats = statsMap[a.id] || { total: 0, graded: 0, lastUpdate: null, lastStudent: null };
                 
-                // 計算百分比 (防除以零)
                 const progress = stats.total > 0 ? Math.round((stats.graded / stats.total) * 100) : 0;
                 
                 const richProject = {
@@ -10143,9 +10122,11 @@ async function loadDashboard() {
                     class_id: a.class_id,
                     class_name: cls.class_name,
                     academic_year: cls.academic_year,
-                    last_updated: a.created_at,
+                    created_at: a.created_at, // 開啟日期
+                    last_updated: stats.lastUpdate || a.created_at, // 最新修訂日期 (如果無批改過，就係開啟日期)
+                    last_student: stats.lastStudent, // 最新同學
                     graded_count: stats.graded,
-                    total_students: stats.total, // 這是實際分配人數
+                    total_students: stats.total,
                     progress: progress,
                     isCompleted: (stats.total > 0 && stats.graded >= stats.total)
                 };
@@ -10159,17 +10140,20 @@ async function loadDashboard() {
         // 6. 渲染
         const focusItems = allProjectsFlat.filter(p => !p.isCompleted).slice(0, 5);
         focusList.innerHTML = ''; 
-        renderFocusList(focusItems, focusList);
+        
+        // 使用新的渲染函數 (下面會定義)
+        renderNewDetailCards(focusItems, focusList);
 
         if(classContainer) {
             classContainer.innerHTML = ''; 
-            renderClassCentricAccordion(classesData, assignmentMap, classContainer);
+            // 班級列表也用新樣式 (傳入 true 代表使用詳細卡片)
+            renderClassCentricAccordion(classesData, assignmentMap, classContainer, true);
         }
         
         updateWelcomeMessage();
 
     } catch (error) {
-        console.error("Dashboard Load Error:", error);
+        console.error("Dashboard Error:", error);
         focusList.innerHTML = `<div style="color:#c86a5a; padding:1rem;">讀取失敗: ${error.message}</div>`;
     }
 }
@@ -10287,14 +10271,13 @@ function groupByYearAndClass(projects) {
     return groups;
 }
 
-// [Pro-v10.1] 渲染以班級為中心的列表 (空班級都會顯示)
-function renderClassCentricAccordion(classes, assignmentMap, container) {
+// [v19.0] 渲染班級歸檔 (支援新卡片格式)
+function renderClassCentricAccordion(classes, assignmentMap, container, useNewCard = false) {
     if(!classes || classes.length === 0) {
         container.innerHTML = '<div style="color:#ccc; text-align:center; padding:1rem;">(暫無班級資料)</div>';
         return;
     }
 
-    // 1. 按學年分組
     const groups = {};
     classes.forEach(c => {
         const year = c.academic_year || '未知學年';
@@ -10309,13 +10292,11 @@ function renderClassCentricAccordion(classes, assignmentMap, container) {
         yearDiv.innerHTML = `<h4 style="margin: 2rem 0 0.8rem 0; color:#aaa; font-size:0.85rem; text-transform:uppercase; letter-spacing:1px; border-bottom:1px solid #eee; padding-bottom:4px;">📅 ${year} 學年</h4>`;
         container.appendChild(yearDiv);
 
-        // 該學年下的班級 (按名稱排)
         const yearClasses = groups[year].sort((a, b) => a.class_name.localeCompare(b.class_name));
 
         yearClasses.forEach((cls) => {
             const projects = assignmentMap[cls.id] || [];
             
-            // Header
             const header = document.createElement('div');
             header.className = 'class-group-header';
             header.innerHTML = `
@@ -10323,19 +10304,27 @@ function renderClassCentricAccordion(classes, assignmentMap, container) {
                 <span style="font-weight:normal; color:#888; font-size:0.9rem;">${projects.length} 份作業 ${projects.length > 0 ? '▼' : '➕'}</span>
             `;
             
-            // Content
             const content = document.createElement('div');
             content.className = 'class-group-content';
             
             if (projects.length > 0) {
-                let listHtml = '';
-                projects.forEach((p, pIndex) => {
-                    const uniqueId = `cls-${cls.id}-${pIndex}`;
-                    listHtml += buildCardHtml(p, uniqueId);
-                });
-                content.innerHTML = listHtml;
+                // 🔥 如果是新模式，用新的 renderNewDetailCards (但要改少少邏輯因為它係 render 整個 container)
+                // 這裡簡單起見，我們直接生成 HTML string
+                if (useNewCard) {
+                    const tempDiv = document.createElement('div');
+                    renderNewDetailCards(projects, tempDiv);
+                    content.innerHTML = tempDiv.innerHTML;
+                    content.className = 'class-group-content active folder-grid'; // 確保 grid 樣式生效
+                } else {
+                    // 舊 fallback
+                    let listHtml = '';
+                    projects.forEach((p, pIndex) => {
+                        const uniqueId = `cls-${cls.id}-${pIndex}`;
+                        listHtml += buildCardHtml(p, uniqueId);
+                    });
+                    content.innerHTML = listHtml;
+                }
             } else {
-                // 🔥 空班級：顯示開新 Project 按鈕
                 content.innerHTML = `
                     <div style="grid-column: 1 / -1; text-align:center; padding:20px; border:2px dashed #eee; border-radius:12px; background:#fafafa;">
                         <p style="color:#999; font-size:0.9rem; margin-bottom:10px;">此班級尚未有作業</p>
@@ -10348,10 +10337,11 @@ function renderClassCentricAccordion(classes, assignmentMap, container) {
 
             header.onclick = () => {
                 content.classList.toggle('active');
-                // 箭咀動畫邏輯
-                const arrow = header.querySelector('span:last-child');
-                const symbol = projects.length > 0 ? (content.classList.contains('active') ? '▲' : '▼') : '➕';
-                arrow.textContent = `${projects.length} 份作業 ${symbol}`;
+                if (content.classList.contains('active')) {
+                    content.style.display = 'grid'; // 強制 Grid
+                } else {
+                    content.style.display = 'none';
+                }
             };
 
             container.appendChild(header);
@@ -13245,7 +13235,77 @@ function formatReportComment(text) {
     }).join('<br>');
 }
 
+// [v19.0] 渲染詳細版卡片 (無編輯掣，有最新動態)
+function renderNewDetailCards(items, container) {
+    if (items.length === 0) {
+        container.style.display = 'block'; 
+        container.innerHTML = `
+            <div style="text-align:center; padding:3rem; color:#aaa; background:rgba(255,255,255,0.5); border-radius:16px; border:2px dashed #eee;">
+                <div style="font-size:2.5rem; margin-bottom:10px;">🍃</div>
+                案頭很乾淨。<br><span style="font-size:0.9rem;">(點擊上方按鈕開始新工作)</span>
+            </div>`;
+        return;
+    }
+    
+    container.style.display = 'grid'; 
+    let html = '';
 
+    items.forEach(item => {
+        // 日期格式化
+        const createDate = new Date(item.created_at).toLocaleDateString('zh-HK', {month:'2-digit', day:'2-digit'});
+        
+        // 最新修訂時間 (如果是今天，顯示時間；否則顯示日期)
+        const updateDateObj = new Date(item.last_updated);
+        const today = new Date();
+        const isToday = updateDateObj.getDate() === today.getDate() && updateDateObj.getMonth() === today.getMonth();
+        const updateStr = isToday 
+            ? updateDateObj.toLocaleTimeString('zh-HK', {hour:'2-digit', minute:'2-digit'}) 
+            : updateDateObj.toLocaleDateString('zh-HK', {month:'2-digit', day:'2-digit'});
+
+        // 點擊卡片本體：載入專案
+        const loadAction = `openAssignment('${item.id}')`;
+        
+        // 點擊「最新同學」：載入專案 + 跳轉
+        let jumpHtml = '';
+        if (item.last_student) {
+            const jumpAction = `event.stopPropagation(); localStorage.setItem('idw_jump_target', '${item.last_student}'); openAssignment('${item.id}');`;
+            jumpHtml = `
+                <div onclick="${jumpAction}" 
+                     style="margin-top:10px; padding:6px 10px; background:#e8f5e9; color:#2e7d32; border-radius:8px; font-size:0.85rem; display:flex; justify-content:space-between; align-items:center; cursor:pointer; transition:background 0.2s;">
+                    <span>📝 最新：<b>${escapeHtml(item.last_student)}</b></span>
+                    <span style="font-size:1.1em;">➔</span>
+                </div>
+            `;
+        } else {
+            jumpHtml = `
+                <div style="margin-top:10px; padding:6px 10px; background:#f5f5f5; color:#aaa; border-radius:8px; font-size:0.85rem;">
+                    <span>(尚未開始批改)</span>
+                </div>
+            `;
+        }
+
+        html += `
+        <div class="cozy-folder" onclick="${loadAction}" style="cursor:pointer; padding:1.2rem; min-height:auto;">
+            <!-- 頂部：班級與題目 -->
+            <div style="margin-bottom:8px;">
+                <span class="folder-class" style="font-size:0.8rem; color:#999;">${escapeHtml(item.class_name)}</span>
+                <div class="folder-title" style="font-size:1.15rem; margin-bottom:5px;">${escapeHtml(item.topic)}</div>
+            </div>
+
+            <!-- 中間：資訊網格 -->
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; font-size:0.8rem; color:#666; background:#fafafa; padding:8px; border-radius:8px;">
+                <div>📅 開啟：${createDate}</div>
+                <div>📊 進度：${item.graded_count} / ${item.total_students}</div>
+                <div style="grid-column: span 2;">🔄 更新：${updateStr}</div>
+            </div>
+
+            <!-- 底部：最新批改跳轉按鈕 -->
+            ${jumpHtml}
+        </div>`;
+    });
+    
+    container.innerHTML = html;
+}
 
 </script> <!-- 呢個係原本全個檔案唯一的結尾，保留佢 -->
 
