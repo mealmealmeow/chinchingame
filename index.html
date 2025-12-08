@@ -6126,21 +6126,31 @@ function switchMainTab(target) {
 // showPage 保持 v10.6 版本即可，它已經兼容這種父子結構
 // 唯一要刪除的是 toggleMobileMenu 函數，因為按鈕已經沒了
 
-// [v18.9] Show Page (含未同步攔截)
+// [v18.10] Show Page (路由守衛 + 離場檢查 + 歷史紀錄)
 function showPage(pageId, focusElementId = null, pushToHistory = true, forceBypass = false) {
     
-    // 🔥 攔截邏輯：如果正在 Page 2，且有未儲存變更，且不是強制跳轉
+    // 🔥 1. 離場檢查邏輯
+    // 如果正在 Page 2 (批改頁)，且有未儲存變更 (isDataDirty)，且不是強制跳轉
     const currentPage = document.querySelector('.page-content.active');
+    
+    // 確保 isDataDirty 已定義
+    const isDirty = (typeof isDataDirty !== 'undefined') ? isDataDirty : false;
+
     if (!forceBypass && currentPage && currentPage.id === 'page2' && pageId !== 'page2') {
-        if (typeof isDataDirty !== 'undefined' && isDataDirty) {
-            // 彈出溫柔提醒
-            document.getElementById('guard-target-page').value = pageId; // 記住想去邊
-            document.getElementById('pop-unsaved-guard-modal').classList.add('active');
-            return; // 中止跳轉
+        if (isDirty) {
+            // 觸發攔截彈窗
+            const guardInput = document.getElementById('guard-target-page');
+            const guardModal = document.getElementById('pop-unsaved-guard-modal');
+            
+            if (guardInput && guardModal) {
+                guardInput.value = pageId; // 記住使用者想去邊
+                guardModal.classList.add('active'); // 彈出視窗
+                return; // ⛔️ 中止跳轉，停留在原頁
+            }
         }
     }
 
-    // Route Guard (權限守衛)
+    // 2. 權限檢查 (Route Guard)
     if (pageId === 'page2') {
         const hasProject = window.currentAssignmentId || (typeof allStudentRecords !== 'undefined' && allStudentRecords.length > 0);
         if (!hasProject) {
@@ -6149,25 +6159,27 @@ function showPage(pageId, focusElementId = null, pushToHistory = true, forceBypa
         }
     }
 
+    // 3. 執行換頁
     document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
     const page = document.getElementById(pageId);
     if(page) page.classList.add('active');
 
-    // Nav 狀態更新
+    // 4. 更新導航狀態
     document.querySelectorAll('.sub-nav-btn').forEach(n => n.classList.remove('active'));
     const subBtn = document.getElementById('nav-' + pageId);
     if (subBtn) {
         subBtn.classList.add('active');
         const group = subBtn.closest('.sub-nav-group');
         if(group) {
-            switchMainTab(group.id.replace('sub-nav-', ''));
+            if(typeof switchMainTab === 'function') switchMainTab(group.id.replace('sub-nav-', ''));
             document.getElementById('nav-' + pageId).classList.add('active');
         }
     } else if (pageId === 'page-home') {
         document.querySelectorAll('.main-nav .nav-btn').forEach(b => b.classList.remove('active'));
         const homeBtn = document.querySelector('.main-nav .nav-btn[data-target="home"]');
         if(homeBtn) homeBtn.classList.add('active');
-        document.getElementById('sub-nav-container').style.display = 'none';
+        const subNav = document.getElementById('sub-nav-container');
+        if(subNav) subNav.style.display = 'none';
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -6175,7 +6187,7 @@ function showPage(pageId, focusElementId = null, pushToHistory = true, forceBypa
     const fNav = document.getElementById('floating-nav');
     if(fNav) fNav.classList.toggle('visible', pageId === 'page2');
 
-    // 數據刷新與觸發
+    // 5. 頁面初始化與觸發
     if (pageId === 'page-home') setTimeout(() => { if(typeof loadDashboard === 'function') loadDashboard(); }, 50);
     if (pageId === 'page8') { if(typeof loadAllClasses === 'function') loadAllClasses(); }
     if (pageId === 'page5') { if(typeof renderAnalysisPage === 'function') renderAnalysisPage(); }
@@ -6189,6 +6201,7 @@ function showPage(pageId, focusElementId = null, pushToHistory = true, forceBypa
     
     localStorage.setItem('idw_last_page', pageId);
 
+    // 6. 瀏覽器歷史紀錄 (上一頁功能)
     if (pushToHistory) {
         const state = { pageId: pageId };
         if (window.location.hash !== '#' + pageId) {
@@ -9013,7 +9026,12 @@ details.category-group[style*="border: 2px solid"] {
     right: auto !important;
 }
 
-
+/* [v18.10] 強制隱藏舊版切換器 (靈魂頁面殺手) */
+#project-switcher-container, #project-switcher {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
 </style>
 </head>
 <body>`;
@@ -10322,7 +10340,7 @@ function startNewProjectForClass(classId, className) {
     }, 500);
 }
 
-// [v18.8] 載入作業 (精準載入版：只讀取有記錄的學生)
+// [v18.10] 載入作業 (精準過濾版：只顯示已分配學生)
 async function openAssignment(assignmentId) {
     if (!currentUser) return;
     try {
@@ -10360,7 +10378,9 @@ async function openAssignment(assignmentId) {
         // 4. UI 設定
         window.currentAssignmentId = assignment.id;
         window.currentClassId = assignment.class_id;
-        if(document.getElementById('student-class')) document.getElementById('student-class').value = assignment.classes.class_name;
+        
+        // 安全地填寫欄位
+        if(document.getElementById('student-class')) document.getElementById('student-class').value = assignment.classes ? assignment.classes.class_name : '未知班級';
         if(document.getElementById('topic')) document.getElementById('topic').value = assignment.title;
         if(document.getElementById('page2-topic-display')) document.getElementById('page2-topic-display').value = assignment.title;
 
@@ -10369,11 +10389,11 @@ async function openAssignment(assignmentId) {
         allStudentRecords = results.map(res => {
             const st = res.students; // 這是從關聯表抓出來的
             
-            if (!st) return null; // 防爆
+            if (!st) return null; // 如果找不到學生資料，跳過
 
             const extraData = res.comment_data || {};
             const dataObj = {
-                class: assignment.classes.class_name,
+                class: assignment.classes ? assignment.classes.class_name : '',
                 topic: assignment.title,
                 uniqueComment: extraData.uniqueComment || '',
                 scores: {
@@ -10405,7 +10425,10 @@ async function openAssignment(assignmentId) {
         // 排序
         sortStudents(allStudentRecords);
 
+        // 填寫名單文字框 (這會觸發下拉選單更新)
         document.getElementById('student-names').value = allStudentRecords.map(r => r.originalName).join('\n');
+        
+        // 強制刷新 UI
         updateStudentDropdown(); 
         renderStudentOverviewTable(); 
         updateHeaderInfo();
@@ -10413,19 +10436,8 @@ async function openAssignment(assignmentId) {
         showPage('page2');
         if(typeof showToast === 'function') showToast(`已載入：${assignment.title}`, "success");
         
-        // 自動跳轉
-        const jumpTarget = localStorage.getItem('idw_jump_target');
-        if (jumpTarget) {
-            localStorage.removeItem('idw_jump_target'); 
-            const targetRec = allStudentRecords.find(r => r.name === jumpTarget || r.originalName.includes(jumpTarget));
-            if (targetRec) {
-                const select = document.getElementById('student-select');
-                select.value = targetRec.originalName;
-                loadStudentData(targetRec.originalName); 
-            }
-        }
-        
-        // 移除 loadSiblingProjects 呼叫，因為功能已刪除
+        // 清除舊的跳轉目標
+        localStorage.removeItem('idw_jump_target');
 
     } catch (error) {
         console.error(error);
