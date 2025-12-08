@@ -3762,44 +3762,67 @@ header h1 {
 /* 1. 平時隱藏列印容器 */
 #print-container { display: none; }
 
-/* [v19.5] PDF 列印修復 (Visibility 隱形法) */
+/* [v19.6] PDF 列印暴力修復 (Hammer Fix) */
 @media print {
-    /* 1. 隱藏所有元素 (但保留佔位，防止佈局崩壞) */
-    body * {
-        visibility: hidden;
+    /* 1. 隱藏所有非列印介面 */
+    .main-container, 
+    .sticky-top-bar, 
+    header, 
+    nav, 
+    .pop-overlay, 
+    #back-to-top-btn, 
+    #mobile-menu-btn,
+    #mobile-book-trigger,
+    #toast-container {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        width: 0 !important;
+        overflow: hidden !important;
     }
 
-    /* 2. 唯獨讓列印容器及其子孫「顯形」 */
-    #print-container, 
-    #print-container * {
-        visibility: visible;
-    }
-
-    /* 3. 將列印容器強制拉到視窗最左上角，蓋過其他隱形元素 */
-    #print-container {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        margin: 0;
-        padding: 0;
-        background-color: white !important; 
-        z-index: 9999;
-    }
-
-    /* 4. 強制重置頁面邊距與滾動 */
-    html, body {
-        height: auto !important;
-        overflow: visible !important;
+    /* 2. 設定 Body 背景 */
+    body, html {
+        background-color: #fff !important;
         margin: 0 !important;
         padding: 0 !important;
-        background: #fff !important;
+        height: 100% !important;
+        overflow: visible !important;
     }
 
-    /* 5. 隱藏瀏覽器預設頁眉頁腳 */
+    /* 3. 強制顯示列印容器 */
+    #print-container {
+        display: block !important;
+        visibility: visible !important;
+        position: relative !important; /* 改回 relative 讓它自然流動 */
+        width: 100% !important;
+        height: auto !important;
+        top: 0 !important;
+        left: 0 !important;
+        z-index: 99999 !important;
+        background: white !important;
+        margin: 0 !important;
+    }
+
+    /* 4. 確保內容可見 */
+    #print-container * {
+        visibility: visible !important;
+        display: block; /* 確保 block 元素正常換行 */
+    }
+    
+    /* 5. 表格與彈性佈局修正 */
+    .score-table, .score-table tbody, .score-table tr, .score-table td {
+        display: table !important; /* 表格要維持表格屬性 */
+    }
+    .score-table tr { display: table-row !important; }
+    .score-table td, .score-table th { display: table-cell !important; }
+    
+    .report-meta-grid { display: grid !important; } /* Grid 要維持 Grid */
+
+    /* 6. 頁面設定 */
     @page {
+        size: A4 portrait;
         margin: 0;
-        size: auto;
     }
 }
 
@@ -6916,29 +6939,43 @@ function calculateTotalScore() {
   return total;
 }
 
-// [v19.5] Checkbox 狀態處理 (修復 Re-tick 顯示問題)
+// [v19.6] Checkbox 邏輯重寫 (DOM 遍歷版)
 function handleCheckboxChange(checkbox, doUpdate = true) {
-  const id = checkbox.id;
   const isChecked = checkbox.checked;
-  const checkItem = checkbox.closest('.check-item');
   
-  // 1. 獲取控制目標
+  // 1. 找到父層卡片 (Card)
+  const checkItem = checkbox.closest('.check-item');
+  if (!checkItem) {
+      console.warn("找不到父層 .check-item");
+      return;
+  }
+
+  // 2. 找到內部的下拉選單區與編輯區
   const interactiveModule = checkItem.querySelector('.interactive-module');
   const editableComment = checkItem.querySelector('.editable-comment');
 
-  // 2. 切換顯示狀態
-  if (interactiveModule) interactiveModule.style.display = isChecked ? 'block' : 'none';
-  if (editableComment) editableComment.style.display = isChecked ? 'block' : 'none';
-
-  // 3. 🔥 關鍵修復：當剔選時，如果編輯框是空的，自動填入預設內容
-  if (isChecked) {
-      const textarea = document.getElementById(`text-${id}`);
-      if (textarea && !textarea.value.trim()) {
-          populateEditableTextarea(id);
+  // 3. 切換顯示狀態 (強制 block/none)
+  if (interactiveModule) {
+      interactiveModule.style.display = isChecked ? 'block' : 'none';
+  }
+  
+  if (editableComment) {
+      editableComment.style.display = isChecked ? 'block' : 'none';
+      
+      // 4. 🔥 內容自動填充邏輯
+      if (isChecked) {
+          const textarea = editableComment.querySelector('textarea');
+          if (textarea) {
+              // 如果裡面無字，或者只是空殼，就填入預設內容
+              if (!textarea.value || textarea.value.trim() === '') {
+                  // 獲取 Checkbox ID 來生成內容
+                  textarea.value = composeStudentFromConcise(checkbox.id);
+              }
+          }
       }
   }
 
-  // 4. 更新總評語 (可選，視乎 doUpdate 參數)
+  // 5. 更新總評語
   if (doUpdate) updateAllOutputs();
 }
 
@@ -8420,17 +8457,40 @@ function handleManualEdit(which) {
   if (ta) ta.dataset.userEditing = '1';
 }
 
+// [v19.6] 清空功能 (強制隱藏 Details)
 function clearAllCore(doUpdate = true) {
+  // 1. 清空一般輸入框
   document.getElementById('unique-comment').value = '';
   ['score-content','score-expression','score-structure','score-punctuation','score-typos','score-total'].forEach(id=>{ const el = document.getElementById(id); if (el) el.value='';});
+  
+  // 2. 清空錯別字
   currentTypos = [];
   renderTypoList();
+  
+  // 3. 🔥 重置 Checkbox 與 隱藏 Details
   document.querySelectorAll('#checklist-container input[type="checkbox"]').forEach(cb => { 
     cb.checked = false; 
+    // 呼叫剛剛修復的 handleCheckboxChange 來隱藏 details
     handleCheckboxChange(cb, false); 
   });
-  document.querySelectorAll('.editable-comment textarea').forEach(t => t.value = '');
+
+  // 4. 雙重保險：強制清空並隱藏所有編輯框
+  document.querySelectorAll('.editable-comment').forEach(div => {
+      div.style.display = 'none';
+      const ta = div.querySelector('textarea');
+      if(ta) ta.value = '';
+  });
+  
+  document.querySelectorAll('.interactive-module').forEach(div => {
+      div.style.display = 'none';
+      div.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
+      div.querySelectorAll('input[type="text"]').forEach(i => i.value = '');
+  });
+
+  // 5. 清空常見錯別字勾選
   document.querySelectorAll('#typo-saved-list input[type="checkbox"]').forEach(cb => cb.checked = false);
+  
+  // 6. 更新輸出
   if (doUpdate) {
     renderCommonTyposCheckedState();
     updateAllOutputs();
