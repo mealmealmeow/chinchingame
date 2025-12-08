@@ -3757,35 +3757,61 @@ header h1 {
 /* === [v19.3] 雜誌風報告 (Magazine A4) === */
 /* ========================================= */
 
+/* [v19.2] PDF 列印修復 (完整樣式版) */
+
+/* 1. 平時隱藏列印容器 */
 #print-container { display: none; }
 
+/* 2. 列印時的顯示邏輯 (核心修復) */
 @media print {
-    body > :not(#print-container) { display: none !important; }
-    #print-container { display: block !important; }
+    /* 隱藏網頁原本所有內容 */
+    body > * { display: none !important; }
+    
+    /* 唯獨顯示列印容器，並強制置頂 */
+    #print-container { 
+        display: block !important; 
+        position: absolute; 
+        top: 0; 
+        left: 0; 
+        width: 100%; 
+        height: auto;
+        z-index: 9999;
+        background-color: #fff;
+    }
+    
+    /* 強制容器內所有元素可見 */
+    #print-container * { visibility: visible !important; }
+    
+    /* 重設頁面邊距 */
+    html, body { 
+        margin: 0; padding: 0; 
+        background: #fff !important; 
+        height: auto; 
+        overflow: visible; 
+    }
+    
     @page {
         size: A4 portrait;
         margin: 0; /* 無邊距列印，由 CSS 控制內距 */
     }
 }
 
+/* 3. 報告樣式 (雜誌風 - 保留原樣) */
 .report-page {
     width: 210mm;
     min-height: 297mm;
     margin: 0 auto;
     background: #fff;
-    /* 恢復舒適的字體大小 */
     font-size: 12pt; 
     font-family: "LXGW WenKai TC", serif;
     color: #444;
     position: relative;
     page-break-after: always;
-    
-    /* 雜誌風內距 */
     padding: 20mm; 
     box-sizing: border-box;
 }
 
-/* 裝飾性邊框 (像證書) */
+/* 裝飾性邊框 */
 .report-page::before {
     content: "";
     position: absolute;
@@ -3794,17 +3820,17 @@ header h1 {
     pointer-events: none;
 }
 
-/* 頁頭：極簡大氣 */
+/* 頁頭 */
 .report-header {
     margin-bottom: 30px;
-    border-bottom: 2px solid #5A8F7B; /* 主題色線條 */
+    border-bottom: 2px solid #5A8F7B;
     padding-bottom: 15px;
     position: relative;
 }
 
 .report-title-block h1 {
     font-size: 24pt;
-    font-weight: normal; /* 文青風通常不用太粗 */
+    font-weight: normal;
     color: #2c3e50;
     margin: 0;
     letter-spacing: 2px;
@@ -3833,16 +3859,16 @@ header h1 {
 /* 歷程圖區域 */
 .chart-section {
     margin-bottom: 30px;
-    height: 200px; /* 固定高度 */
+    height: 200px;
     width: 100%;
-    border: 1px dashed #eee; /* 輕盈的框 */
+    border: 1px dashed #eee;
     border-radius: 8px;
     padding: 10px;
     box-sizing: border-box;
     background: #fafafa;
 }
 
-/* 分數表 (簡約風格) */
+/* 分數表 */
 .score-table {
     width: 100%;
     border-collapse: collapse;
@@ -3869,7 +3895,7 @@ header h1 {
     padding-top: 15px;
 }
 
-/* 評語區 (雜誌專欄感) */
+/* 評語區 */
 .comment-section {
     margin-top: 20px;
 }
@@ -3883,7 +3909,7 @@ header h1 {
     letter-spacing: 1px;
 }
 .comment-content {
-    line-height: 1.8; /* 增加行距，閱讀感更佳 */
+    line-height: 1.8;
     text-align: justify;
     font-size: 12pt;
     white-space: pre-wrap;
@@ -6428,9 +6454,7 @@ document.addEventListener('click', (e) => {
 
 
 
-/* ===== [Phase 3] 批改頁升級：Checklist 渲染與快速新增 ===== */
-
-/* [v17.1] 評語庫渲染 (3 Rescue Cards) */
+// [v19.2] 評語清單渲染 (支援即時編輯監聽)
 function buildChecklist() {
     const dataContainer = document.getElementById('critique-data');
     const checklistContainer = document.getElementById('checklist-container');
@@ -6457,7 +6481,6 @@ function buildChecklist() {
         checklistContainer.style.display = 'grid';
         checklistContainer.className = '';
         
-        // 排序與渲染 (保持原邏輯，略縮寫)
         const sortedCats = Object.keys(currentCategories).sort((a,b) => {
             const idxA = CATEGORY_ORDER.indexOf(a), idxB = CATEGORY_ORDER.indexOf(b);
             if (idxA > -1 && idxB > -1) return idxA - idxB;
@@ -6475,12 +6498,19 @@ function buildChecklist() {
                 const type = el.dataset.type;
                 const title = el.querySelector('h4').textContent;
                 const hasOptions = (el.dataset.options || '').trim() !== '';
+                
                 const itemDiv = document.createElement('div');
                 itemDiv.className = `check-item ${type==='problem'?'is-problem':'is-excellent'}`;
+                
                 itemDiv.innerHTML = `<div class="check-item-header"><input type="checkbox" id="${id}"><label for="${id}">${title}</label></div>`;
                 if (hasOptions) itemDiv.appendChild(createInteractiveModule(id));
-                const editDiv = document.createElement('div'); editDiv.className = 'editable-comment';
-                editDiv.innerHTML = `<textarea id="text-${id}" placeholder="預覽..."></textarea>`;
+                
+                // 編輯區 (預覽與修改)
+                const editDiv = document.createElement('div'); 
+                editDiv.className = 'editable-comment';
+                // 🔥 加入 oninput 事件，打字即觸發更新
+                editDiv.innerHTML = `<textarea id="text-${id}" placeholder="點擊此處編輯評語內容..." oninput="updateAllOutputs(); isDataDirty=true; updateUIBasedOnAuthState();"></textarea>`;
+                
                 itemDiv.appendChild(editDiv);
                 content.appendChild(itemDiv);
                 
@@ -6489,14 +6519,16 @@ function buildChecklist() {
                     if(hasOptions) itemDiv.querySelector('.interactive-module').style.display = 'block';
                     editDiv.style.display = 'block';
                     const ta = editDiv.querySelector('textarea');
+                    // 如果有舊輸入，優先還原
                     if(ta && editedTexts[id]) ta.value = editedTexts[id];
+                    // 如果冇舊輸入，產生預設內容
+                    else if(ta) ta.value = composeStudentFromConcise(id);
                 }
             });
             details.appendChild(content);
             checklistContainer.appendChild(details);
         }
     } else {
-        // 🔥 Rescue Card (3 張版)
         checklistContainer.style.display = 'block';
         checklistContainer.innerHTML = `
             <div class="rescue-card">
@@ -13237,7 +13269,7 @@ function formatReportComment(text) {
     }).join('<br>');
 }
 
-// [v19.1] 渲染文青風卡片 (Hipster & Breathing Style)
+// [v19.2] 渲染詳細版卡片 (含刪除按鈕 & 清晰人數)
 function renderNewDetailCards(items, container) {
     if (items.length === 0) {
         container.style.display = 'block'; 
@@ -13251,15 +13283,14 @@ function renderNewDetailCards(items, container) {
     }
     
     container.style.display = 'grid'; 
-    // 響應式 Grid 設定：手機 1 欄，電腦 2-3 欄
     container.style.gridTemplateColumns = 'repeat(auto-fill, minmax(300px, 1fr))';
     container.style.gap = '20px';
 
     let html = '';
 
     items.forEach(item => {
-        // 日期處理
         const createDate = new Date(item.created_at).toLocaleDateString('zh-HK', {month:'2-digit', day:'2-digit'});
+        
         const updateDateObj = new Date(item.last_updated);
         const today = new Date();
         const isToday = updateDateObj.getDate() === today.getDate() && updateDateObj.getMonth() === today.getMonth();
@@ -13268,8 +13299,9 @@ function renderNewDetailCards(items, container) {
             : updateDateObj.toLocaleDateString('zh-HK', {month:'2-digit', day:'2-digit'});
 
         const loadAction = `openAssignment('${item.id}')`;
+        // 直接刪除專案的邏輯
+        const deleteAction = `event.stopPropagation(); confirmDeleteProjectDirectly('${item.id}', '${escapeHtmlAttr(item.topic)}')`;
         
-        // 最新同學按鈕 (文青膠囊風格)
         let jumpHtml = '';
         if (item.last_student) {
             const jumpAction = `event.stopPropagation(); localStorage.setItem('idw_jump_target', '${item.last_student}'); openAssignment('${item.id}');`;
@@ -13290,10 +13322,17 @@ function renderNewDetailCards(items, container) {
 
         html += `
         <div class="cozy-folder" onclick="${loadAction}" 
-             style="cursor:pointer; padding:24px; min-height:auto; background:#fff; border:1px solid rgba(0,0,0,0.04); box-shadow: 0 4px 24px rgba(0,0,0,0.03); transition: transform 0.2s, box-shadow 0.2s; border-radius:20px;">
+             style="cursor:pointer; padding:24px; min-height:auto; background:#fff; border:1px solid rgba(0,0,0,0.04); box-shadow: 0 4px 24px rgba(0,0,0,0.03); transition: transform 0.2s, box-shadow 0.2s; border-radius:20px; position: relative;">
             
+            <!-- 🗑️ 刪除按鈕 (右上角) -->
+            <button onclick="${deleteAction}" title="刪除專案" 
+                style="position:absolute; top:15px; right:15px; background:transparent; border:none; color:#ddd; font-size:1.1rem; cursor:pointer; transition:color 0.2s;">
+                🗑️
+            </button>
+            <style>button[title="刪除專案"]:hover { color: #c86a5a !important; transform: scale(1.1); }</style>
+
             <!-- 頂部：班級標籤 -->
-            <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:12px; padding-right: 30px;">
                 <span style="font-size:0.75rem; letter-spacing:1px; color:#999; text-transform:uppercase; font-weight:600; border:1px solid #eee; padding:2px 8px; border-radius:6px;">
                     ${escapeHtml(item.class_name)}
                 </span>
@@ -13305,14 +13344,14 @@ function renderNewDetailCards(items, container) {
                 ${escapeHtml(item.topic)}
             </div>
 
-            <!-- 資訊分隔線 (呼吸感核心) -->
+            <!-- 資訊分隔線 -->
             <div style="border-top:1px dashed #f0f0f0; margin:15px 0;"></div>
 
-            <!-- 進度數據 (清爽版) -->
+            <!-- 進度數據 (顯示作答人數) -->
             <div style="display:flex; align-items:center; justify-content:space-between; color:#8c867a; font-size:0.9rem;">
                 <div style="display:flex; align-items:center; gap:6px;">
-                    <span>📊</span>
-                    <span>${item.graded_count} / ${item.total_students}</span>
+                    <span>👥 作答人數：${item.total_students}</span>
+                    <span style="color:#aaa; font-size:0.8rem;">(已閱 ${item.graded_count})</span>
                 </div>
                 <div style="font-weight:bold; color:${item.progress === 100 ? '#5A8F7B' : '#d4a373'};">
                     ${item.progress}%
@@ -13325,6 +13364,32 @@ function renderNewDetailCards(items, container) {
     });
     
     container.innerHTML = html;
+}
+// [v19.2] 直接刪除專案邏輯
+async function confirmDeleteProjectDirectly(id, title) {
+    const userConfirmed = await showCustomModal({
+        icon: '⚠️',
+        title: '刪除作業',
+        desc: `確定要刪除「${title}」嗎？\n所有學生的成績和評語都將消失，無法復原。`,
+        confirmText: '忍痛刪除',
+        cancelText: '保留'
+    });
+
+    if (!userConfirmed) return;
+
+    if (typeof showToast === 'function') showToast("正在刪除...", "info");
+
+    try {
+        const { error } = await supabaseClient.from('assignments').delete().eq('id', id);
+        if (error) throw error;
+
+        if (typeof showToast === 'function') showToast("已成功刪除", "success");
+        loadDashboard(); // 刷新
+
+    } catch (error) {
+        console.error("Delete Failed:", error);
+        alert("刪除失敗：" + error.message);
+    }
 }
 
 </script> <!-- 呢個係原本全個檔案唯一的結尾，保留佢 -->
