@@ -4063,13 +4063,17 @@ header h1 {
     <span id="ph-topic"></span>
 </div>
     </div>
-
-    <!-- 右邊：Setting 掣 -->
+<!-- 右邊：書籤 & Setting -->
     <div class="header-right">
-      <!-- [v17.5] 手機版導航書籤 (Header 嵌入) -->
-<button class="header-book-btn" onclick="toggleBookMenu()">🔖</button>
+        <!-- 🔖 書籤按鈕 (放在這裡) -->
+        <button class="header-book-btn" onclick="toggleBookMenu()">🔖</button>
        
+        <!-- ⚙️ 設定按鈕 (原本的) -->
+        <button class="font-control-btn" onclick="toggleSettingsMenu()">⚙️</button>
+
+        <!-- 設定選單 (保持不變) -->
         <div id="settings-dropdown" class="settings-menu-popover" style="display: none;">
+            <!-- ... (內容保持不變) ... -->
             <div class="settings-group">
                 <label style="font-size:0.8rem;color:#999;display:block;margin-bottom:5px;">字體大小</label>
                 <div class="font-controls-row" style="display:flex;gap:5px;">
@@ -5293,17 +5297,16 @@ header h1 {
     <span style="font-size: 0.75rem; font-weight: bold;">書籤</span>
 </div>
 
-<!-- [Edition: 書] 全螢幕目錄遮罩 -->
-<div id="mobile-book-overlay">
+<!-- [v20.7] 全螢幕目錄 (強制補回) -->
+<div id="mobile-book-overlay" style="display:none;">
     <!-- 關閉按鈕 -->
     <button class="book-close-btn" onclick="toggleBookMenu()">✕</button>
     
     <div class="book-menu-container">
         <h2 class="book-menu-title">工作日誌目錄</h2>
         
-        <!-- 目錄列表 (JS 動態生成或靜態寫入) -->
         <div id="book-menu-list">
-            <!-- 1. 咖啡廳 (無子選單) -->
+            <!-- 1. 咖啡廳 -->
             <div class="book-main-item" onclick="mobileNavClick('home', null)">
                 <span class="book-icon">☕️</span> 咖啡廳
             </div>
@@ -5346,13 +5349,12 @@ header h1 {
                 </div>
             </div>
         </div>
-
+        
         <div style="margin-top: 3rem; text-align: center; opacity: 0.5; font-size: 0.8rem;">
             — 我不想努力了 Pro —
         </div>
     </div>
 </div>
-
 <!-- [v11.4] 快速開 Project Modal (補鑊專用) -->
 <div id="pop-quick-project-modal" class="pop-overlay">
     <div class="pop-modal">
@@ -5404,7 +5406,40 @@ header h1 {
         </div>
     </div>
 </div>
+/* [v20.7] 目錄強制顯形樣式 */
+#mobile-book-overlay {
+    display: flex !important; /* 確保它存在於排版中 */
+    position: fixed !important;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(253, 251, 247, 0.95) !important;
+    backdrop-filter: blur(10px);
+    z-index: 2147483647 !important; /* 確保在最上層 */
+    flex-direction: column;
+    padding: 20px 25px;
+    overflow-y: auto;
+    
+    /* 預設狀態：隱藏但可隨時現身 */
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    visibility: hidden;
+}
 
+/* 激活狀態 */
+#mobile-book-overlay.active {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    visibility: visible !important;
+}
+
+/* 確保內部元素樣式正常 */
+.book-menu-container { width: 100%; max-width: 500px; margin: 0 auto; }
+.book-close-btn { 
+    position: absolute; top: 20px; right: 20px; 
+    font-size: 1.5rem; background: none; border: none; cursor: pointer; color: #555; 
+}
+.book-sub-list { display: none; margin-left: 20px; border-left: 2px solid #eee; }
+.book-main-item.expanded .book-sub-list { display: block; }
 
 <script>
 
@@ -9278,32 +9313,57 @@ details.category-group[style*="border: 2px solid"] {
     transform: translateX(2px);
 }
 
-/* ========================================= */
-/* === [v18.2] 排版與去線 (Final Fix) === */
-/* ========================================= */
 
-/* 1. Header 右側按鈕強制並列 (Side-by-side) */
-.header-right {
-    display: flex !important;       /* 強制 Flex 佈局 */
-    flex-direction: row !important; /* 強制橫向排列 */
-    align-items: center !important; /* 垂直置中 */
-    gap: 12px !important;           /* 按鈕之間的間距 */
-    
-    /* 確保手機版定位正確 */
-    position: absolute;
-    top: 20px;
-    right: 20px;
-}
+/* [v20.6] 終極 Header 書籤按鈕樣式 */
 
-/* 確保書籤掣在 Desktop 也能顯示 (如果你想 Desktop 都有) */
-/* 如果只想手機有，保持原本 media query 即可；這裡強制對齊樣式 */
 .header-book-btn {
-    margin-right: 0 !important; /* 移除舊 margin，改用 gap */
-    margin-bottom: 0 !important;
-    position: relative !important; /* 防止絕對定位亂跑 */
+    /* 1. 強制顯示並重置定位 */
+    display: flex !important;
+    position: relative !important; /* 跟隨 Header 排列，不再懸浮 */
     top: auto !important;
+    bottom: auto !important;
     right: auto !important;
+    left: auto !important;
+    z-index: 3002 !important;
+
+    /* 2. 外觀設定 (融入 Header) */
+    background: rgba(255, 255, 255, 0.25) !important;
+    border: 1px solid rgba(255, 255, 255, 0.4) !important;
+    color: #fff !important;
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 8px !important;
+    align-items: center; 
+    justify-content: center;
+    font-size: 1.2rem;
+    cursor: pointer;
+    margin-right: 8px; /* 同右邊齒輪保持距離 */
+    box-shadow: none !important; /* 移除浮起陰影 */
 }
+
+.header-book-btn:hover {
+    background: rgba(255, 255, 255, 0.4) !important;
+}
+
+/* 3. 確保 Header 右側容器橫向排列 */
+.header-right {
+    display: flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    position: relative !important; /* 確保下拉選單定位正常 */
+}
+
+/* 4. 手機版特別處理 (確保唔會走位) */
+@media (max-width: 768px) {
+    .header-right {
+        position: absolute !important;
+        top: 15px !important;
+        right: 15px !important;
+    }
+    /* 殺死舊有的懸浮設定 */
+    #mobile-book-trigger { display: none !important; }
+}
+
 
 /* [v18.10] 強制隱藏舊版切換器 (靈魂頁面殺手) */
 #project-switcher-container, #project-switcher {
@@ -13754,7 +13814,38 @@ function updateAllPageHeaders() {
         const el = document.getElementById(id);
         if (el) el.innerHTML = bannerHtml;
     });
-}
+}// [v20.7] 強制重寫目錄開關邏輯
+window.toggleBookMenu = function() {
+    const overlay = document.getElementById('mobile-book-overlay');
+    if (!overlay) {
+        alert("錯誤：找不到目錄元件！請檢查 HTML 是否已貼上 [v20.7] 的代碼。");
+        return;
+    }
+    
+    // 切換 Active Class
+    if (overlay.classList.contains('active')) {
+        overlay.classList.remove('active');
+    } else {
+        overlay.classList.add('active');
+        
+        // 自動展開當前章節 (UX)
+        if(typeof autoExpandCurrentSection === 'function') {
+            setTimeout(autoExpandCurrentSection, 100);
+        }
+    }
+};
+
+// 確保點擊連結後會關閉目錄
+window.mobileNavClick = function(mainTarget, pageId) {
+    if (pageId) showPage(pageId);
+    else if (mainTarget === 'home') showPage('page-home');
+    
+    if(typeof switchMainTab === 'function') switchMainTab(mainTarget);
+    
+    // 關閉目錄
+    const overlay = document.getElementById('mobile-book-overlay');
+    if(overlay) overlay.classList.remove('active');
+};
 </script> <!-- 呢個係原本全個檔案唯一的結尾，保留佢 -->
 
 <!-- [v12.2] Back To Top (確保在最外層，不受干擾) -->
