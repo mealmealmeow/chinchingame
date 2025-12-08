@@ -5004,7 +5004,10 @@ header h1 {
             <div>
                 <span style="color:#888; font-size:0.85rem;">作答人數：</span><br>
                 <strong id="confirm-count-display" style="font-size:1.1rem; color:#c86a5a;"></strong> 
-               
+                <span style="font-size:0.85rem; color:#999;">(已選學生)</span>
+            </div>
+        </div>
+
         <!-- ✅ 請在這裡加入此段代碼：顯示學生名單 -->
 <div style="margin-top:12px; border-top:1px dashed #ddd; padding-top:10px;">
     <span style="color:#888; font-size:0.85rem;">已選名單預覽：</span>
@@ -5013,9 +5016,6 @@ header h1 {
     </div>
 </div>
 <!-- ✅ 加入結束 -->
-            </div>
-        </div>
-
 
         <div class="pop-footer">
             <button class="pop-btn pop-btn-cancel" onclick="document.getElementById('pop-setup-confirm-modal').classList.remove('active')">返回修改</button>
@@ -11368,7 +11368,7 @@ async function loadPage1ClassDropdown(forceRefresh = false) {
     }
 }
 
-/* [v17.2] Page 1 名單選取 (同步純學號邏輯) */
+// [v18.5] Page 1 名單選取 (修復 ID 遺失問題)
 async function handleClassSelectChange() {
     const select = document.getElementById('setup-class-select');
     const container = document.getElementById('setup-student-checklist');
@@ -11378,38 +11378,47 @@ async function handleClassSelectChange() {
     area.style.display = 'none';
     if (!select.value) return;
 
+    // 設定全域變數
     window.currentClassId = select.value;
+    
     area.style.display = 'block';
     container.innerHTML = '<div>讀取中...</div>';
 
     try {
-        const { data: students } = await supabaseClient.from('students').select('*').eq('class_id', select.value);
+        const { data: students } = await supabaseClient
+            .from('students')
+            .select('*')
+            .eq('class_id', select.value);
+            
         container.innerHTML = '';
-        if (!students || students.length === 0) { container.innerHTML = '<div>暫無學生</div>'; return; }
+        if (!students || students.length === 0) { 
+            container.innerHTML = '<div>暫無學生</div>'; 
+            return; 
+        }
 
+        // 使用統一排序
         sortStudents(students);
 
         students.forEach(s => {
             const div = document.createElement('div');
             div.className = 'student-check-card checked';
             
+            // 處理顯示名稱
             let displayNum = s.student_number;
             if (displayNum && /^\d$/.test(displayNum)) displayNum = '0' + displayNum;
             
-            // 🔥 如果名字就是學號 (e.g. "23")，不要顯示 "01-23"，直接顯示 "23"
             let displayName = s.name;
-            let cleanInfo = s.name; // 預設用名字
+            let cleanInfo = s.name;
 
             if (/^\d+$/.test(s.name)) {
-                // 純數字名字
                 cleanInfo = s.name;
             } else if (displayNum) {
-                // 有學號又有字
                 cleanInfo = `${displayNum}-${s.name}`;
             }
 
+            // 🔥 關鍵修正：確保寫入 Database ID
             div.dataset.info = cleanInfo;
-            div.dataset.dbId = s.id;
+            div.dataset.dbId = s.id; 
 
             div.innerHTML = `<input type="checkbox" checked><span>${escapeHtml(displayNum||'')}<br>${escapeHtml(s.name||'')}</span>`;
             div.onclick = () => {
@@ -11419,7 +11428,10 @@ async function handleClassSelectChange() {
             };
             container.appendChild(div);
         });
-    } catch (err) { container.innerHTML = '錯誤'; }
+    } catch (err) { 
+        console.error(err);
+        container.innerHTML = '讀取錯誤，請重試'; 
+    }
 }
 
 // 4. 全選 / 全不選
@@ -11513,7 +11525,7 @@ function toggleAllSetupStudents(checked) {
 /* === [v16.1 Fix] Page 1 啟動批改 (純班級版) === */
 /* ================================================= */
 
-// [v18.4] 步驟一：檢查並彈出確認視窗 (含名單預覽)
+// [v18.5] 步驟一：檢查並彈出確認視窗 (含 ID 安全檢查)
 let _pendingSetupData = null; 
 
 function startGradingWithSetup(actionType) {
@@ -11543,25 +11555,36 @@ function startGradingWithSetup(actionType) {
     const selectedStudents = [];
     let rawStudentList = "";
     const tempRecords = [];
-    
-    // 用來顯示的名單陣列
     const displayNames = [];
+    
+    // 安全檢查旗標
+    let missingIdCount = 0;
 
     checkedCards.forEach(card => {
         const info = card.dataset.info; 
         const dbId = card.dataset.dbId; 
         
-        rawStudentList += info + "\n";
-        selectedStudents.push(dbId);
-        
-        // 收集名字
-        displayNames.push(info);
+        // 🔥 安全檢查：如果沒有 ID，記錄下來
+        if (!dbId) {
+            missingIdCount++;
+        } else {
+            rawStudentList += info + "\n";
+            selectedStudents.push(dbId);
+            displayNames.push(info);
 
-        const p = parseStudentName(info);
-        tempRecords.push({
-            number: p.number, name: p.name, originalName: p.originalName, dbId: dbId, data: null
-        });
+            const p = parseStudentName(info);
+            tempRecords.push({
+                number: p.number, name: p.name, originalName: p.originalName, dbId: dbId, data: null
+            });
+        }
     });
+
+    // 🔥 如果發現有學生沒有 ID，強制重新載入
+    if (missingIdCount > 0) {
+        alert(`系統偵測到 ${missingIdCount} 位學生資料未同步 (缺少 ID)。\n系統將自動重新讀取班級名單，請稍後再試一次。`);
+        handleClassSelectChange(); // 重新觸發讀取
+        return;
+    }
     
     _pendingSetupData = {
         actionType: actionType,
@@ -11576,8 +11599,6 @@ function startGradingWithSetup(actionType) {
     document.getElementById('confirm-topic-display').textContent = topic;
     document.getElementById('confirm-class-display').textContent = className;
     document.getElementById('confirm-count-display').textContent = `${count} 人`;
-    
-    // ✅ 顯示名單 (用頓號分隔)
     document.getElementById('confirm-student-list').textContent = displayNames.join('、');
     
     const confirmBtn = document.getElementById('btn-create-project-confirm');
