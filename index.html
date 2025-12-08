@@ -9207,27 +9207,7 @@ details.category-group[style*="border: 2px solid"] {
     visibility: hidden !important;
     pointer-events: none !important;
 }
-/* ========================================= */
-/* === [Fix] 手機版書籤目錄顯示修正 === */
-/* ========================================= */
 
-@media (max-width: 768px) {
-    /* 1. 覆蓋全域隱藏設定，強制設定為 Flex 佈局 */
-    #mobile-book-overlay {
-        display: flex !important; 
-        visibility: hidden; /* 預設看不見 */
-        opacity: 0;
-        pointer-events: none;
-        z-index: 2147483647 !important; /* 確保在最頂層 */
-    }
-
-    /* 2. 當啟用 (.active) 時，讓它顯形 */
-    #mobile-book-overlay.active {
-        visibility: visible !important; /* 這是關鍵：讓它變回可見 */
-        opacity: 1 !important;
-        pointer-events: auto !important;
-    }
-}
 
 </style>
 </head>
@@ -13646,5 +13626,66 @@ function deleteProjectFromDetails() {
 
 <!-- [v12.2] Back To Top (確保在最外層，不受干擾) -->
 <button id="back-to-top-btn" onclick="scrollToTop()" title="回到頂部" style="display: none;">⬆</button>
+
+<!-- [v13.5-Hotfix] 強制修復手機目錄顯示問題 -->
+<style>
+/* 1. 強制設定 Overlay 的基礎狀態 (確保它存在於 DOM，只是看不見) */
+@media (max-width: 768px) {
+    #mobile-book-overlay {
+        display: flex !important;       /* 強制變成 Flex 佈局，覆蓋 display: none */
+        visibility: hidden !important;  /* 暫時隱藏 (保留動畫能力) */
+        opacity: 0 !important;          /* 全透明 */
+        pointer-events: none !important;/* 禁止點擊 */
+        
+        /* 確保位置正確 */
+        position: fixed !important;
+        top: 0; left: 0; right: 0; bottom: 0;
+        z-index: 2147483647 !important; /* 確保在最頂層 (比所有野都高) */
+        background: rgba(253, 251, 247, 0.95) !important; /* 確保有背景色 */
+        backdrop-filter: blur(10px);
+        
+        /* 確保內容排版 */
+        flex-direction: column;
+        justify-content: flex-start;
+        padding-top: 60px; /* 避開頂部 */
+    }
+
+    /* 2. 當加上 .active 時，讓它顯形 */
+    #mobile-book-overlay.active {
+        visibility: visible !important; /* 變回可見 */
+        opacity: 1 !important;          /* 變回實色 */
+        pointer-events: auto !important;/* 恢復點擊 */
+    }
+}
+</style>
+
+<script>
+// [JS] 強制覆蓋舊的 toggleBookMenu 函數，確保邏輯無誤
+window.toggleBookMenu = function() {
+    const overlay = document.getElementById('mobile-book-overlay');
+    if (!overlay) {
+        console.error("搵唔到 #mobile-book-overlay 元素！");
+        return;
+    }
+
+    // 切換 active class
+    const isActive = overlay.classList.contains('active');
+    
+    if (isActive) {
+        overlay.classList.remove('active');
+        // 關閉時恢復頁面捲動
+        document.body.style.overflow = '';
+    } else {
+        overlay.classList.add('active');
+        // 打開時鎖定背景捲動 (防止滑動到底下內容)
+        document.body.style.overflow = 'hidden';
+        
+        // 嘗試自動展開當前章節
+        if (typeof autoExpandCurrentSection === 'function') {
+            autoExpandCurrentSection();
+        }
+    }
+};
+</script>
 </body>
 </html>
