@@ -3943,93 +3943,131 @@ header h1 {
 #pop-manage-students-modal { z-index: 2147483640 !important; }
 /* 確保通用彈窗的底色更深一點，區分層次 */
 #pop-generic-modal .pop-modal { box-shadow: 0 25px 80px rgba(0,0,0,0.5); }
+/* ========================================= */
+/* === [v20.2] UI 修復補丁 (標題 & 書籤) === */
+/* ========================================= */
 
-/* [v20.4] 樣式修補包 */
-
-/* 1. 資訊欄 (美化版) */
-.context-banner {
-    background: linear-gradient(to right, rgba(90, 143, 123, 0.1), rgba(90, 143, 123, 0.02));
-    border-left: 5px solid var(--accent-color);
-    padding: 12px 18px;
-    margin-bottom: 25px;
-    border-radius: 6px;
-    font-size: 1.05rem;
-    color: #2c4c3f;
+/* 1. 頁面標題資訊欄 (Project Info Banner) - 用於 P4, P5, P7 */
+.project-info-banner {
     display: flex;
     align-items: center;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 15px;
+    background: linear-gradient(135deg, #fffdfa, #fdfbf7);
+    border: 1px solid #e1d8c8;
+    border-radius: 16px;
+    padding: 15px 25px;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 15px rgba(90, 143, 123, 0.05);
+    text-align: center;
+    animation: fadeIn 0.5s ease;
 }
 
-/* 2. 彈窗關閉掣 */
+.pib-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.1rem;
+    color: #5b5044;
+}
+
+.pib-icon {
+    font-size: 1.3rem;
+    background: #f0ebe4;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    color: #8d775f;
+}
+
+.pib-text {
+    font-weight: bold;
+    color: #3d5c4f;
+    border-bottom: 1px dashed #ccc;
+    padding-bottom: 2px;
+}
+
+.pib-divider {
+    width: 1px;
+    height: 25px;
+    background: #ddd;
+    display: none; /* 手機版隱藏 */
+}
+
+@media (min-width: 600px) {
+    .pib-divider { display: block; }
+}
+
+/* 2. 手機版書籤掣 (強制置頂修復) */
+#mobile-book-trigger {
+    z-index: 2147483647 !important; /* 宇宙最高層級 */
+    bottom: 30px !important;        /* 確保位置 */
+    right: 20px !important;
+    display: flex !important;       /* 強制顯示 */
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important; /* 確保可點擊 */
+}
+
+/* 避免 Desktop 顯示書籤 */
+@media (min-width: 769px) {
+    #mobile-book-trigger { display: none !important; }
+}
+
+/* 3. 彈窗右上角關閉鍵 (Close X) */
 .pop-close-x {
     position: absolute;
     top: 15px;
     right: 15px;
-    width: 30px; height: 30px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.2rem;
-    color: #999;
-    cursor: pointer;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     background: #f5f5f5;
-    transition: all 0.2s;
-    z-index: 10;
-}
-.pop-close-x:hover { background: #e0e0e0; color: #333; }
-
-/* 3. 手機版書籤修復 (強制顯示) */
-@media (max-width: 768px) {
-    .header-book-btn {
-        display: flex !important; /* 確保不被隱藏 */
-        z-index: 3001; /* 確保在最上層 */
-    }
-}
-/* [v20.5] 介面強制修復 */
-
-/* 1. 手機書籤 (強制置頂，防遮擋) */
-@media (max-width: 768px) {
-    .header-book-btn {
-        display: flex !important;
-        position: fixed !important; /* 改用 fixed 確保在視窗固定位置 */
-        bottom: 25px !important;    /* 放下面方便按 */
-        right: 20px !important;
-        top: auto !important;       /* 取消頂部定位 */
-        z-index: 2147483647 !important; /* 宇宙最高 */
-        background: rgba(255, 255, 255, 0.9);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        border: 1px solid rgba(0,0,0,0.1);
-        width: 50px; height: 50px;
-        border-radius: 12px;
-    }
-}
-
-/* 2. 雲端彈窗關閉掣 (確保可見) */
-.pop-close-x {
-    position: absolute;
-    top: 15px;
-    right: 15px;
-    width: 35px; height: 35px;
-    background: #f0f0f0;
-    border-radius: 50%;
-    color: #666;
-    display: flex; align-items: center; justify-content: center;
-    font-weight: bold;
+    border: none;
+    color: #888;
+    font-size: 1.2rem;
+    line-height: 1;
     cursor: pointer;
-    z-index: 20;
-    border: 1px solid #ddd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+.pop-close-x:hover {
+    background: #e0e0e0;
+    color: #333;
+    transform: rotate(90deg);
 }
 
-/* 3. 頁面資訊欄 (美化) */
-.context-banner {
-    background: linear-gradient(120deg, rgba(90, 143, 123, 0.1), rgba(255, 255, 255, 0.5));
-    border-left: 6px solid var(--accent-color);
-    padding: 12px 20px;
-    margin-bottom: 20px;
-    border-radius: 8px;
-    font-size: 1.05rem;
-    color: #2c4c3f;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.03);
-    display: flex; align-items: center; gap: 10px;
+/* 4. Header 專案按鈕微調 (確保常駐) */
+#project-header-btn-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-left: 10px;
+}
+
+/* 常駐的資料夾圖示按鈕 */
+.header-folder-btn {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #fff;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.header-folder-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
 }
 </style>
 
@@ -4044,36 +4082,41 @@ header h1 {
 <header>
     <!-- 左邊：標題 & 身份 -->
     <div class="header-left">
-        <h1>我不想努力了</h1>
+    <div style="display:flex; align-items:center; flex-wrap:wrap; gap:10px;">
+        <h1 style="cursor:pointer;" onclick="showPage('page-home')">我不想努力了</h1>
         
-        <div class="auth-container">
-            <span id="auth-status">未連接</span>
-            <div id="auth-buttons">
-                <button id="login-btn" class="btn light-btn" style="padding: 2px 8px; font-size: 0.75rem;">登入</button>
-                <button id="logout-btn" class="btn danger-btn" style="display: none; padding: 2px 8px; font-size: 0.75rem;">登出</button>
-                <button id="sync-btn" class="btn action-btn" style="display: none; padding: 2px 8px; font-size: 0.75rem;" disabled>同步</button>
-                 <button class="font-control-btn" onclick="toggleSettingsMenu()">⚙️</button>
-                
+        <!-- [v20.2] 新增：Header 專案控制組 -->
+        <div id="project-header-btn-group">
+            <!-- 1. 常駐的資料夾按鈕 (點擊打開選單) -->
+            <button class="header-folder-btn" onclick="promptAndLoadCloudProject()" title="切換/載入專案">
+                📂
+            </button>
+
+            <!-- 2. 專案資訊膠囊 (有專案時才顯示，點擊也可刷新) -->
+            <div id="project-header-info" class="project-header-info" style="display:none;" onclick="promptAndLoadCloudProject()">
+                <span id="ph-class"></span><span class="ph-divider">|</span><span id="ph-topic"></span>
             </div>
         </div>
-        
-       <div id="project-header-info" class="project-header-info" onclick="promptAndLoadCloudProject()">
-    <span id="ph-class">📂 點擊載入專案</span>
-    <span class="ph-divider" style="display:none;">|</span>
-    <span id="ph-topic"></span>
-</div>
     </div>
-<!-- 右邊：書籤 & Setting -->
-    <div class="header-right">
-        <!-- 🔖 書籤按鈕 (放在這裡) -->
-        <button class="header-book-btn" onclick="toggleBookMenu()">🔖</button>
-       
-        <!-- ⚙️ 設定按鈕 (原本的) -->
-        <button class="font-control-btn" onclick="toggleSettingsMenu()">⚙️</button>
 
-        <!-- 設定選單 (保持不變) -->
+    <!-- 身份狀態 -->
+    <div class="auth-container">
+        <span id="auth-status">未連接</span>
+        <div id="auth-buttons">
+            <button id="login-btn" class="btn light-btn" style="padding: 2px 8px; font-size: 0.75rem;">登入</button>
+            <button id="logout-btn" class="btn danger-btn" style="display: none; padding: 2px 8px; font-size: 0.75rem;">登出</button>
+            <button id="sync-btn" class="btn action-btn" style="display: none; padding: 2px 8px; font-size: 0.75rem;" disabled>同步</button>
+            <button class="font-control-btn" onclick="toggleSettingsMenu()">⚙️</button>
+        </div>
+    </div>
+</div>
+
+    <!-- 右邊：Setting 掣 -->
+    <div class="header-right">
+      <!-- [v17.5] 手機版導航書籤 (Header 嵌入) -->
+<button class="header-book-btn" onclick="toggleBookMenu()">🔖</button>
+       
         <div id="settings-dropdown" class="settings-menu-popover" style="display: none;">
-            <!-- ... (內容保持不變) ... -->
             <div class="settings-group">
                 <label style="font-size:0.8rem;color:#999;display:block;margin-bottom:5px;">字體大小</label>
                 <div class="font-controls-row" style="display:flex;gap:5px;">
@@ -4581,7 +4624,6 @@ header h1 {
               <input type="file" id="import-progress-excel" accept=".xlsx, .xls, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" style="display:none;">
             </div>
           </div>
-          <div id="p4-banner" class="context-banner">📂 未載入專案</div>
           <h3 id="overview-class-display"></h3>
           <!-- 刪除舊的 div，換成這個： -->
 <div id="literary-progress" class="literary-progress-box">
@@ -4628,7 +4670,6 @@ header h1 {
         <button class="secondary-btn" onclick="exportAnalysisToWord()">📄 匯出分析 Word</button>
       </div>
     </div>
-    <div id="p4-banner" class="context-banner">📂 未載入專案</div>
     <p style="font-size:0.9rem;color:#777;">
       透過視覺化圖表，快速掌握全班的強弱項分佈及常見問題。
     </p>
@@ -4743,7 +4784,6 @@ header h1 {
  <div id="page7" class="page-content">
     <div class="overview-container">
         <h2>📝 AI 烘焙室：生成教學回饋</h2>
-        <div id="p4-banner" class="context-banner">📂 未載入專案</div>
         <div class="cozy-hint">
             這裡可以將全班的表現，轉化為一份溫暖而專業的跟進文件。<br>
             我們會為您生成老師專用的「教學詳案」和給學生的「鼓勵單張」。
@@ -4919,8 +4959,7 @@ header h1 {
 
 <!-- 自定義 Pop Art 風格 Project Selection Modal -->
 <div id="pop-project-modal" class="pop-overlay">
-<div class="pop-modal">
-    <div class="pop-close-x" onclick="document.getElementById('pop-project-modal').classList.remove('active')">✕</div>
+  <div class="pop-modal">
     <div class="pop-icon">📂</div>
     <h3>雲端專案讀取</h3>
     <p class="pop-desc">
@@ -5297,16 +5336,17 @@ header h1 {
     <span style="font-size: 0.75rem; font-weight: bold;">書籤</span>
 </div>
 
-<!-- [v20.7] 全螢幕目錄 (強制補回) -->
-<div id="mobile-book-overlay" style="display:none;">
+<!-- [Edition: 書] 全螢幕目錄遮罩 -->
+<div id="mobile-book-overlay">
     <!-- 關閉按鈕 -->
     <button class="book-close-btn" onclick="toggleBookMenu()">✕</button>
     
     <div class="book-menu-container">
         <h2 class="book-menu-title">工作日誌目錄</h2>
         
+        <!-- 目錄列表 (JS 動態生成或靜態寫入) -->
         <div id="book-menu-list">
-            <!-- 1. 咖啡廳 -->
+            <!-- 1. 咖啡廳 (無子選單) -->
             <div class="book-main-item" onclick="mobileNavClick('home', null)">
                 <span class="book-icon">☕️</span> 咖啡廳
             </div>
@@ -5349,12 +5389,13 @@ header h1 {
                 </div>
             </div>
         </div>
-        
+
         <div style="margin-top: 3rem; text-align: center; opacity: 0.5; font-size: 0.8rem;">
             — 我不想努力了 Pro —
         </div>
     </div>
 </div>
+
 <!-- [v11.4] 快速開 Project Modal (補鑊專用) -->
 <div id="pop-quick-project-modal" class="pop-overlay">
     <div class="pop-modal">
@@ -5406,40 +5447,7 @@ header h1 {
         </div>
     </div>
 </div>
-/* [v20.7] 目錄強制顯形樣式 */
-#mobile-book-overlay {
-    display: flex !important; /* 確保它存在於排版中 */
-    position: fixed !important;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(253, 251, 247, 0.95) !important;
-    backdrop-filter: blur(10px);
-    z-index: 2147483647 !important; /* 確保在最上層 */
-    flex-direction: column;
-    padding: 20px 25px;
-    overflow-y: auto;
-    
-    /* 預設狀態：隱藏但可隨時現身 */
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s ease;
-    visibility: hidden;
-}
 
-/* 激活狀態 */
-#mobile-book-overlay.active {
-    opacity: 1 !important;
-    pointer-events: auto !important;
-    visibility: visible !important;
-}
-
-/* 確保內部元素樣式正常 */
-.book-menu-container { width: 100%; max-width: 500px; margin: 0 auto; }
-.book-close-btn { 
-    position: absolute; top: 20px; right: 20px; 
-    font-size: 1.5rem; background: none; border: none; cursor: pointer; color: #555; 
-}
-.book-sub-list { display: none; margin-left: 20px; border-left: 2px solid #eee; }
-.book-main-item.expanded .book-sub-list { display: block; }
 
 <script>
 
@@ -5956,29 +5964,24 @@ async function syncDataToCloud() {
 // ====== 登入/介面狀態 強制修復版 ======
 // ==========================================
 
-// [v20.5] 介面狀態 (Header 按鈕常駐版)
+// 1. 介面狀態更新函數 (v10.0-Auth-Core-Fix: 隱藏多餘登入制)
 function updateUIBasedOnAuthState() {
     const authStatus = document.getElementById('auth-status');
     const loginBtn = document.getElementById('login-btn');
     const logoutBtn = document.getElementById('logout-btn');
     const syncBtn = document.getElementById('sync-btn');
+    const selectProjectBtn = document.getElementById('select-project-btn');
     const phContainer = document.getElementById('project-header-info');
 
-    // 🔥 強制顯示 Header 專案按鈕
-    if(phContainer) phContainer.style.display = 'inline-flex';
-
     if (currentUser) {
-        // 已登入
-        if(authStatus) {
-            authStatus.textContent = `已登入: ${currentUser.email}`;
-            authStatus.style.backgroundColor = "rgba(90, 143, 123, 0.2)";
-        }
+        // 已登入狀態
+        if(authStatus) authStatus.textContent = `已登入: ${currentUser.email}`;
+        if(authStatus) authStatus.style.backgroundColor = "rgba(90, 143, 123, 0.2)";
+        
         if(loginBtn) loginBtn.style.display = 'none';
         if(logoutBtn) logoutBtn.style.display = 'inline-flex';
         if(syncBtn) syncBtn.style.display = 'inline-flex';
-
-        // 刷新內容
-        if(typeof updateAllPageHeaders === 'function') updateAllPageHeaders();
+        if(selectProjectBtn) selectProjectBtn.style.display = 'inline-flex';
 
         if (isDataDirty) {
             syncBtn.disabled = false;
@@ -5990,22 +5993,17 @@ function updateUIBasedOnAuthState() {
             syncBtn.textContent = '資料已同步';
         }
     } else {
-        // 未登入
-        if(authStatus) {
-            authStatus.textContent = '未連接';
-            authStatus.style.backgroundColor = "rgba(0, 0, 0, 0.15)";
-        }
-        if(loginBtn) loginBtn.style.display = 'none'; // 登入牆接管
+        // 未登入狀態
+        if(authStatus) authStatus.textContent = '未連接';
+        if(authStatus) authStatus.style.backgroundColor = "rgba(0, 0, 0, 0.15)";
+
+        // 🔥 核心改動：因為有登入牆，Header 嘅「登入/註冊」按鈕隱藏，避免雙重入口
+        if(loginBtn) loginBtn.style.display = 'none';
+        
         if(logoutBtn) logoutBtn.style.display = 'none';
         if(syncBtn) syncBtn.style.display = 'none';
-        
-        // 未登入時，Header 按鈕顯示提示
-        const phClass = document.getElementById('ph-class');
-        const phTopic = document.getElementById('ph-topic');
-        const phDivider = document.querySelector('.project-header-info .ph-divider');
-        if(phClass) phClass.textContent = '🔒 請先登入';
-        if(phTopic) phTopic.textContent = '';
-        if(phDivider) phDivider.style.display = 'none';
+        if(selectProjectBtn) selectProjectBtn.style.display = 'none';
+        if(phContainer) phContainer.style.display = 'none';
     }
 }
 
@@ -9313,57 +9311,32 @@ details.category-group[style*="border: 2px solid"] {
     transform: translateX(2px);
 }
 
+/* ========================================= */
+/* === [v18.2] 排版與去線 (Final Fix) === */
+/* ========================================= */
 
-/* [v20.6] 終極 Header 書籤按鈕樣式 */
-
-.header-book-btn {
-    /* 1. 強制顯示並重置定位 */
-    display: flex !important;
-    position: relative !important; /* 跟隨 Header 排列，不再懸浮 */
-    top: auto !important;
-    bottom: auto !important;
-    right: auto !important;
-    left: auto !important;
-    z-index: 3002 !important;
-
-    /* 2. 外觀設定 (融入 Header) */
-    background: rgba(255, 255, 255, 0.25) !important;
-    border: 1px solid rgba(255, 255, 255, 0.4) !important;
-    color: #fff !important;
-    width: 38px !important;
-    height: 38px !important;
-    border-radius: 8px !important;
-    align-items: center; 
-    justify-content: center;
-    font-size: 1.2rem;
-    cursor: pointer;
-    margin-right: 8px; /* 同右邊齒輪保持距離 */
-    box-shadow: none !important; /* 移除浮起陰影 */
-}
-
-.header-book-btn:hover {
-    background: rgba(255, 255, 255, 0.4) !important;
-}
-
-/* 3. 確保 Header 右側容器橫向排列 */
+/* 1. Header 右側按鈕強制並列 (Side-by-side) */
 .header-right {
-    display: flex !important;
-    align-items: center !important;
-    gap: 5px !important;
-    position: relative !important; /* 確保下拉選單定位正常 */
+    display: flex !important;       /* 強制 Flex 佈局 */
+    flex-direction: row !important; /* 強制橫向排列 */
+    align-items: center !important; /* 垂直置中 */
+    gap: 12px !important;           /* 按鈕之間的間距 */
+    
+    /* 確保手機版定位正確 */
+    position: absolute;
+    top: 20px;
+    right: 20px;
 }
 
-/* 4. 手機版特別處理 (確保唔會走位) */
-@media (max-width: 768px) {
-    .header-right {
-        position: absolute !important;
-        top: 15px !important;
-        right: 15px !important;
-    }
-    /* 殺死舊有的懸浮設定 */
-    #mobile-book-trigger { display: none !important; }
+/* 確保書籤掣在 Desktop 也能顯示 (如果你想 Desktop 都有) */
+/* 如果只想手機有，保持原本 media query 即可；這裡強制對齊樣式 */
+.header-book-btn {
+    margin-right: 0 !important; /* 移除舊 margin，改用 gap */
+    margin-bottom: 0 !important;
+    position: relative !important; /* 防止絕對定位亂跑 */
+    top: auto !important;
+    right: auto !important;
 }
-
 
 /* [v18.10] 強制隱藏舊版切換器 (靈魂頁面殺手) */
 #project-switcher-container, #project-switcher {
@@ -10818,65 +10791,69 @@ function updateWelcomeMessage() {
 /* === [v16.1] 智能入口 (Selective Restore) === */
 /* ========================================= */
 
-// [v20.5] 系統啟動引擎 (Boot Engine)
-document.addEventListener('DOMContentLoaded', () => {
-    console.log("🚀 System Booting...");
-
-    // 1. 瞬間路由 (Instant Routing) - 解決刷新跳首頁問題
+// [v20.1] 初始化 (瞬間路由 + 非同步載入)
+document.addEventListener('DOMContentLoaded', () => { // 移除 async，確保立即執行
+    
+    // 🔥 1. 瞬間路由 (Instant Routing)
+    // 在載入任何數據前，立即決定顯示哪個頁面，杜絕閃爍
     const lastPage = localStorage.getItem('idw_last_page');
-    // 定義哪些頁面刷新後「必須」回首頁 (因為依賴記憶體數據)
-    const resetToHomePages = ['page1', 'page2']; 
+    const resetToHomePages = ['page1', 'page2']; // 這些頁面刷新必回首頁
     let targetPageId = 'page-home';
 
     if (lastPage && !resetToHomePages.includes(lastPage)) {
-        targetPageId = lastPage; // 其他頁面 (P3-P8) 保持原位
+        targetPageId = lastPage;
     }
 
-    // 立即切換頁面 class
+    // 手動切換 Active Class (比 showPage 更快，不涉邏輯)
     document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
     const targetEl = document.getElementById(targetPageId);
     if(targetEl) targetEl.classList.add('active');
 
-    // 2. 還原導航按鈕狀態
-    if (targetPageId !== 'page-home') {
+    // 同步導航按鈕狀態
+    document.querySelectorAll('.main-nav .nav-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.sub-nav-btn').forEach(btn => btn.classList.remove('active'));
+    
+    // 簡單還原按鈕狀態 (詳細邏輯稍後由 showPage 補足)
+    if (targetPageId === 'page-home') {
+        const homeBtn = document.querySelector('.main-nav .nav-btn[data-target="home"]');
+        if(homeBtn) homeBtn.classList.add('active');
+        const subContainer = document.getElementById('sub-nav-container');
+        if(subContainer) subContainer.style.display = 'none';
+    } else {
         const subBtn = document.getElementById('nav-' + targetPageId);
-        if (subBtn) {
+        if(subBtn) {
             subBtn.classList.add('active');
+            // 嘗試顯示懸浮島
             const subContainer = document.getElementById('sub-nav-container');
             if(subContainer) subContainer.style.display = 'flex';
             const group = subBtn.closest('.sub-nav-group');
             if(group) {
                 document.querySelectorAll('.sub-nav-group').forEach(g => g.style.display = 'none');
                 group.style.display = 'flex';
-                // 亮起主導航
+                // 反向激活主導航
                 const mainTarget = group.id.replace('sub-nav-', '');
                 const mainBtn = document.querySelector(`.main-nav .nav-btn[data-target="${mainTarget}"]`);
-                if(mainBtn) {
-                    document.querySelectorAll('.main-nav .nav-btn').forEach(b => b.classList.remove('active'));
-                    mainBtn.classList.add('active');
-                }
+                if(mainBtn) mainBtn.classList.add('active');
             }
         }
     }
 
-    // 3. 啟動所有功能模組
-    if(typeof loadFontSize === 'function') loadFontSize();
-    if(typeof initHotkeys === 'function') initHotkeys();
-    if(typeof attachGlobalListeners === 'function') attachGlobalListeners();
-    if(typeof loadDefaultCritiques === 'function') loadDefaultCritiques();
-    if(typeof initFloatingNavObserver === 'function') initFloatingNavObserver();
-    if(typeof initScrollAutoShow === 'function') initScrollAutoShow();
+    // 2. 執行初始化函數
+    loadFontSize();
+    initHotkeys();
+    attachGlobalListeners();
+    loadDefaultCritiques();
+    initFloatingNavObserver();
+    initScrollAutoShow();
 
-    // 4. 身份驗證與數據載入 (這是您之前沒登入的原因)
+    // 3. 非同步執行驗證與數據載入 (不阻擋 UI)
     (async () => {
-        await checkUser(); // 檢查登入
-        if(typeof loadDashboard === 'function') loadDashboard(); // 載入首頁
+        await checkUser(); 
+        if(typeof loadDashboard === 'function') loadDashboard();
         
-        // 確保 showPage 的滾動監聽器被掛載
+        // 為了確保 showPage 的完整邏輯 (如 Scroll Listener) 被掛載，
+        // 我們在數據準備好後，安靜地再 Call 一次 showPage (不寫入 History)
         showPage(targetPageId, null, false);
-        
-        // 強制刷新一次資訊欄
-        if(typeof updateAllPageHeaders === 'function') updateAllPageHeaders();
     })();
 });
 
@@ -12999,15 +12976,17 @@ function scrollToTop() {
 /* === [Edition: 書] Mobile Menu Logic === */
 /* ========================================= */
 
-// [v20.4] 手機書籤開關
+// 1. 開關全螢幕目錄
 function toggleBookMenu() {
     const overlay = document.getElementById('mobile-book-overlay');
-    if(overlay) {
-        overlay.classList.toggle('active');
-        if(overlay.classList.contains('active')) {
-            // 打開時自動展開當前章節
-            if(typeof autoExpandCurrentSection === 'function') autoExpandCurrentSection();
-        }
+    const isActive = overlay.classList.contains('active');
+    
+    if (isActive) {
+        overlay.classList.remove('active');
+    } else {
+        overlay.classList.add('active');
+        // 打開時，自動展開當前所在的主分類
+        autoExpandCurrentSection();
     }
 }
 
@@ -13779,72 +13758,204 @@ function deleteProjectFromDetails() {
     confirmDeleteProjectDirectly(id, title);
 }
 
+/* ========================================= */
+/* === [v20.2] UI 邏輯修復包 === */
+/* ========================================= */
 
-// [v20.4] 全域資訊同步 (Header + 頁面 Banner)
-function updateAllPageHeaders() {
-    // 讀取當前資訊
-    const className = document.getElementById('student-class').value;
-    const topic = document.getElementById('topic').value;
-    const hasProject = (className && className.trim() !== '') || (topic && topic.trim() !== '');
+// 1. 通用標題資訊欄渲染器 (用於 P4, P5, P7)
+function renderPageHeaderInfo(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
 
-    // 1. 更新 Header 按鈕
-    const phContainer = document.getElementById('project-header-info');
-    const phClass = document.getElementById('ph-class');
-    const phTopic = document.getElementById('ph-topic');
-    const phDivider = document.querySelector('.project-header-info .ph-divider');
+    // 獲取當前資訊 (優先從 DOM 抓，確保最新)
+    const className = document.getElementById('student-class')?.value || '未設定班別';
+    const topicName = document.getElementById('topic')?.value || '未設定題目';
 
-    if (phContainer && phClass) {
-        if (hasProject) {
-            phClass.textContent = `📂 ${className}`;
-            phTopic.textContent = topic;
-            if(phDivider) phDivider.style.display = 'inline';
-        } else {
-            phClass.textContent = '📂 點擊載入專案';
-            phTopic.textContent = '';
-            if(phDivider) phDivider.style.display = 'none';
-        }
-    }
+    // 檢查是否已經有 Banner，有的話移除舊的 (防止重複)
+    const oldBanner = container.querySelector('.project-info-banner');
+    if (oldBanner) oldBanner.remove();
 
-    // 2. 更新各頁 Banner
-    const bannerHtml = hasProject 
-        ? `<strong>${escapeHtml(className)}</strong> <span style="opacity:0.4; margin:0 10px;">|</span> 📝 ${escapeHtml(topic)}`
-        : '📂 尚未載入專案，請點擊上方按鈕選擇。';
+    // 建立 Banner HTML
+    const bannerHtml = `
+        <div class="project-info-banner">
+            <div class="pib-item">
+                <span class="pib-icon">🏫</span>
+                <span>班別：<span class="pib-text">${escapeHtml(className)}</span></span>
+            </div>
+            <div class="pib-divider"></div>
+            <div class="pib-item">
+                <span class="pib-icon">📝</span>
+                <span>題目：<span class="pib-text">${escapeHtml(topicName)}</span></span>
+            </div>
+        </div>
+    `;
 
-    ['p4-banner', 'p5-banner', 'p7-banner'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.innerHTML = bannerHtml;
-    });
-}// [v20.7] 強制重寫目錄開關邏輯
-window.toggleBookMenu = function() {
-    const overlay = document.getElementById('mobile-book-overlay');
-    if (!overlay) {
-        alert("錯誤：找不到目錄元件！請檢查 HTML 是否已貼上 [v20.7] 的代碼。");
-        return;
-    }
-    
-    // 切換 Active Class
-    if (overlay.classList.contains('active')) {
-        overlay.classList.remove('active');
-    } else {
-        overlay.classList.add('active');
+    // 插入到容器最前面
+    container.insertAdjacentHTML('afterbegin', bannerHtml);
+}
+
+// 2. 修改：學生總覽頁 (Page 4) 渲染
+// (請確認你的 renderStudentOverviewTable 函數開頭加入這一行)
+const originalRenderOverview = renderStudentOverviewTable;
+renderStudentOverviewTable = function() {
+    // 先執行原本邏輯
+    originalRenderOverview();
+    // 再插入美觀 Banner
+    renderPageHeaderInfo('page4');
+};
+
+// 3. 修改：評語分析頁 (Page 5) 渲染
+const originalRenderAnalysis = renderAnalysisPage;
+renderAnalysisPage = function() {
+    // 先執行原本邏輯
+    originalRenderAnalysis();
+    // 確保插入到 overview-container 內部最上面
+    const container = document.querySelector('#page5 .overview-container');
+    if(container) {
+        renderPageHeaderInfo('page5-content-wrapper'); // 假設你要加個 wrapper ID，或者直接操作 DOM
+        // 這裡我們直接操作 DOM 插入
+        const oldBanner = container.querySelector('.project-info-banner');
+        if(oldBanner) oldBanner.remove();
         
-        // 自動展開當前章節 (UX)
-        if(typeof autoExpandCurrentSection === 'function') {
-            setTimeout(autoExpandCurrentSection, 100);
-        }
+        const className = document.getElementById('student-class')?.value || '未設定班別';
+        const topicName = document.getElementById('topic')?.value || '未設定題目';
+        
+        const banner = document.createElement('div');
+        banner.className = 'project-info-banner';
+        banner.innerHTML = `
+            <div class="pib-item"><span class="pib-icon">🏫</span><span><span class="pib-text">${escapeHtml(className)}</span></span></div>
+            <div class="pib-divider"></div>
+            <div class="pib-item"><span class="pib-icon">📊</span><span>分析對象：<span class="pib-text">${escapeHtml(topicName)}</span></span></div>
+        `;
+        // 插在 page-header 之後
+        const header = container.querySelector('.page-header');
+        if(header) header.parentNode.insertBefore(banner, header.nextSibling);
     }
 };
 
-// 確保點擊連結後會關閉目錄
-window.mobileNavClick = function(mainTarget, pageId) {
-    if (pageId) showPage(pageId);
-    else if (mainTarget === 'home') showPage('page-home');
+// 4. 修改：生成回饋頁 (Page 7) 監聽
+// 在 showPage 切換到 page7 時觸發
+document.addEventListener('click', (e) => {
+    // 簡單監聽導航點擊
+    if(e.target && (e.target.id === 'nav-page7' || e.target.closest('#nav-page7'))) {
+        setTimeout(() => {
+            const container = document.querySelector('#page7 .overview-container');
+            if(container) {
+                // 移除舊 Banner
+                const old = container.querySelector('.project-info-banner');
+                if(old) old.remove();
+                
+                // 插入新 Banner (插在 h2 標題之後)
+                const h2 = container.querySelector('h2');
+                const className = document.getElementById('student-class')?.value || '未設定';
+                const topicName = document.getElementById('topic')?.value || '未設定';
+                
+                const banner = document.createElement('div');
+                banner.className = 'project-info-banner';
+                banner.innerHTML = `
+                    <div class="pib-item"><span class="pib-icon">🏫</span><span>${escapeHtml(className)}</span></div>
+                    <div class="pib-divider"></div>
+                    <div class="pib-item"><span class="pib-icon">🤖</span><span>回饋主題：<span class="pib-text">${escapeHtml(topicName)}</span></span></div>
+                `;
+                if(h2) h2.parentNode.insertBefore(banner, h2.nextSibling);
+            }
+        }, 100);
+    }
+});
+
+// 5. 修復：雲端專案讀取 (加入關閉鍵 & 強制刷新列表)
+async function promptAndLoadCloudProject() {
+    if (!currentUser) { alert("請先登入"); return; }
     
-    if(typeof switchMainTab === 'function') switchMainTab(mainTarget);
+    const modal = document.getElementById('pop-project-modal');
+    const listContainer = document.getElementById('pop-project-list');
     
-    // 關閉目錄
+    // A. 顯示 Modal 前先清空列表 (防止顯示舊資料)
+    listContainer.innerHTML = '<div style="text-align:center; padding:20px; color:#999;"><div class="spinner"></div> 正在連線雲端...</div>';
+    modal.classList.add('active');
+
+    // B. 加入關閉按鈕 (如果未加)
+    if (!modal.querySelector('.pop-close-x')) {
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'pop-close-x';
+        closeBtn.innerHTML = '×';
+        closeBtn.onclick = () => modal.classList.remove('active');
+        modal.querySelector('.pop-modal').appendChild(closeBtn);
+    }
+
+    try {
+        // C. 重新讀取資料 (與原本邏輯相同，但確保每次都 fetch)
+        const { data: assignments, error } = await supabaseClient
+            .from('assignments')
+            .select('id, title, created_at, classes(class_name)')
+            .eq('user_id', currentUser.id)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        listContainer.innerHTML = ''; // 再次清空 Loading
+
+        if (!assignments || assignments.length === 0) {
+            listContainer.innerHTML = '<div style="text-align:center; padding:20px; color:#999;">沒有找到任何專案。</div>';
+            return;
+        }
+
+        // D. 渲染列表
+        assignments.forEach((p, idx) => {
+            const dateStr = new Date(p.created_at).toLocaleDateString();
+            const className = p.classes ? p.classes.class_name : '(未分類)';
+            
+            const item = document.createElement('div');
+            item.className = 'pop-list-item';
+            item.style.cursor = 'pointer';
+            item.innerHTML = `
+                <div style="font-weight:bold; color:#3d5c4f;">${idx+1}. ${escapeHtml(className)} - ${escapeHtml(p.title)}</div>
+                <div style="font-size:0.8rem; color:#888;">${dateStr}</div>
+            `;
+            item.onclick = () => {
+                modal.classList.remove('active');
+                openAssignment(p.id); // 載入並刷新 Header
+            };
+            listContainer.appendChild(item);
+        });
+
+    } catch (e) {
+        listContainer.innerHTML = `<div style="color:red; padding:20px;">讀取失敗: ${e.message}</div>`;
+    }
+}
+
+// 6. Header 資訊更新 (確保顯示正確)
+function updateHeaderInfo() {
+    const classInput = document.getElementById('student-class');
+    const topicInput = document.getElementById('topic');
+    const container = document.getElementById('project-header-info');
+    
+    if (!container) return;
+
+    const className = classInput ? classInput.value.trim() : '';
+    const topic = topicInput ? topicInput.value.trim() : '';
+
+    if (className || topic) {
+        container.style.display = 'inline-flex';
+        document.getElementById('ph-class').textContent = className || '未命名';
+        document.getElementById('ph-topic').textContent = topic || '無題目';
+    } else {
+        container.style.display = 'none';
+    }
+}
+
+// 7. 手機書籤修復 (確保 click event 綁定)
+window.toggleBookMenu = function() {
     const overlay = document.getElementById('mobile-book-overlay');
-    if(overlay) overlay.classList.remove('active');
+    if(overlay) {
+        overlay.classList.toggle('active');
+        // 如果是打開，自動展開當前頁
+        if(overlay.classList.contains('active') && typeof autoExpandCurrentSection === 'function') {
+            autoExpandCurrentSection();
+        }
+    } else {
+        console.error("找不到 #mobile-book-overlay");
+    }
 };
 </script> <!-- 呢個係原本全個檔案唯一的結尾，保留佢 -->
 
