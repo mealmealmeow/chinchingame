@@ -258,18 +258,21 @@
                     <div id="score-a" class="font-game text-3xl lg:text-5xl font-black text-amber-500 drop-shadow-[2px_2px_0px_#1E293B]">100</div>
                 </div>
 
-                <!-- 桌面版出戰訓練員 -->
-                <div class="hidden lg:block w-full text-center py-2 bg-pokeYellow/45 rounded-xl border-2 border-hudDark mt-auto">
-                    <div class="text-[11px] text-hudDark font-black">🧢 出戰訓練員 🧢</div>
-                    <div id="student-name-a" class="text-2xl font-black text-hudDark min-h-[1.85rem]">待機中</div>
-                </div>
+                <!-- 底部兩行區域：第一行「出戰訓練員」、第二行「手動調分按鈕」 -->
+                <div class="flex flex-col items-center lg:w-full lg:mt-auto gap-1.5">
+                    <!-- 第一行：桌面版出戰訓練員 -->
+                    <div class="hidden lg:block w-full text-center py-2 px-2 bg-pokeYellow/45 rounded-xl border-2 border-hudDark">
+                        <div class="text-[11px] text-hudDark font-black">🧢 出戰訓練員 🧢</div>
+                        <div id="student-name-a" class="text-xl xl:text-2xl font-black text-hudDark min-h-[1.85rem] truncate">待機中</div>
+                    </div>
 
-                <!-- 教師手動調分/精靈球 -->
-                <div class="opacity-30 group-hover:opacity-100 transition-opacity duration-200 flex gap-1 bg-white border-2 border-hudDark p-1 rounded-full lg:absolute lg:bottom-1.5 lg:left-1/2 lg:-translate-x-1/2 shadow">
-                    <button onclick="modStat('a','s',10)" title="加10積分" class="bg-emerald-300 hover:bg-emerald-400 text-hudDark rounded-full px-1.5 lg:px-2 py-0.5 text-[11px] font-black cursor-pointer">+10</button>
-                    <button onclick="modStat('a','s',-10)" title="扣10積分" class="bg-rose-300 hover:bg-rose-400 text-hudDark rounded-full px-1.5 lg:px-2 py-0.5 text-[11px] font-black cursor-pointer">-10</button>
-                    <button onclick="modStat('a','h',1)" title="回復1顆精靈球" class="bg-amber-300 hover:bg-amber-400 text-hudDark rounded-full px-1.5 py-0.5 text-[11px] font-black cursor-pointer">+球</button>
-                    <button onclick="modStat('a','h',-1)" title="減少1顆精靈球" class="bg-slate-200 hover:bg-slate-300 text-hudDark rounded-full px-1.5 lg:px-2 py-0.5 text-[11px] font-black cursor-pointer">-球</button>
+                    <!-- 第二行：教師手動調分/精靈球（正常文件流，絕不重疊） -->
+                    <div class="opacity-45 group-hover:opacity-100 transition-opacity duration-200 flex justify-center gap-1 bg-white border-2 border-hudDark px-2 py-1 rounded-full shadow-xs">
+                        <button onclick="modStat('a','s',10)" title="加10積分" class="bg-emerald-300 hover:bg-emerald-400 text-hudDark rounded-full px-1.5 lg:px-2 py-0.5 text-[11px] font-black cursor-pointer">+10</button>
+                        <button onclick="modStat('a','s',-10)" title="扣10積分" class="bg-rose-300 hover:bg-rose-400 text-hudDark rounded-full px-1.5 lg:px-2 py-0.5 text-[11px] font-black cursor-pointer">-10</button>
+                        <button onclick="modStat('a','h',1)" title="回復1顆精靈球" class="bg-amber-300 hover:bg-amber-400 text-hudDark rounded-full px-1.5 lg:px-2 py-0.5 text-[11px] font-black cursor-pointer">+球</button>
+                        <button onclick="modStat('a','h',-1)" title="減少1顆精靈球" class="bg-slate-200 hover:bg-slate-300 text-hudDark rounded-full px-1.5 lg:px-2 py-0.5 text-[11px] font-black cursor-pointer">-球</button>
+                    </div>
                 </div>
             </div>
 
@@ -402,18 +405,21 @@
                     <div id="score-b" class="font-game text-3xl lg:text-5xl font-black text-pokeRed drop-shadow-[2px_2px_0px_#1E293B]">100</div>
                 </div>
 
-                <!-- 桌面版出戰訓練員 -->
-                <div class="hidden lg:block w-full text-center py-2 bg-rose-200/55 rounded-xl border-2 border-hudDark mt-auto">
-                    <div class="text-[11px] text-hudDark font-black">🧢 出戰訓練員 🧢</div>
-                    <div id="student-name-b" class="text-2xl font-black text-hudDark min-h-[1.85rem]">待機中</div>
-                </div>
+                <!-- 底部兩行區域：第一行「出戰訓練員」、第二行「手動調分按鈕」 -->
+                <div class="flex flex-col items-center lg:w-full lg:mt-auto gap-1.5">
+                    <!-- 第一行：桌面版出戰訓練員 -->
+                    <div class="hidden lg:block w-full text-center py-2 px-2 bg-rose-200/55 rounded-xl border-2 border-hudDark">
+                        <div class="text-[11px] text-hudDark font-black">🧢 出戰訓練員 🧢</div>
+                        <div id="student-name-b" class="text-xl xl:text-2xl font-black text-hudDark min-h-[1.85rem] truncate">待機中</div>
+                    </div>
 
-                <!-- 教師手動調分/精靈球 -->
-                <div class="opacity-30 group-hover:opacity-100 transition-opacity duration-200 flex gap-1 bg-white border-2 border-hudDark p-1 rounded-full lg:absolute lg:bottom-1.5 lg:left-1/2 lg:-translate-x-1/2 shadow">
-                    <button onclick="modStat('b','s',10)" title="加10積分" class="bg-emerald-300 hover:bg-emerald-400 text-hudDark rounded-full px-1.5 lg:px-2 py-0.5 text-[11px] font-black cursor-pointer">+10</button>
-                    <button onclick="modStat('b','s',-10)" title="扣10積分" class="bg-rose-300 hover:bg-rose-400 text-hudDark rounded-full px-1.5 lg:px-2 py-0.5 text-[11px] font-black cursor-pointer">-10</button>
-                    <button onclick="modStat('b','h',1)" title="回復1顆精靈球" class="bg-amber-300 hover:bg-amber-400 text-hudDark rounded-full px-1.5 py-0.5 text-[11px] font-black cursor-pointer">+球</button>
-                    <button onclick="modStat('b','h',-1)" title="減少1顆精靈球" class="bg-slate-200 hover:bg-slate-300 text-hudDark rounded-full px-1.5 lg:px-2 py-0.5 text-[11px] font-black cursor-pointer">-球</button>
+                    <!-- 第二行：教師手動調分/精靈球（正常文件流，絕不重疊） -->
+                    <div class="opacity-45 group-hover:opacity-100 transition-opacity duration-200 flex justify-center gap-1 bg-white border-2 border-hudDark px-2 py-1 rounded-full shadow-xs">
+                        <button onclick="modStat('b','s',10)" title="加10積分" class="bg-emerald-300 hover:bg-emerald-400 text-hudDark rounded-full px-1.5 lg:px-2 py-0.5 text-[11px] font-black cursor-pointer">+10</button>
+                        <button onclick="modStat('b','s',-10)" title="扣10積分" class="bg-rose-300 hover:bg-rose-400 text-hudDark rounded-full px-1.5 lg:px-2 py-0.5 text-[11px] font-black cursor-pointer">-10</button>
+                        <button onclick="modStat('b','h',1)" title="回復1顆精靈球" class="bg-amber-300 hover:bg-amber-400 text-hudDark rounded-full px-1.5 lg:px-2 py-0.5 text-[11px] font-black cursor-pointer">+球</button>
+                        <button onclick="modStat('b','h',-1)" title="減少1顆精靈球" class="bg-slate-200 hover:bg-slate-300 text-hudDark rounded-full px-1.5 lg:px-2 py-0.5 text-[11px] font-black cursor-pointer">-球</button>
+                    </div>
                 </div>
             </div>
         </main>
