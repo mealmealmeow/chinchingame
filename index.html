@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>寵物小精靈道館賽：文史知識對決</title>
+    <title>寵物小精靈道館賽</title>
     <!-- 引入遊戲感粗體與繁體字型 -->
     <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@700;900&family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
     <!-- SheetJS Excel 處理 -->
@@ -26,7 +26,7 @@
                         pokeBlue: '#2A75BB',
                         pokeBlueDark: '#1D4ED8',
                         dexCyan: '#38BDF8',
-                        hudDark: '#1E293B',
+                        hudDark: '#0F172A',
                         arenaBg: '#F1F5F9',
                     }
                 }
@@ -34,81 +34,317 @@
         }
     </script>
     <style>
-        /* 經典精靈聯盟道館場地與精靈球水印背景 */
+        /* 道館競技場深邃星光背景與精靈聯盟網格 */
         body {
-            background-color: #e2e8f0;
+            background-color: #0f172a;
             background-image: 
-                radial-gradient(circle at 15% 25%, rgba(255, 203, 5, 0.25) 0%, transparent 40%),
-                radial-gradient(circle at 85% 25%, rgba(238, 21, 21, 0.2) 0%, transparent 40%),
-                radial-gradient(circle at 50% 85%, rgba(42, 117, 187, 0.18) 0%, transparent 45%),
-                linear-gradient(rgba(30, 41, 59, 0.05) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(30, 41, 59, 0.05) 1px, transparent 1px);
-            background-size: 100% 100%, 100% 100%, 100% 100%, 28px 28px, 28px 28px;
+                radial-gradient(circle at 15% 20%, rgba(255, 203, 5, 0.22) 0%, transparent 42%),
+                radial-gradient(circle at 85% 20%, rgba(238, 21, 21, 0.22) 0%, transparent 42%),
+                radial-gradient(circle at 50% 85%, rgba(56, 189, 248, 0.2) 0%, transparent 48%),
+                linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 100% 100%, 32px 32px, 32px 32px;
         }
 
         .perspective-1500 { perspective: 1500px; }
         .perspective-1200 { perspective: 1200px; }
         .preserve-3d { transform-style: preserve-3d; }
-        .backface-hidden { backface-visibility: hidden; }
+        .backface-hidden { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
         .rotate-y-180 { transform: rotateY(180deg); }
 
-        /* 經典 GBA / Switch 對戰資訊框（斜角雙層粗框） */
+        /* 經典對戰資訊框 */
         .poke-hud-box {
-            border: 3.5px solid #1E293B;
-            border-radius: 20px;
-            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.16), 4px 4px 0px #1E293B;
-        }
-        .poke-pill {
-            border: 2.5px solid #1E293B;
-            border-radius: 999px;
-            box-shadow: 2.5px 2.5px 0px #1E293B;
+            border: 3.5px solid #0F172A;
+            border-radius: 22px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35), 4px 4px 0px #0F172A;
         }
 
         /* 經典戰鬥指令按鈕 */
         .btn-poke {
-            border: 3px solid #1E293B;
+            border: 3px solid #0F172A;
             border-radius: 16px;
-            box-shadow: 0 4px 0 #1E293B;
+            box-shadow: 0 4px 0 #0F172A;
             transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.12s ease, filter 0.15s ease;
         }
         .btn-poke:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 0 #1E293B;
-            filter: brightness(1.04);
+            box-shadow: 0 6px 0 #0F172A;
+            filter: brightness(1.06);
         }
         .btn-poke:active {
             transform: translateY(3px);
-            box-shadow: 0 1px 0 #1E293B;
+            box-shadow: 0 1px 0 #0F172A;
+        }
+
+        /* =========================================================
+           1. POKÉMON TCG 全息閃卡系統 (Gold Secret Rare / VMAX Holo)
+           ========================================================= */
+        :root {
+            --mx: 50%;
+            --my: 50%;
+            --holo-angle: 115deg;
+        }
+
+        /* 黃金稀有卡框漸層 */
+        .tcg-gold-frame {
+            background: linear-gradient(135deg, #fde047 0%, #f59e0b 25%, #fef08a 50%, #d97706 75%, #fde047 100%);
+            padding: 8px;
+            border: 3.5px solid #0F172A;
+            border-radius: 24px;
+            box-shadow: 
+                0 15px 35px rgba(0, 0, 0, 0.45),
+                0 0 25px rgba(250, 204, 21, 0.35),
+                inset 0 0 12px rgba(255, 255, 255, 0.8);
+        }
+
+        /* 3D 滑鼠傾斜包裝層 */
+        .tcg-tilt-wrapper {
+            transition: transform 0.18s ease-out;
+            transform-style: preserve-3d;
         }
 
         /* 3D 翻轉卡片動畫 */
-        .main-card { transition: transform 0.7s cubic-bezier(0.34, 1.35, 0.64, 1); }
-        .main-card.flipped { transform: rotateY(180deg); }
-        
-        .tarot-card { transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
-        .tarot-card:hover { transform: translateY(-16px) scale(1.04); z-index: 10; }
-        .tarot-card.flipped { transform: rotateY(180deg); }
-        .tarot-card.disabled { opacity: 0.3; filter: grayscale(80%); pointer-events: none; }
+        .main-card {
+            transition: transform 0.72s cubic-bezier(0.34, 1.35, 0.64, 1);
+        }
+        .main-card.flipped {
+            transform: rotateY(180deg);
+        }
 
-        /* 精靈球卡背（道具背包 & 野生突襲） */
+        /* 全息彩虹雷射光澤疊層 (Iridescent Holo Foil) */
+        .holo-foil-layer {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            border-radius: inherit;
+            z-index: 25;
+            mix-blend-mode: color-dodge;
+            opacity: 0.42;
+            background: 
+                radial-gradient(circle at var(--mx) var(--my), rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.15) 35%, transparent 65%),
+                linear-gradient(
+                    var(--holo-angle),
+                    transparent 15%,
+                    rgba(255, 0, 128, 0.45) 30%,
+                    rgba(255, 230, 0, 0.5) 42%,
+                    rgba(0, 255, 170, 0.5) 54%,
+                    rgba(0, 140, 255, 0.45) 66%,
+                    rgba(180, 0, 255, 0.45) 78%,
+                    transparent 90%
+                );
+            background-size: 100% 100%, 220% 220%;
+            animation: holoShimmerFlow 5s ease-in-out infinite alternate;
+            transition: opacity 0.25s ease;
+        }
+
+        /* 星塵閃爍網紋層 (Glitter Sparkle Texture) */
+        .holo-glitter-layer {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            border-radius: inherit;
+            z-index: 26;
+            opacity: 0.35;
+            mix-blend-mode: overlay;
+            background-image: 
+                radial-gradient(circle, #ffffff 1.2px, transparent 1.5px),
+                radial-gradient(circle, #fef08a 1px, transparent 1.5px),
+                repeating-linear-gradient(45deg, rgba(255,255,255,0.12) 0px, rgba(255,255,255,0.12) 2px, transparent 2px, transparent 8px);
+            background-size: 26px 26px, 37px 37px, 100% 100%;
+            background-position: 0 0, 13px 17px, 0 0;
+        }
+
+        /* 自動掃過光帶 (Foil Sweep) */
+        .holo-sweep::after {
+            content: "";
+            position: absolute;
+            top: -50%;
+            left: -75%;
+            width: 50%;
+            height: 200%;
+            background: linear-gradient(
+                to right,
+                rgba(255, 255, 255, 0) 0%,
+                rgba(255, 255, 255, 0.55) 50%,
+                rgba(255, 255, 255, 0) 100%
+            );
+            transform: rotate(25deg);
+            pointer-events: none;
+            z-index: 27;
+            animation: foilSweep 4.2s infinite ease-in-out;
+        }
+
+        @keyframes holoShimmerFlow {
+            0% { background-position: 0% 0%, 0% 50%; }
+            100% { background-position: 0% 0%, 100% 50%; }
+        }
+
+        @keyframes foilSweep {
+            0%, 55% { left: -75%; opacity: 0; }
+            65% { opacity: 0.9; }
+            90%, 100% { left: 145%; opacity: 0; }
+        }
+
+        /* VMAX 戰隊面板全息流光 */
+        .vmax-team-card {
+            position: relative;
+            overflow: hidden;
+        }
+        .vmax-team-card::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background: linear-gradient(125deg, transparent 20%, rgba(255,255,255,0.45) 45%, rgba(56,189,248,0.2) 55%, transparent 80%);
+            background-size: 250% 250%;
+            animation: vmaxSheen 6s ease-in-out infinite alternate;
+            z-index: 1;
+        }
+        @keyframes vmaxSheen {
+            0% { background-position: 0% 0%; }
+            100% { background-position: 100% 100%; }
+        }
+
+        /* 三選一道具閃卡 */
+        .tarot-card {
+            transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .tarot-card:hover {
+            transform: translateY(-16px) scale(1.05);
+            z-index: 10;
+        }
+        .tarot-card.flipped {
+            transform: rotateY(180deg);
+        }
+        .tarot-card.disabled {
+            opacity: 0.3;
+            filter: grayscale(80%);
+            pointer-events: none;
+        }
+
+        /* 精靈球卡背（金屬立體質感） */
         .pokeball-back-item {
-            background: linear-gradient(180deg, #2A75BB 0%, #2A75BB 46%, #1E293B 46%, #1E293B 54%, #F8FAFC 54%, #F8FAFC 100%);
+            background:
+                radial-gradient(circle at 30% 25%, rgba(255,255,255,0.35), transparent 50%),
+                linear-gradient(180deg, #1d4ed8 0%, #2563eb 45%, #0F172A 45%, #0F172A 55%, #e2e8f0 55%, #f8fafc 100%);
         }
         .pokeball-back-rocket {
-            background: linear-gradient(180deg, #EE1515 0%, #EE1515 46%, #1E293B 46%, #1E293B 54%, #1E293B 54%, #334155 100%);
+            background:
+                radial-gradient(circle at 30% 25%, rgba(255,255,255,0.28), transparent 50%),
+                linear-gradient(180deg, #dc2626 0%, #ef4444 45%, #0F172A 45%, #0F172A 55%, #1e293b 55%, #334155 100%);
         }
 
         /* 當前出戰隊伍發光呼吸特效 */
         @keyframes electricPulse {
-            0%, 100% { box-shadow: 0 0 22px rgba(255, 203, 5, 0.65), 4px 4px 0px #1E293B; transform: translateY(0px) scale(1.02); }
-            50% { box-shadow: 0 0 38px rgba(255, 203, 5, 0.95), 4px 4px 0px #1E293B; transform: translateY(-4px) scale(1.03); }
+            0%, 100% { box-shadow: 0 0 24px rgba(255, 203, 5, 0.75), 4px 4px 0px #0F172A; transform: translateY(0px) scale(1.02); }
+            50% { box-shadow: 0 0 42px rgba(255, 203, 5, 1), 4px 4px 0px #0F172A; transform: translateY(-4px) scale(1.03); }
         }
         @keyframes firePulse {
-            0%, 100% { box-shadow: 0 0 22px rgba(238, 21, 21, 0.55), 4px 4px 0px #1E293B; transform: translateY(0px) scale(1.02); }
-            50% { box-shadow: 0 0 38px rgba(238, 21, 21, 0.85), 4px 4px 0px #1E293B; transform: translateY(-4px) scale(1.03); }
+            0%, 100% { box-shadow: 0 0 24px rgba(238, 21, 21, 0.7), 4px 4px 0px #0F172A; transform: translateY(0px) scale(1.02); }
+            50% { box-shadow: 0 0 42px rgba(249, 115, 22, 0.95), 4px 4px 0px #0F172A; transform: translateY(-4px) scale(1.03); }
         }
         .active-team-a { animation: electricPulse 2.2s ease-in-out infinite; }
         .active-team-b { animation: firePulse 2.2s ease-in-out infinite; }
+
+        /* =========================================================
+           2. 精靈球投擲、搖晃、捕獲與爆裂動畫系統
+           ========================================================= */
+        @keyframes pokeballThrowIn {
+            0% {
+                transform: translate(-180px, 260px) scale(0.35) rotate(-540deg);
+                opacity: 0;
+            }
+            45% {
+                transform: translate(0px, -75px) scale(1.15) rotate(-140deg);
+                opacity: 1;
+            }
+            70% {
+                transform: translate(0px, 12px) scale(0.95) rotate(15deg);
+            }
+            85% {
+                transform: translate(0px, -18px) scale(1.03) rotate(-8deg);
+            }
+            100% {
+                transform: translate(0px, 0px) scale(1) rotate(0deg);
+                opacity: 1;
+            }
+        }
+
+        @keyframes pokeballWobble {
+            0%, 100% { transform: rotate(0deg) translateX(0); }
+            20% { transform: rotate(-22deg) translateX(-12px); }
+            45% { transform: rotate(18deg) translateX(10px); }
+            70% { transform: rotate(-12deg) translateX(-6px); }
+            85% { transform: rotate(6deg) translateX(3px); }
+        }
+
+        @keyframes pokeballCaptureSuccess {
+            0% { transform: scale(1); filter: brightness(1); }
+            40% { transform: scale(1.18); filter: brightness(1.6) drop-shadow(0 0 28px #FFCB05); }
+            70% { transform: scale(0.95); filter: brightness(1.2); }
+            100% { transform: scale(1.05); filter: brightness(1.1) drop-shadow(0 0 18px #34D399); }
+        }
+
+        @keyframes pokeballBreakFree {
+            0% { transform: scale(1) rotate(0deg); }
+            25% { transform: scale(1.25) rotate(-15deg); filter: brightness(2) drop-shadow(0 0 30px #EE1515); }
+            50% { transform: scale(0.85) rotate(22deg) translateX(-18px); opacity: 0.9; }
+            75% { transform: scale(1.1) rotate(-25deg) translateX(18px); opacity: 0.7; }
+            100% { transform: scale(0.4) rotate(90deg) translateY(80px); opacity: 0; }
+        }
+
+        @keyframes flashBurst {
+            0% { transform: scale(0.1); opacity: 0.95; }
+            60% { transform: scale(2.8); opacity: 0.85; }
+            100% { transform: scale(4.2); opacity: 0; }
+        }
+
+        @keyframes starPopOut {
+            0% { transform: translate(0, 0) scale(0.2) rotate(0deg); opacity: 1; }
+            80% { opacity: 1; }
+            100% { transform: translate(var(--tx), var(--ty)) scale(1.25) rotate(240deg); opacity: 0; }
+        }
+
+        @keyframes cardSummonPop {
+            0% { transform: scale(0.35) translateY(40px); opacity: 0; filter: brightness(2.2); }
+            65% { transform: scale(1.04) translateY(-6px); opacity: 1; filter: brightness(1.2); }
+            100% { transform: scale(1) translateY(0); opacity: 1; filter: brightness(1); }
+        }
+
+        /* 精靈球上下蓋彈開動畫（抽學生揭曉時刻） */
+        @keyframes domeSplitTop {
+            0% { transform: translateY(0) rotate(0deg); }
+            100% { transform: translateY(-26px) rotate(-14deg); }
+        }
+        @keyframes domeSplitBottom {
+            0% { transform: translateY(0) rotate(0deg); }
+            100% { transform: translateY(24px) rotate(12deg); }
+        }
+        @keyframes trainerCardReveal {
+            0% { transform: scale(0.25) rotateY(90deg); opacity: 0; }
+            65% { transform: scale(1.08) rotateY(-8deg); opacity: 1; }
+            100% { transform: scale(1) rotateY(0deg); opacity: 1; }
+        }
+
+        .anim-ball-throw { animation: pokeballThrowIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+        .anim-ball-wobble { animation: pokeballWobble 0.42s ease-in-out; }
+        .anim-ball-wobble-loop { animation: pokeballWobble 0.36s ease-in-out infinite; }
+        .anim-ball-capture { animation: pokeballCaptureSuccess 0.5s ease-out forwards; }
+        .anim-ball-break { animation: pokeballBreakFree 0.55s ease-in forwards; }
+        .anim-flash-burst { animation: flashBurst 0.55s ease-out forwards; }
+        .anim-card-summon { animation: cardSummonPop 0.52s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        .anim-dome-top-open { transform-origin: 60px 60px; animation: domeSplitTop 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        .anim-dome-bottom-open { transform-origin: 60px 60px; animation: domeSplitBottom 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        .anim-trainer-reveal { animation: trainerCardReveal 0.48s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+
+        .capture-star {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            font-size: 28px;
+            pointer-events: none;
+            animation: starPopOut 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
 
         /* 圖鑑藍色感應燈閃爍 */
         @keyframes dexScanner {
@@ -125,26 +361,97 @@
 
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 999px; }
-        ::-webkit-scrollbar-thumb { background: #94a3b8; border: 2px solid #1E293B; border-radius: 999px; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border: 2px solid #0F172A; border-radius: 999px; }
     </style>
 </head>
 <body class="m-0 p-0 w-full h-full overflow-hidden font-body text-hudDark select-none relative">
 
+    <!-- =========================================================
+         道館賽開幕開始頁 (Start Screen：初始進入與重置後顯示)
+         ========================================================= -->
+    <div id="overlay-start" class="fixed inset-0 z-[2400] flex flex-col items-center justify-center bg-slate-950/92 backdrop-blur-md p-4">
+        <div class="w-full max-w-[680px] tcg-gold-frame animate-pop-in">
+            <div class="holo-foil-layer"></div>
+            <div class="holo-glitter-layer"></div>
+            <div class="holo-sweep absolute inset-0 pointer-events-none"></div>
+
+            <div class="bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 rounded-[17px] border-[2.5px] border-hudDark p-6 sm:p-10 text-center text-white relative overflow-hidden">
+                <!-- 頂部聯盟徽章 -->
+                <div class="inline-flex items-center gap-2 bg-pokeRed border-2 border-white px-4 py-1 rounded-full text-xs sm:text-sm font-game font-black tracking-wider text-pokeYellow shadow mb-4 relative z-10">
+                    <span>★ POKÉMON GYM LEAGUE</span>
+                    <span>•</span>
+                    <span>TCG HOLO EDITION</span>
+                </div>
+
+                <!-- 立體旋轉精靈球主視覺 -->
+                <div class="w-24 h-24 sm:w-28 sm:h-28 mx-auto mb-4 drop-shadow-[0_10px_20px_rgba(255,203,5,0.45)] relative z-10">
+                    <svg viewBox="0 0 120 120" class="w-full h-full">
+                        <circle cx="60" cy="60" r="54" fill="#ffffff" stroke="#0F172A" stroke-width="7"/>
+                        <path d="M6,60 A54,54 0 0,1 114,60 Z" fill="#EE1515" stroke="#0F172A" stroke-width="7"/>
+                        <line x1="6" y1="60" x2="114" y2="60" stroke="#0F172A" stroke-width="8"/>
+                        <circle cx="60" cy="60" r="18" fill="#ffffff" stroke="#0F172A" stroke-width="7"/>
+                        <circle cx="60" cy="60" r="8" fill="#38BDF8" stroke="#0F172A" stroke-width="2.5"/>
+                    </svg>
+                </div>
+
+                <h1 class="font-game text-3xl sm:text-5xl font-black text-pokeYellow tracking-wider drop-shadow-[3px_3px_0_#0F172A] mb-2 relative z-10">
+                    寵物小精靈道館賽
+                </h1>
+                <p class="text-sm sm:text-lg font-bold text-cyan-200 mb-6 relative z-10">
+                    文史知識 TCG 閃卡對決・準備好迎接館主試煉了嗎？
+                </p>
+
+                <!-- 兩隊出戰陣容預覽框 -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 text-left relative z-10">
+                    <div class="bg-amber-300/15 border-2 border-pokeYellow/80 rounded-2xl p-3.5 flex items-center gap-3">
+                        <span class="text-2xl">⚡</span>
+                        <div class="min-w-0">
+                            <div class="text-[11px] font-black text-pokeYellow">甲隊・電氣屬性</div>
+                            <div id="start-team-a" class="text-base sm:text-lg font-black text-white truncate">比卡超雷電隊</div>
+                        </div>
+                    </div>
+                    <div class="bg-rose-500/15 border-2 border-pokeRed/80 rounded-2xl p-3.5 flex items-center gap-3">
+                        <span class="text-2xl">🔥</span>
+                        <div class="min-w-0">
+                            <div class="text-[11px] font-black text-rose-300">乙隊・火焰屬性</div>
+                            <div id="start-team-b" class="text-base sm:text-lg font-black text-white truncate">噴火龍烈焰隊</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 題庫與狀態提示 -->
+                <div class="inline-block bg-slate-950/80 border border-slate-600 px-4 py-1.5 rounded-full text-xs sm:text-sm font-bold text-slate-300 mb-7 relative z-10">
+                    📚 目前已載入 <span id="start-q-count" class="text-pokeYellow font-game font-black">20</span> 道道館試煉題目（尚未抽取任何題目與訓練員）
+                </div>
+
+                <!-- 操作按鈕 -->
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-3 relative z-10">
+                    <button onclick="startGymBattle()" class="w-full sm:w-auto cursor-pointer px-8 sm:px-10 py-3.5 sm:py-4 text-lg sm:text-xl font-black text-hudDark bg-gradient-to-r from-pokeYellow via-amber-300 to-pokeYellow hover:brightness-105 btn-poke tracking-wider">
+                        🔴 進入道館・開始對戰！
+                    </button>
+                    <button onclick="playSfx('select'); openSettings()" class="w-full sm:w-auto cursor-pointer px-6 py-3.5 sm:py-4 text-sm sm:text-base font-black text-hudDark bg-white hover:bg-slate-100 btn-poke">
+                        🔬 設定名單 / 匯入題庫
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 背景精靈球裝飾水印 -->
-    <div class="pointer-events-none fixed inset-0 overflow-hidden z-0 opacity-[0.06] flex items-center justify-center">
-        <svg viewBox="0 0 200 200" class="w-[620px] h-[620px]">
-            <circle cx="100" cy="100" r="90" fill="none" stroke="#1E293B" stroke-width="14"/>
-            <line x1="10" y1="100" x2="190" y2="100" stroke="#1E293B" stroke-width="14"/>
-            <circle cx="100" cy="100" r="28" fill="#e2e8f0" stroke="#1E293B" stroke-width="14"/>
+    <div class="pointer-events-none fixed inset-0 overflow-hidden z-0 opacity-[0.07] flex items-center justify-center">
+        <svg viewBox="0 0 200 200" class="w-[650px] h-[650px]">
+            <circle cx="100" cy="100" r="90" fill="none" stroke="#ffffff" stroke-width="14"/>
+            <line x1="10" y1="100" x2="190" y2="100" stroke="#ffffff" stroke-width="14"/>
+            <circle cx="100" cy="100" r="28" fill="#0f172a" stroke="#ffffff" stroke-width="14"/>
         </svg>
     </div>
 
     <!-- 主應用程式畫面 -->
     <div id="app" class="fixed inset-0 flex flex-col z-10">
         <!-- 頂部圖鑑 / 聯盟對戰 HUD 欄 -->
-        <header class="h-[68px] flex justify-between items-center px-3 md:px-8 bg-pokeRed border-b-[4px] border-hudDark shadow-md shrink-0 text-white">
+        <header class="h-[68px] flex justify-between items-center px-3 md:px-8 bg-gradient-to-r from-pokeRedDark via-pokeRed to-pokeRedDark border-b-[4px] border-hudDark shadow-lg shrink-0 text-white">
             <!-- 左側精靈球題庫與回合狀態 -->
-            <div class="flex items-center gap-2 bg-hudDark/90 border-2 border-white px-3 md:px-4 py-1 rounded-full text-xs md:text-sm font-black shadow">
+            <div class="flex items-center gap-2 bg-hudDark/95 border-2 border-pokeYellow/80 px-3 md:px-4 py-1 rounded-full text-xs md:text-sm font-black shadow">
                 <span>🔴 精靈球題庫：<span id="q-count" class="text-pokeYellow font-game text-sm md:text-base">20</span></span>
                 <span class="text-slate-400">|</span>
                 <span>⚔️ 第 <span id="turn-count" class="text-dexCyan font-game text-sm md:text-base">1</span> 回合</span>
@@ -153,23 +460,27 @@
             <!-- 中央道館賽主標題 -->
             <div class="flex items-center gap-2.5">
                 <!-- 精靈球 SVG 圖示 -->
-                <svg class="w-7 h-7 md:w-9 md:h-9 shrink-0 drop-shadow-[2px_2px_0_#1E293B]" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="45" fill="#ffffff" stroke="#1E293B" stroke-width="8"/>
-                    <path d="M5,50 A45,45 0 0,1 95,50 Z" fill="#EE1515" stroke="#1E293B" stroke-width="8"/>
-                    <line x1="5" y1="50" x2="95" y2="50" stroke="#1E293B" stroke-width="8"/>
-                    <circle cx="50" cy="50" r="15" fill="#ffffff" stroke="#1E293B" stroke-width="8"/>
+                <svg class="w-7 h-7 md:w-9 md:h-9 shrink-0 drop-shadow-[2px_2px_0_#0F172A]" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="45" fill="#ffffff" stroke="#0F172A" stroke-width="8"/>
+                    <path d="M5,50 A45,45 0 0,1 95,50 Z" fill="#EE1515" stroke="#0F172A" stroke-width="8"/>
+                    <line x1="5" y1="50" x2="95" y2="50" stroke="#0F172A" stroke-width="8"/>
+                    <circle cx="50" cy="50" r="15" fill="#ffffff" stroke="#0F172A" stroke-width="8"/>
                     <circle cx="50" cy="50" r="6" fill="#38BDF8"/>
                 </svg>
-                <h1 class="font-game text-lg sm:text-2xl md:text-3xl font-black tracking-[1.5px] text-pokeYellow drop-shadow-[2.5px_2.5px_0px_#1E293B]">
+                <h1 class="font-game text-lg sm:text-2xl md:text-3xl font-black tracking-[1.5px] text-pokeYellow drop-shadow-[2.5px_2.5px_0px_#0F172A]">
                     寵物小精靈道館賽
                 </h1>
-                <span class="hidden md:inline-block bg-pokeBlue border-2 border-hudDark text-white text-xs px-2.5 py-0.5 rounded-full font-black">
-                    GYM BATTLE
+                <span class="hidden md:inline-block bg-gradient-to-r from-amber-300 to-yellow-500 border-2 border-hudDark text-hudDark text-xs px-2.5 py-0.5 rounded-full font-black shadow-xs">
+                    ★ TCG HOLO EDITION
                 </span>
             </div>
 
             <!-- 右側音效開關與大木博士研究所按鈕 -->
             <div class="flex items-center gap-2">
+                <button onclick="resetMatch()" title="重置分數、精靈球與題庫" class="cursor-pointer px-2.5 md:px-3.5 py-1.5 text-xs md:text-sm font-black text-white bg-slate-800 hover:bg-slate-700 btn-poke flex items-center gap-1">
+                    <span>🔄</span>
+                    <span class="hidden sm:inline">重置回合</span>
+                </button>
                 <button id="btn-mute" onclick="toggleMute()" title="切換 8-bit 遊戲音效" class="cursor-pointer w-9 h-9 md:w-10 md:h-10 flex items-center justify-center text-base bg-pokeYellow hover:bg-yellow-300 text-hudDark btn-poke font-black">
                     🔊
                 </button>
@@ -183,18 +494,18 @@
         <!-- 道館對戰三欄主舞台 -->
         <main id="game-stage" class="flex-1 grid grid-cols-1 lg:grid-cols-[295px_1fr_295px] gap-3 lg:gap-5 px-3 lg:px-7 py-2.5 lg:py-4 items-center justify-items-center overflow-hidden">
             
-            <!-- 甲隊面板：⚡ 比卡超雷電隊 (電氣黃主題) -->
-            <div id="panel-a" class="team-panel active group w-[98%] lg:w-full h-auto lg:h-[94%] bg-gradient-to-b from-[#FEF08A] via-white to-[#FEF9C3] poke-hud-box flex flex-row lg:flex-col items-center p-3 lg:p-4 active-team-a transition-all duration-300 relative z-10">
-                <!-- 頂部屬性標籤與出戰徽章 -->
-                <div class="hidden lg:flex w-full justify-between items-center mb-1.5">
-                    <span class="px-2.5 py-0.5 rounded-full bg-pokeYellow border-2 border-hudDark text-[11px] font-black text-hudDark">⚡ 電氣屬性</span>
-                    <span id="badge-a" class="px-3 py-0.5 rounded-full text-xs font-black bg-pokeBlue border-2 border-hudDark text-white shadow-[1.5px_1.5px_0_#1E293B]">
+            <!-- 甲隊面板：⚡ 比卡超雷電隊 (VMAX 電氣黃全息閃卡框) -->
+            <div id="panel-a" class="team-panel vmax-team-card active group w-[98%] lg:w-full h-auto lg:h-[94%] bg-gradient-to-b from-[#FEF08A] via-[#FFFBEB] to-[#FDE047] poke-hud-box flex flex-row lg:flex-col items-center p-3 lg:p-4 active-team-a transition-all duration-300 relative z-10">
+                <!-- 頂部 VMAX 屬性標籤與出戰徽章 -->
+                <div class="hidden lg:flex w-full justify-between items-center mb-1.5 relative z-10">
+                    <span class="px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-300 to-pokeYellow border-2 border-hudDark text-[11px] font-black text-hudDark shadow-xs">⚡ VMAX 電氣</span>
+                    <span id="badge-a" class="px-3 py-0.5 rounded-full text-xs font-black bg-pokeBlue border-2 border-hudDark text-white shadow-[1.5px_1.5px_0_#0F172A]">
                         ▶ 攻擊回合
                     </span>
                 </div>
 
-                <!-- 原創電氣鼠 SVG 徽章 -->
-                <div class="w-16 h-16 lg:w-[132px] lg:h-[100px] rounded-2xl bg-white border-[3px] border-hudDark flex items-center justify-center mr-3 lg:mr-0 lg:mb-1.5 shadow-[3px_3px_0_#1E293B] shrink-0 overflow-hidden">
+                <!-- 原創電氣鼠 SVG 閃卡插畫框 -->
+                <div class="w-16 h-16 lg:w-[136px] lg:h-[104px] rounded-2xl bg-gradient-to-br from-amber-100 via-white to-yellow-200 border-[3px] border-hudDark flex items-center justify-center mr-3 lg:mr-0 lg:mb-1.5 shadow-[3px_3px_0_#0F172A] shrink-0 overflow-hidden relative z-10 holo-sweep">
                     <svg viewBox="0 0 150 115" class="w-full h-full">
                         <defs>
                             <radialGradient id="elecGlow" cx="50%" cy="50%" r="55%">
@@ -205,31 +516,31 @@
                         </defs>
                         <circle cx="75" cy="58" r="52" fill="url(#elecGlow)"/>
                         <!-- 閃電形狀尾巴 -->
-                        <path d="M105,82 L126,64 L118,56 L138,34 L120,30 L108,50 L115,56 L98,74 Z" fill="#FFCB05" stroke="#1E293B" stroke-width="2.6" stroke-linejoin="round"/>
+                        <path d="M105,82 L126,64 L118,56 L138,34 L120,30 L108,50 L115,56 L98,74 Z" fill="#FFCB05" stroke="#0F172A" stroke-width="2.6" stroke-linejoin="round"/>
                         <!-- 尖尖長耳朵（帶黑耳尖） -->
-                        <path d="M48,42 L26,10 L58,28 Z" fill="#FFCB05" stroke="#1E293B" stroke-width="2.8" stroke-linejoin="round"/>
-                        <path d="M26,10 L36,24 L43,19 Z" fill="#1E293B"/>
-                        <path d="M102,42 L124,10 L92,28 Z" fill="#FFCB05" stroke="#1E293B" stroke-width="2.8" stroke-linejoin="round"/>
-                        <path d="M124,10 L114,24 L107,19 Z" fill="#1E293B"/>
+                        <path d="M48,42 L26,10 L58,28 Z" fill="#FFCB05" stroke="#0F172A" stroke-width="2.8" stroke-linejoin="round"/>
+                        <path d="M26,10 L36,24 L43,19 Z" fill="#0F172A"/>
+                        <path d="M102,42 L124,10 L92,28 Z" fill="#FFCB05" stroke="#0F172A" stroke-width="2.8" stroke-linejoin="round"/>
+                        <path d="M124,10 L114,24 L107,19 Z" fill="#0F172A"/>
                         <!-- 圓滾滾臉蛋與身體 -->
-                        <path d="M42,98 Q38,76 42,60 Q42,30 75,30 Q108,30 108,60 Q112,76 108,98 Z" fill="#FFCB05" stroke="#1E293B" stroke-width="3" stroke-linejoin="round"/>
+                        <path d="M42,98 Q38,76 42,60 Q42,30 75,30 Q108,30 108,60 Q112,76 108,98 Z" fill="#FFCB05" stroke="#0F172A" stroke-width="3" stroke-linejoin="round"/>
                         <!-- 閃亮大眼睛 -->
-                        <circle cx="60" cy="56" r="5.5" fill="#1E293B"/>
+                        <circle cx="60" cy="56" r="5.5" fill="#0F172A"/>
                         <circle cx="62" cy="54" r="2" fill="#FFFFFF"/>
-                        <circle cx="90" cy="56" r="5.5" fill="#1E293B"/>
+                        <circle cx="90" cy="56" r="5.5" fill="#0F172A"/>
                         <circle cx="92" cy="54" r="2" fill="#FFFFFF"/>
                         <!-- 招牌電力紅臉頰 -->
-                        <circle cx="48" cy="67" r="7.5" fill="#EE1515" stroke="#1E293B" stroke-width="2"/>
-                        <circle cx="102" cy="67" r="7.5" fill="#EE1515" stroke="#1E293B" stroke-width="2"/>
+                        <circle cx="48" cy="67" r="7.5" fill="#EE1515" stroke="#0F172A" stroke-width="2"/>
+                        <circle cx="102" cy="67" r="7.5" fill="#EE1515" stroke="#0F172A" stroke-width="2"/>
                         <!-- 小鼻子與 ω 嘴 -->
-                        <polygon points="75,61 72,64 78,64" fill="#1E293B"/>
-                        <path d="M68,69 Q71.5,73 75,69 Q78.5,73 82,69" fill="none" stroke="#1E293B" stroke-width="2.4" stroke-linecap="round"/>
+                        <polygon points="75,61 72,64 78,64" fill="#0F172A"/>
+                        <path d="M68,69 Q71.5,73 75,69 Q78.5,73 82,69" fill="none" stroke="#0F172A" stroke-width="2.4" stroke-linecap="round"/>
                         <!-- 放電小火花 -->
                         <path d="M24,52 L16,48 M22,64 L13,65 M126,52 L134,48" stroke="#F59E0B" stroke-width="2.5" stroke-linecap="round"/>
                     </svg>
                 </div>
 
-                <div class="text-left lg:text-center min-w-0 flex-1 lg:flex-initial lg:w-full">
+                <div class="text-left lg:text-center min-w-0 flex-1 lg:flex-initial lg:w-full relative z-10">
                     <div id="name-a" class="text-base sm:text-xl lg:text-2xl font-black text-hudDark tracking-wide truncate">比卡超雷電隊</div>
                     
                     <!-- 經典 Pokémon HP 血條 -->
@@ -247,27 +558,25 @@
                 </div>
 
                 <!-- 手機版出戰訓練員 -->
-                <div class="lg:hidden ml-2 px-2.5 py-1 bg-pokeYellow/50 rounded-xl border-2 border-hudDark text-center">
+                <div class="lg:hidden ml-2 px-2.5 py-1 bg-pokeYellow/60 rounded-xl border-2 border-hudDark text-center relative z-10">
                     <div class="text-[10px] font-black text-hudDark/75">出戰訓練員</div>
                     <div id="student-name-a-mobile" class="text-xs sm:text-sm font-black text-hudDark truncate max-w-[74px]">待機中</div>
                 </div>
 
                 <!-- 道館積分 -->
-                <div class="ml-auto mr-2 lg:mx-0 lg:my-1 text-center">
-                    <div class="hidden lg:block text-[11px] text-amber-800 font-black tracking-wider">🏆 道館積分</div>
-                    <div id="score-a" class="font-game text-3xl lg:text-5xl font-black text-amber-500 drop-shadow-[2px_2px_0px_#1E293B]">100</div>
+                <div class="ml-auto mr-2 lg:mx-0 lg:my-1 text-center relative z-10">
+                    <div class="hidden lg:block text-[11px] text-amber-900 font-black tracking-wider">🏆 道館積分</div>
+                    <div id="score-a" class="font-game text-3xl lg:text-5xl font-black text-amber-500 drop-shadow-[2px_2px_0px_#0F172A]">100</div>
                 </div>
 
-                <!-- 底部兩行區域：第一行「出戰訓練員」、第二行「手動調分按鈕」 -->
-                <div class="flex flex-col items-center lg:w-full lg:mt-auto gap-1.5">
-                    <!-- 第一行：桌面版出戰訓練員 -->
-                    <div class="hidden lg:block w-full text-center py-2 px-2 bg-pokeYellow/45 rounded-xl border-2 border-hudDark">
+                <!-- 底部兩行區域 -->
+                <div class="flex flex-col items-center lg:w-full lg:mt-auto gap-1.5 relative z-10">
+                    <div class="hidden lg:block w-full text-center py-2 px-2 bg-white/80 rounded-xl border-2 border-hudDark shadow-xs">
                         <div class="text-[11px] text-hudDark font-black">🧢 出戰訓練員 🧢</div>
                         <div id="student-name-a" class="text-xl xl:text-2xl font-black text-hudDark min-h-[1.85rem] truncate">待機中</div>
                     </div>
 
-                    <!-- 第二行：教師手動調分/精靈球（正常文件流，絕不重疊） -->
-                    <div class="opacity-45 group-hover:opacity-100 transition-opacity duration-200 flex justify-center gap-1 bg-white border-2 border-hudDark px-2 py-1 rounded-full shadow-xs">
+                    <div class="opacity-55 group-hover:opacity-100 transition-opacity duration-200 flex justify-center gap-1 bg-white border-2 border-hudDark px-2 py-1 rounded-full shadow-xs">
                         <button onclick="modStat('a','s',10)" title="加10積分" class="bg-emerald-300 hover:bg-emerald-400 text-hudDark rounded-full px-1.5 lg:px-2 py-0.5 text-[11px] font-black cursor-pointer">+10</button>
                         <button onclick="modStat('a','s',-10)" title="扣10積分" class="bg-rose-300 hover:bg-rose-400 text-hudDark rounded-full px-1.5 lg:px-2 py-0.5 text-[11px] font-black cursor-pointer">-10</button>
                         <button onclick="modStat('a','h',1)" title="回復1顆精靈球" class="bg-amber-300 hover:bg-amber-400 text-hudDark rounded-full px-1.5 lg:px-2 py-0.5 text-[11px] font-black cursor-pointer">+球</button>
@@ -276,70 +585,105 @@
                 </div>
             </div>
 
-            <!-- 中央圖鑑試煉卡（Pokédex Battle Screen） -->
-            <div class="w-full h-[335px] sm:h-[385px] lg:h-full flex flex-col justify-center items-center perspective-1500 relative">
-                <div id="game-card" onclick="playSfx('flip'); flipCard()" class="main-card w-full max-w-[660px] h-full lg:h-[92%] relative preserve-3d cursor-pointer z-10">
-                    <!-- 卡片正面（題目） -->
-                    <div class="card-face front absolute inset-0 backface-hidden poke-hud-box bg-white flex flex-col overflow-hidden text-hudDark">
-                        <!-- 圖鑑紅色頂部感應燈與分類欄 -->
-                        <div class="bg-pokeRed px-4 lg:px-6 py-2.5 lg:py-3 flex justify-between items-center border-b-[3.5px] border-hudDark text-white">
-                            <div class="flex items-center gap-2.5">
-                                <!-- 圖鑑大藍燈與三色小指示燈 -->
-                                <div class="w-6 h-6 lg:w-7 lg:h-7 rounded-full bg-dexCyan border-[2.5px] border-white dex-lens shrink-0"></div>
-                                <div class="hidden sm:flex gap-1">
-                                    <span class="w-2.5 h-2.5 rounded-full bg-red-300 border border-hudDark"></span>
-                                    <span class="w-2.5 h-2.5 rounded-full bg-pokeYellow border border-hudDark"></span>
-                                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 border border-hudDark"></span>
-                                </div>
-                                <span id="q-cat" class="bg-hudDark text-pokeYellow border border-white/40 px-3 py-0.5 rounded-lg font-black text-xs lg:text-sm tracking-wide">
-                                    道館挑戰・準備出戰
-                                </span>
-                            </div>
-                            <span class="text-xs font-black bg-white text-hudDark border-2 border-hudDark px-2.5 py-0.5 rounded-full shadow-[1.5px_1.5px_0_#1E293B]">翻看圖鑑解析 ↻</span>
-                        </div>
+            <!-- 中央 TCG 黃金全息閃卡試煉台 (Pokémon TCG Gold Secret Rare Card) -->
+            <div id="center-card-stage" class="w-full h-[345px] sm:h-[395px] lg:h-full flex flex-col justify-center items-center perspective-1500 relative">
+                <!-- 3D 滑鼠傾斜感應容器 -->
+                <div id="tcg-tilt-box" class="tcg-tilt-wrapper w-full max-w-[660px] h-full lg:h-[94%] flex items-center justify-center">
+                    <div id="game-card" onclick="playSfx('flip'); flipCard()" class="main-card w-full h-full relative preserve-3d cursor-pointer z-10">
                         
-                        <!-- 選填圖片區 -->
-                        <div id="card-img" class="h-[30%] bg-slate-100 relative border-b-[3px] border-hudDark overflow-hidden hidden">
-                            <div class="q-img w-full h-full bg-cover bg-center"></div>
+                        <!-- 卡片正面：TCG 黃金全息閃卡（題目） -->
+                        <div class="card-face front absolute inset-0 backface-hidden tcg-gold-frame flex flex-col overflow-hidden text-hudDark">
+                            <!-- 全息彩虹雷射光澤與星塵層 -->
+                            <div class="holo-foil-layer"></div>
+                            <div class="holo-glitter-layer"></div>
+                            <div class="holo-sweep absolute inset-0 pointer-events-none"></div>
+
+                            <!-- 內層卡面 -->
+                            <div class="w-full h-full bg-white rounded-[17px] border-[2.5px] border-hudDark flex flex-col overflow-hidden relative">
+                                <!-- TCG 頂部標題與 HP/屬性角標 -->
+                                <div class="bg-gradient-to-r from-amber-400 via-pokeYellow to-amber-300 px-3.5 lg:px-5 py-2 lg:py-2.5 flex justify-between items-center border-b-[3px] border-hudDark text-hudDark relative z-10">
+                                    <div class="flex items-center gap-2 min-w-0">
+                                        <!-- TCG 稀有度標章 -->
+                                        <span class="bg-hudDark text-pokeYellow font-game text-[11px] font-black px-2 py-0.5 rounded-md border border-white/40 shrink-0">
+                                            SSR
+                                        </span>
+                                        <span id="q-cat" class="font-black text-xs sm:text-sm lg:text-base tracking-wide truncate">
+                                            道館挑戰・準備出戰
+                                        </span>
+                                    </div>
+                                    <div class="flex items-center gap-2 shrink-0">
+                                        <!-- 手動觸發 5 秒倒數計時按鈕（平時待機，按一下才開始 5 秒倒數） -->
+                                        <button id="btn-timer-5s" onclick="event.stopPropagation(); toggle5sTimer()" title="有需要時點擊開始 5 秒限時倒數" class="cursor-pointer flex items-center gap-1 bg-hudDark hover:bg-slate-800 text-pokeYellow border-2 border-white/80 px-2.5 py-0.5 rounded-full text-xs lg:text-sm font-game font-black shadow-[1.5px_1.5px_0_#0F172A] transition-all">
+                                            <span>⏱️</span>
+                                            <span id="timer-5s-text">5s 計時</span>
+                                        </button>
+                                        <span class="hidden sm:inline font-game text-xs lg:text-sm font-black text-pokeRed">HP 300</span>
+                                        <span id="tcg-type-orb" class="w-6 h-6 rounded-full bg-pokeYellow border-2 border-hudDark flex items-center justify-center text-xs shadow-xs">⚡</span>
+                                        <span class="hidden md:inline-block text-[11px] font-black bg-white text-hudDark border-2 border-hudDark px-2 py-0.5 rounded-full shadow-[1.5px_1.5px_0_#0F172A]">翻看解析 ↻</span>
+                                    </div>
+                                </div>
+                                
+                                <!-- 選填圖片區（閃卡插畫框） -->
+                                <div id="card-img" class="h-[30%] bg-slate-100 relative border-b-[3px] border-hudDark overflow-hidden hidden z-10">
+                                    <div class="q-img w-full h-full bg-cover bg-center"></div>
+                                </div>
+
+                                <!-- 題目招式敘述區（全息細紋底圖） -->
+                                <div class="flex-1 p-5 lg:p-8 flex flex-col items-center justify-center relative overflow-y-auto bg-[radial-gradient(#cbd5e1_1.2px,transparent_1.2px)] [background-size:18px_18px] z-10">
+                                    <!-- 招式費用圖示裝飾 -->
+                                    <div class="w-full flex items-center gap-1.5 mb-2 opacity-80">
+                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-pokeYellow border border-hudDark text-[10px] font-black">⚡</span>
+                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-pokeRed text-white border border-hudDark text-[10px] font-black">🔥</span>
+                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-200 border border-hudDark text-[10px] font-black">★</span>
+                                        <span class="text-xs font-game font-black text-slate-500 ml-1 tracking-wider">GYM TRIAL SKILL</span>
+                                        <span class="ml-auto font-game text-xs font-black text-amber-700">+10 DMG</span>
+                                    </div>
+
+                                    <div id="q-text" class="flex-1 flex items-center justify-center text-lg sm:text-xl lg:text-[1.65rem] font-black text-hudDark leading-relaxed whitespace-pre-wrap text-center w-full">點擊下方「🔴 派出精靈出戰！」&#10;投擲精靈球召喚文史閃卡試煉吧！</div>
+                                </div>
+
+                                <!-- TCG 底部弱點/抵抗力/圖鑑編號欄 -->
+                                <div class="px-4 lg:px-5 py-1.5 bg-gradient-to-r from-slate-100 via-amber-50 to-slate-100 border-t-[3px] border-hudDark flex justify-between items-center text-[11px] font-black text-slate-700 shrink-0 z-10">
+                                    <span class="flex items-center gap-1.5">
+                                        <span>弱點 ×2</span>
+                                        <span class="text-slate-300">|</span>
+                                        <span class="text-pokeBlue">答對開啟道具閃卡包</span>
+                                    </span>
+                                    <span class="bg-hudDark text-pokeYellow px-2.5 py-0.5 rounded-full text-[10px] font-game tracking-wider">★ 025/151 HOLO</span>
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- 題目對話框區 -->
-                        <div class="flex-1 p-5 lg:p-8 flex flex-col items-center justify-center relative overflow-y-auto bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:18px_18px]">
-                            <div id="q-text" class="flex-1 flex items-center justify-center text-lg sm:text-xl lg:text-[1.7rem] font-black text-hudDark leading-relaxed whitespace-pre-wrap text-center w-full">點擊下方「🔴 派出精靈出戰！」&#10;接受道館館主的文史試煉吧！</div>
+                        <!-- 卡片背面：圖鑑全息解析・標準答案 -->
+                        <div class="card-face back absolute inset-0 backface-hidden rotate-y-180 tcg-gold-frame flex flex-col overflow-hidden text-white">
+                            <div class="holo-foil-layer"></div>
+                            <div class="w-full h-full bg-slate-900 rounded-[17px] border-[2.5px] border-hudDark p-5 lg:p-7 text-left overflow-y-auto flex flex-col relative">
+                                <div class="flex items-center justify-between border-b-[3px] border-dexCyan pb-2.5 lg:pb-3 mb-4 lg:mb-5 shrink-0 relative z-10">
+                                    <span class="text-xl lg:text-2xl text-pokeYellow font-black flex items-center gap-2">
+                                        <span>📱</span> 圖鑑分析・標準答案
+                                    </span>
+                                    <span class="text-xs font-black bg-dexCyan text-hudDark border-2 border-white px-2.5 py-0.5 rounded-full">翻回閃卡題目 ↺</span>
+                                </div>
+                                <div id="q-ans" class="text-base sm:text-lg lg:text-[1.35rem] leading-relaxed text-cyan-50 whitespace-pre-wrap font-bold bg-slate-800/95 p-4 lg:p-5 rounded-2xl border-2 border-dexCyan/60 flex-1 relative z-10"></div>
+                            </div>
                         </div>
 
-                        <!-- 底部圖鑑狀態欄 -->
-                        <div class="px-4 lg:px-6 py-2 bg-slate-100 border-t-[3px] border-hudDark flex justify-between items-center text-xs font-black text-slate-600 shrink-0">
-                            <span>▶ 答對可使出「效果絕佳」並開啟道具背包！</span>
-                            <span class="bg-pokeBlue text-white border-2 border-hudDark px-2.5 py-0.2 rounded-full text-[11px] font-game">POKÉDEX v2.6</span>
-                        </div>
-                    </div>
-
-                    <!-- 卡片背面（圖鑑解析・標準答案） -->
-                    <div class="card-face back absolute inset-0 backface-hidden rotate-y-180 poke-hud-box bg-slate-900 p-5 lg:p-8 text-left overflow-y-auto text-white flex flex-col">
-                        <div class="flex items-center justify-between border-b-[3px] border-dexCyan pb-2.5 lg:pb-3 mb-4 lg:mb-5 shrink-0">
-                            <span class="text-xl lg:text-2xl text-pokeYellow font-black flex items-center gap-2">
-                                <span>📱</span> 圖鑑分析・標準答案
-                            </span>
-                            <span class="text-xs font-black bg-dexCyan text-hudDark border-2 border-white px-2.5 py-0.5 rounded-full">翻回戰鬥題目 ↺</span>
-                        </div>
-                        <div id="q-ans" class="text-base sm:text-lg lg:text-[1.35rem] leading-relaxed text-cyan-50 whitespace-pre-wrap font-bold bg-slate-800/90 p-4 lg:p-5 rounded-2xl border-2 border-dexCyan/50 flex-1"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- 乙隊面板：🔥 噴火龍烈焰隊 (火焰紅橙主題) -->
-            <div id="panel-b" class="team-panel group w-[98%] lg:w-full h-auto lg:h-[94%] bg-gradient-to-b from-[#FECACA] via-white to-[#FFEDD5] poke-hud-box flex flex-row lg:flex-col items-center p-3 lg:p-4 transition-all duration-300 relative opacity-75">
-                <!-- 頂部屬性標籤與出戰徽章 -->
-                <div class="hidden lg:flex w-full justify-between items-center mb-1.5">
-                    <span class="px-2.5 py-0.5 rounded-full bg-pokeRed border-2 border-hudDark text-[11px] font-black text-white">🔥 火焰屬性</span>
-                    <span id="badge-b" class="hidden px-3 py-0.5 rounded-full text-xs font-black bg-pokeYellow border-2 border-hudDark text-hudDark shadow-[1.5px_1.5px_0_#1E293B]">
+            <!-- 乙隊面板：🔥 噴火龍烈焰隊 (VMAX 火焰紅橙全息閃卡框) -->
+            <div id="panel-b" class="team-panel vmax-team-card group w-[98%] lg:w-full h-auto lg:h-[94%] bg-gradient-to-b from-[#FECACA] via-[#FFF1F2] to-[#FED7AA] poke-hud-box flex flex-row lg:flex-col items-center p-3 lg:p-4 transition-all duration-300 relative opacity-75">
+                <!-- 頂部 VMAX 屬性標籤與出戰徽章 -->
+                <div class="hidden lg:flex w-full justify-between items-center mb-1.5 relative z-10">
+                    <span class="px-2.5 py-0.5 rounded-full bg-gradient-to-r from-pokeRed to-orange-500 border-2 border-hudDark text-[11px] font-black text-white shadow-xs">🔥 VMAX 火焰</span>
+                    <span id="badge-b" class="hidden px-3 py-0.5 rounded-full text-xs font-black bg-pokeYellow border-2 border-hudDark text-hudDark shadow-[1.5px_1.5px_0_#0F172A]">
                         ▶ 攻擊回合
                     </span>
                 </div>
 
-                <!-- 原創火焰飛龍 SVG 徽章 -->
-                <div class="w-16 h-16 lg:w-[132px] lg:h-[100px] rounded-2xl bg-white border-[3px] border-hudDark flex items-center justify-center mr-3 lg:mr-0 lg:mb-1.5 shadow-[3px_3px_0_#1E293B] shrink-0 overflow-hidden">
+                <!-- 原創火焰飛龍 SVG 閃卡插畫框 -->
+                <div class="w-16 h-16 lg:w-[136px] lg:h-[104px] rounded-2xl bg-gradient-to-br from-orange-100 via-white to-red-200 border-[3px] border-hudDark flex items-center justify-center mr-3 lg:mr-0 lg:mb-1.5 shadow-[3px_3px_0_#0F172A] shrink-0 overflow-hidden relative z-10 holo-sweep">
                     <svg viewBox="0 0 150 115" class="w-full h-full">
                         <defs>
                             <radialGradient id="fireGlow" cx="50%" cy="50%" r="55%">
@@ -350,33 +694,33 @@
                         </defs>
                         <circle cx="75" cy="58" r="52" fill="url(#fireGlow)"/>
                         <!-- 背後青藍色龍翼 -->
-                        <path d="M44,54 L14,24 L26,56 L18,68 L44,68 Z" fill="#0EA5E9" stroke="#1E293B" stroke-width="2.6" stroke-linejoin="round"/>
-                        <path d="M106,54 L136,24 L124,56 L132,68 L106,68 Z" fill="#0EA5E9" stroke="#1E293B" stroke-width="2.6" stroke-linejoin="round"/>
+                        <path d="M44,54 L14,24 L26,56 L18,68 L44,68 Z" fill="#0EA5E9" stroke="#0F172A" stroke-width="2.6" stroke-linejoin="round"/>
+                        <path d="M106,54 L136,24 L124,56 L132,68 L106,68 Z" fill="#0EA5E9" stroke="#0F172A" stroke-width="2.6" stroke-linejoin="round"/>
                         <!-- 尾巴火焰 -->
-                        <path d="M114,82 Q132,76 134,58 Q125,64 123,52 Q112,64 110,76 Z" fill="#EE1515" stroke="#1E293B" stroke-width="2.2" stroke-linejoin="round"/>
+                        <path d="M114,82 Q132,76 134,58 Q125,64 123,52 Q112,64 110,76 Z" fill="#EE1515" stroke="#0F172A" stroke-width="2.2" stroke-linejoin="round"/>
                         <path d="M118,78 Q127,73 128,63 Q120,68 118,78 Z" fill="#FFCB05"/>
                         <!-- 龍頭雙角 -->
-                        <path d="M56,34 L44,12 L66,28 Z" fill="#F97316" stroke="#1E293B" stroke-width="2.6" stroke-linejoin="round"/>
-                        <path d="M94,34 L106,12 L84,28 Z" fill="#F97316" stroke="#1E293B" stroke-width="2.6" stroke-linejoin="round"/>
+                        <path d="M56,34 L44,12 L66,28 Z" fill="#F97316" stroke="#0F172A" stroke-width="2.6" stroke-linejoin="round"/>
+                        <path d="M94,34 L106,12 L84,28 Z" fill="#F97316" stroke="#0F172A" stroke-width="2.6" stroke-linejoin="round"/>
                         <!-- 火焰龍身體與頭部 -->
-                        <path d="M44,98 Q40,75 45,56 Q46,28 75,28 Q104,28 105,56 Q110,75 106,98 Z" fill="#F97316" stroke="#1E293B" stroke-width="3" stroke-linejoin="round"/>
+                        <path d="M44,98 Q40,75 45,56 Q46,28 75,28 Q104,28 105,56 Q110,75 106,98 Z" fill="#F97316" stroke="#0F172A" stroke-width="3" stroke-linejoin="round"/>
                         <!-- 奶油色肚皮 -->
-                        <path d="M52,98 Q54,75 75,75 Q96,75 98,98 Z" fill="#FEF3C7" stroke="#1E293B" stroke-width="2.2"/>
+                        <path d="M52,98 Q54,75 75,75 Q96,75 98,98 Z" fill="#FEF3C7" stroke="#0F172A" stroke-width="2.2"/>
                         <!-- 銳利有神龍眼 -->
-                        <path d="M53,51 L66,55 L55,59 Z" fill="#FFFFFF" stroke="#1E293B" stroke-width="2"/>
+                        <path d="M53,51 L66,55 L55,59 Z" fill="#FFFFFF" stroke="#0F172A" stroke-width="2"/>
                         <circle cx="60" cy="55" r="2.2" fill="#0284C7"/>
-                        <path d="M97,51 L84,55 L95,59 Z" fill="#FFFFFF" stroke="#1E293B" stroke-width="2"/>
+                        <path d="M97,51 L84,55 L95,59 Z" fill="#FFFFFF" stroke="#0F172A" stroke-width="2"/>
                         <circle cx="90" cy="55" r="2.2" fill="#0284C7"/>
                         <!-- 鼻孔與小獠牙微笑 -->
-                        <circle cx="70" cy="61" r="1.5" fill="#1E293B"/>
-                        <circle cx="80" cy="61" r="1.5" fill="#1E293B"/>
-                        <path d="M63,67 Q75,73 87,67" fill="none" stroke="#1E293B" stroke-width="2.4" stroke-linecap="round"/>
-                        <polygon points="66,68 69,73 71,69" fill="#FFFFFF" stroke="#1E293B" stroke-width="1.4"/>
-                        <polygon points="84,68 81,73 79,69" fill="#FFFFFF" stroke="#1E293B" stroke-width="1.4"/>
+                        <circle cx="70" cy="61" r="1.5" fill="#0F172A"/>
+                        <circle cx="80" cy="61" r="1.5" fill="#0F172A"/>
+                        <path d="M63,67 Q75,73 87,67" fill="none" stroke="#0F172A" stroke-width="2.4" stroke-linecap="round"/>
+                        <polygon points="66,68 69,73 71,69" fill="#FFFFFF" stroke="#0F172A" stroke-width="1.4"/>
+                        <polygon points="84,68 81,73 79,69" fill="#FFFFFF" stroke="#0F172A" stroke-width="1.4"/>
                     </svg>
                 </div>
 
-                <div class="text-left lg:text-center min-w-0 flex-1 lg:flex-initial lg:w-full">
+                <div class="text-left lg:text-center min-w-0 flex-1 lg:flex-initial lg:w-full relative z-10">
                     <div id="name-b" class="text-base sm:text-xl lg:text-2xl font-black text-hudDark tracking-wide truncate">噴火龍烈焰隊</div>
                     
                     <!-- 經典 Pokémon HP 血條 -->
@@ -394,27 +738,25 @@
                 </div>
 
                 <!-- 手機版出戰訓練員 -->
-                <div class="lg:hidden ml-2 px-2.5 py-1 bg-rose-200/70 rounded-xl border-2 border-hudDark text-center">
+                <div class="lg:hidden ml-2 px-2.5 py-1 bg-rose-200/80 rounded-xl border-2 border-hudDark text-center relative z-10">
                     <div class="text-[10px] font-black text-hudDark/75">出戰訓練員</div>
                     <div id="student-name-b-mobile" class="text-xs sm:text-sm font-black text-hudDark truncate max-w-[74px]">待機中</div>
                 </div>
 
                 <!-- 道館積分 -->
-                <div class="ml-auto mr-2 lg:mx-0 lg:my-1 text-center">
-                    <div class="hidden lg:block text-[11px] text-red-800 font-black tracking-wider">🏆 道館積分</div>
-                    <div id="score-b" class="font-game text-3xl lg:text-5xl font-black text-pokeRed drop-shadow-[2px_2px_0px_#1E293B]">100</div>
+                <div class="ml-auto mr-2 lg:mx-0 lg:my-1 text-center relative z-10">
+                    <div class="hidden lg:block text-[11px] text-red-900 font-black tracking-wider">🏆 道館積分</div>
+                    <div id="score-b" class="font-game text-3xl lg:text-5xl font-black text-pokeRed drop-shadow-[2px_2px_0px_#0F172A]">100</div>
                 </div>
 
-                <!-- 底部兩行區域：第一行「出戰訓練員」、第二行「手動調分按鈕」 -->
-                <div class="flex flex-col items-center lg:w-full lg:mt-auto gap-1.5">
-                    <!-- 第一行：桌面版出戰訓練員 -->
-                    <div class="hidden lg:block w-full text-center py-2 px-2 bg-rose-200/55 rounded-xl border-2 border-hudDark">
+                <!-- 底部兩行區域 -->
+                <div class="flex flex-col items-center lg:w-full lg:mt-auto gap-1.5 relative z-10">
+                    <div class="hidden lg:block w-full text-center py-2 px-2 bg-white/80 rounded-xl border-2 border-hudDark shadow-xs">
                         <div class="text-[11px] text-hudDark font-black">🧢 出戰訓練員 🧢</div>
                         <div id="student-name-b" class="text-xl xl:text-2xl font-black text-hudDark min-h-[1.85rem] truncate">待機中</div>
                     </div>
 
-                    <!-- 第二行：教師手動調分/精靈球（正常文件流，絕不重疊） -->
-                    <div class="opacity-45 group-hover:opacity-100 transition-opacity duration-200 flex justify-center gap-1 bg-white border-2 border-hudDark px-2 py-1 rounded-full shadow-xs">
+                    <div class="opacity-55 group-hover:opacity-100 transition-opacity duration-200 flex justify-center gap-1 bg-white border-2 border-hudDark px-2 py-1 rounded-full shadow-xs">
                         <button onclick="modStat('b','s',10)" title="加10積分" class="bg-emerald-300 hover:bg-emerald-400 text-hudDark rounded-full px-1.5 lg:px-2 py-0.5 text-[11px] font-black cursor-pointer">+10</button>
                         <button onclick="modStat('b','s',-10)" title="扣10積分" class="bg-rose-300 hover:bg-rose-400 text-hudDark rounded-full px-1.5 lg:px-2 py-0.5 text-[11px] font-black cursor-pointer">-10</button>
                         <button onclick="modStat('b','h',1)" title="回復1顆精靈球" class="bg-amber-300 hover:bg-amber-400 text-hudDark rounded-full px-1.5 lg:px-2 py-0.5 text-[11px] font-black cursor-pointer">+球</button>
@@ -428,19 +770,19 @@
         <footer class="h-auto lg:h-[94px] px-3 lg:px-8 py-2.5 lg:py-0 bg-hudDark border-t-[4px] border-pokeYellow grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] gap-2 items-center z-10 shrink-0">
             <div class="flex justify-center">
                 <button onclick="playSfx('select'); initSelection('chance')" class="w-full lg:w-auto cursor-pointer px-5 lg:px-7 py-2.5 lg:py-3 text-sm lg:text-base font-black text-white bg-pokeBlue hover:bg-blue-500 btn-poke tracking-wide">
-                    🎒 打開道具背包
+                    🎒 打開道具閃卡包
                 </button>
             </div>
             
-            <div class="flex flex-col items-center">
-                <button id="btn-draw" onclick="playSfx('throw'); drawQuestion()" class="w-full lg:w-auto cursor-pointer px-8 lg:px-11 py-2.5 lg:py-3.5 text-base lg:text-xl font-black text-hudDark bg-pokeYellow hover:bg-yellow-300 btn-poke tracking-wider">
-                    🔴 派出精靈出戰！
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-2 lg:gap-3">
+                <button id="btn-draw" onclick="triggerNextTrainerAndQuestion()" class="w-full sm:w-auto cursor-pointer px-5 lg:px-7 py-2.5 lg:py-3 text-sm lg:text-lg font-black text-hudDark bg-gradient-to-r from-pokeYellow via-amber-300 to-pokeYellow hover:brightness-105 btn-poke tracking-wider shrink-0">
+                    🔴 挑選訓練員（下一題）
                 </button>
-                <div id="action-btns" class="hidden flex flex-col sm:flex-row gap-2.5 lg:gap-3 w-full lg:w-auto">
-                    <button onclick="handleResult(true)" class="cursor-pointer px-6 lg:px-7 py-2.5 lg:py-3 text-sm lg:text-base font-black text-hudDark bg-emerald-400 hover:bg-emerald-300 btn-poke">
+                <div id="action-btns" class="hidden flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                    <button onclick="handleResult(true)" class="cursor-pointer px-4 lg:px-5 py-2.5 lg:py-3 text-xs lg:text-sm font-black text-hudDark bg-emerald-400 hover:bg-emerald-300 btn-poke">
                         ⚡ 效果絕佳！(+10分 & +球)
                     </button>
-                    <button onclick="handleResult(false)" class="cursor-pointer px-6 lg:px-7 py-2.5 lg:py-3 text-sm lg:text-base font-black text-white bg-pokeRed hover:bg-red-500 btn-poke">
+                    <button onclick="handleResult(false)" class="cursor-pointer px-4 lg:px-5 py-2.5 lg:py-3 text-xs lg:text-sm font-black text-white bg-pokeRed hover:bg-red-500 btn-poke">
                         💥 攻擊失誤！(-10分 & -球)
                     </button>
                 </div>
@@ -454,10 +796,102 @@
         </footer>
     </div>
 
-    <!-- 🎒 道具背包 / 🚀 野生精靈突襲 三選一覆蓋層 -->
-    <div id="overlay-select" class="overlay fixed inset-0 bg-slate-950/85 z-[2000] hidden flex-col justify-center items-center backdrop-blur-sm p-4">
-        <div class="bg-white poke-hud-box px-6 py-2.5 mb-6 lg:mb-8">
-            <h1 id="select-title" class="text-xl sm:text-3xl lg:text-4xl font-black text-hudDark tracking-wider">🎒 道具背包（選擇一項補給道具！）</h1>
+    <!-- =========================================================
+         精靈球抽學生 & 判定動畫舞台 (Pokéball Action Stage)
+         ========================================================= -->
+    <div id="pokeball-anim-stage" class="fixed inset-0 z-[2500] hidden flex-col items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+        <div class="relative flex flex-col items-center justify-center w-full max-w-[540px]">
+            <!-- 白金光芒爆發圈 -->
+            <div id="pokeball-flash-ring" class="hidden absolute w-40 h-40 rounded-full bg-white shadow-[0_0_90px_45px_#ffffff] pointer-events-none"></div>
+            
+            <!-- 星星爆開容器 -->
+            <div id="pokeball-stars-container" class="absolute inset-0 pointer-events-none"></div>
+
+            <!-- 頂部隊伍出戰提示標籤 -->
+            <div id="pokeball-team-tag" class="mb-4 px-5 py-1.5 rounded-full bg-pokeYellow border-[3px] border-hudDark text-hudDark font-black text-sm sm:text-base tracking-wider shadow-[3px_3px_0_#0F172A]">
+                ⚡ 比卡超雷電隊・召喚訓練員
+            </div>
+
+            <!-- 精緻立體 SVG 精靈球（支援上下蓋彈開） -->
+            <div id="pokeball-actor" class="w-32 h-32 sm:w-40 sm:h-40 relative drop-shadow-[0_14px_24px_rgba(0,0,0,0.65)]">
+                <svg viewBox="0 0 120 120" class="w-full h-full overflow-visible">
+                    <defs>
+                        <!-- 甲隊：電氣藍金超級球漸層 -->
+                        <radialGradient id="ballTopTeamA" cx="35%" cy="28%" r="65%">
+                            <stop offset="0%" stop-color="#60A5FA"/>
+                            <stop offset="55%" stop-color="#2563EB"/>
+                            <stop offset="100%" stop-color="#1E3A8A"/>
+                        </radialGradient>
+                        <!-- 乙隊：火焰紅紫大師球漸層 -->
+                        <radialGradient id="ballTopTeamB" cx="35%" cy="28%" r="65%">
+                            <stop offset="0%" stop-color="#F87171"/>
+                            <stop offset="55%" stop-color="#DC2626"/>
+                            <stop offset="100%" stop-color="#7F1D1D"/>
+                        </radialGradient>
+                        <radialGradient id="ballBottomGrad" cx="40%" cy="35%" r="70%">
+                            <stop offset="0%" stop-color="#FFFFFF"/>
+                            <stop offset="75%" stop-color="#E2E8F0"/>
+                            <stop offset="100%" stop-color="#94A3B8"/>
+                        </radialGradient>
+                    </defs>
+
+                    <!-- 精靈球打開時內部綻放的金色能量核心 -->
+                    <circle id="pokeball-inner-glow" cx="60" cy="60" r="36" fill="#FEF08A" opacity="0"/>
+
+                    <!-- 下半白球組 -->
+                    <g id="pokeball-bottom-group">
+                        <path d="M6,60 A54,54 0 0,0 114,60 Z" fill="url(#ballBottomGrad)" stroke="#0F172A" stroke-width="6"/>
+                        <path d="M6,60 L114,60" stroke="#0F172A" stroke-width="5"/>
+                    </g>
+
+                    <!-- 上半彩蓋組（含屬性條紋與按鈕） -->
+                    <g id="pokeball-top-group">
+                        <path id="pokeball-top-dome" d="M6,60 A54,54 0 0,1 114,60 Z" fill="url(#ballTopTeamA)" stroke="#0F172A" stroke-width="6"/>
+                        <!-- 屬性雙側高光條紋 -->
+                        <path id="pokeball-stripe-left" d="M22,42 L35,24" stroke="#FFCB05" stroke-width="7" stroke-linecap="round"/>
+                        <path id="pokeball-stripe-right" d="M98,42 L85,24" stroke="#FFCB05" stroke-width="7" stroke-linecap="round"/>
+                        <!-- 中央黑腰帶 -->
+                        <line x1="6" y1="60" x2="114" y2="60" stroke="#0F172A" stroke-width="8"/>
+                        <!-- 中央按鈕外圈 -->
+                        <circle cx="60" cy="60" r="18" fill="#FFFFFF" stroke="#0F172A" stroke-width="6"/>
+                        <!-- 中央按鈕核心發光燈 -->
+                        <circle id="pokeball-core-btn" cx="60" cy="60" r="8" fill="#FFCB05" stroke="#0F172A" stroke-width="2.5"/>
+                        <!-- 高光反光弧線 -->
+                        <path d="M26,34 A42,42 0 0,1 52,18" fill="none" stroke="rgba(255,255,255,0.65)" stroke-width="4.5" stroke-linecap="round"/>
+                    </g>
+                </svg>
+            </div>
+
+            <!-- 全息閃卡抽學生輪盤銘牌（滾動名字 + 揭曉贏家） -->
+            <div id="pokeball-roulette-box" class="mt-5 w-full max-w-[420px] tcg-gold-frame">
+                <div class="holo-foil-layer"></div>
+                <div class="holo-glitter-layer"></div>
+                <div class="bg-slate-900 rounded-[16px] border-2 border-hudDark px-5 py-4 text-center relative overflow-hidden">
+                    <div id="pokeball-roulette-label" class="text-xs font-game font-black tracking-widest text-dexCyan mb-1">
+                        SEARCHING TRAINER...
+                    </div>
+                    <div id="pokeball-roulette-name" class="text-2xl sm:text-4xl font-black text-pokeYellow tracking-wide truncate min-h-[2.75rem] flex items-center justify-center drop-shadow-[2px_2px_0_#000000]">
+                        準備召喚...
+                    </div>
+                </div>
+            </div>
+
+            <!-- 動畫狀態字幕橫幅 -->
+            <div id="pokeball-banner" class="mt-4 px-6 py-2 rounded-full bg-hudDark border-[3px] border-pokeYellow text-pokeYellow font-game text-base sm:text-xl font-black tracking-wider shadow-[0_6px_20px_rgba(0,0,0,0.6)]">
+                去吧！精靈球！
+            </div>
+
+            <!-- 跳過動畫按鈕（方便老師快速推進課堂節奏） -->
+            <button id="btn-skip-ball-anim" onclick="skipStudentDrawAnim()" class="mt-4 cursor-pointer px-5 py-1.5 rounded-full bg-white/90 hover:bg-white border-2 border-hudDark text-xs font-black text-hudDark shadow">
+                ⚡ 立即揭曉訓練員
+            </button>
+        </div>
+    </div>
+
+    <!-- 🎒 道具背包 / 🚀 野生精靈突襲 三選一全息閃卡覆蓋層 -->
+    <div id="overlay-select" class="overlay fixed inset-0 bg-slate-950/88 z-[2000] hidden flex-col justify-center items-center backdrop-blur-sm p-4">
+        <div class="bg-gradient-to-r from-amber-300 via-pokeYellow to-amber-300 poke-hud-box px-6 py-2.5 mb-6 lg:mb-8">
+            <h1 id="select-title" class="text-xl sm:text-3xl lg:text-4xl font-black text-hudDark tracking-wider">🎒 道具閃卡包（選擇一張全息補給卡！）</h1>
         </div>
         <div id="cards-grid" class="flex gap-4 lg:gap-8 perspective-1200 w-full justify-center items-center flex-wrap"></div>
         <button id="btn-confirm-select" onclick="playSfx('select'); closeSelection()" class="hidden mt-8 lg:mt-10 cursor-pointer px-10 py-3.5 text-base lg:text-lg font-black text-hudDark bg-pokeYellow hover:bg-yellow-300 btn-poke tracking-wider">
@@ -466,7 +900,7 @@
     </div>
 
     <!-- 🔬 大木博士研究所（設定與 Excel 匯入匯出視窗） -->
-    <div id="overlay-settings" class="overlay fixed inset-0 bg-slate-950/80 z-[2000] hidden flex-col justify-center items-center backdrop-blur-xs p-4">
+    <div id="overlay-settings" class="overlay fixed inset-0 bg-slate-950/85 z-[2600] hidden flex-col justify-center items-center backdrop-blur-sm p-4">
         <div class="bg-white text-hudDark p-5 lg:p-8 w-[900px] max-w-[95vw] max-h-[90vh] overflow-y-auto poke-hud-box">
             <h2 class="text-2xl lg:text-3xl font-black text-hudDark border-b-[3.5px] border-hudDark pb-3 mb-5 flex items-center gap-2">
                 <span>🔬</span> 大木博士研究所・道館與題庫管理
@@ -544,7 +978,7 @@
         </div>
         <div id="wheel-container" class="w-[310px] h-[310px] sm:w-[440px] sm:h-[440px] relative mb-6">
             <!-- 精靈球三角指針 -->
-            <div class="absolute -top-6 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[20px] border-l-transparent border-r-[20px] border-r-transparent border-t-[40px] border-t-pokeYellow z-10 drop-shadow-[0_3px_0_#1E293B]"></div>
+            <div class="absolute -top-6 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[20px] border-l-transparent border-r-[20px] border-r-transparent border-t-[40px] border-t-pokeYellow z-10 drop-shadow-[0_3px_0_#0F172A]"></div>
             <canvas id="wheel-canvas" width="500" height="500" class="w-full h-full rounded-full border-[6px] border-hudDark shadow-[0_0_40px_rgba(255,203,5,0.45)] bg-white"></canvas>
         </div>
         <div id="wheel-result-card" class="hidden poke-hud-box bg-white w-[90%] max-w-[480px] p-8 text-center text-hudDark animate-pop-in">
@@ -584,7 +1018,7 @@
         function toggleMute() {
             isMuted = !isMuted;
             const btn = document.getElementById('btn-mute');
-            btn.innerText = isMuted ? '🔇' : '🔊';
+            if (btn) btn.innerText = isMuted ? '🔇' : '🔊';
             if (!isMuted) playSfx('select');
         }
 
@@ -627,8 +1061,27 @@
                     gain.gain.exponentialRampToValueAtTime(0.005, now + 0.34);
                     osc.start(now);
                     osc.stop(now + 0.34);
+                } else if (type === 'wobble') {
+                    // 精靈球搖晃與輪盤滾動電子嘀嗒音
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(520, now);
+                    osc.frequency.exponentialRampToValueAtTime(740, now + 0.06);
+                    gain.gain.setValueAtTime(0.07, now);
+                    gain.gain.exponentialRampToValueAtTime(0.004, now + 0.08);
+                    osc.start(now);
+                    osc.stop(now + 0.08);
+                } else if (type === 'burst') {
+                    // 精靈球彈開爆光揭曉音效
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(587.33, now);       // D5
+                    osc.frequency.setValueAtTime(880.00, now + 0.07); // A5
+                    osc.frequency.setValueAtTime(1174.66, now + 0.14);// D6
+                    gain.gain.setValueAtTime(0.10, now);
+                    gain.gain.exponentialRampToValueAtTime(0.005, now + 0.32);
+                    osc.start(now);
+                    osc.stop(now + 0.32);
                 } else if (type === 'victory') {
-                    // 道館勝利經典四音節旋律！
+                    // 道館勝利經典四音節旋律
                     osc.type = 'square';
                     osc.frequency.setValueAtTime(523.25, now);        // C5
                     osc.frequency.setValueAtTime(659.25, now + 0.09); // E5
@@ -651,6 +1104,313 @@
             } catch (e) {
                 // 忽略瀏覽器音訊限制
             }
+        }
+
+        // --- TCG 黃金閃卡 3D 滑鼠視差與全息反光互動 ---
+        function initTcgHoloTilt() {
+            const stage = document.getElementById('center-card-stage');
+            const tiltBox = document.getElementById('tcg-tilt-box');
+            if (!stage || !tiltBox) return;
+
+            stage.addEventListener('mousemove', (e) => {
+                const rect = tiltBox.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const px = Math.max(0, Math.min(100, (x / rect.width) * 100));
+                const py = Math.max(0, Math.min(100, (y / rect.height) * 100));
+
+                const rotateY = ((px - 50) / 50) * 8;
+                const rotateX = ((50 - py) / 50) * 8;
+                const angle = Math.atan2(y - rect.height / 2, x - rect.width / 2) * (180 / Math.PI) + 90;
+
+                document.documentElement.style.setProperty('--mx', `${px}%`);
+                document.documentElement.style.setProperty('--my', `${py}%`);
+                document.documentElement.style.setProperty('--holo-angle', `${angle}deg`);
+
+                tiltBox.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+            });
+
+            stage.addEventListener('mouseleave', () => {
+                document.documentElement.style.setProperty('--mx', '50%');
+                document.documentElement.style.setProperty('--my', '50%');
+                tiltBox.style.transform = 'rotateX(0deg) rotateY(0deg)';
+            });
+        }
+
+        // --- 精靈球抽學生動畫 & 判定動畫控制器 ---
+        let isPokeballAnimating = false;
+        let rouletteTimer = null;
+        let drawAnimTimers = [];
+        let pendingChosenStudent = null;
+
+        function clearDrawAnimTimers() {
+            if (rouletteTimer) {
+                clearInterval(rouletteTimer);
+                rouletteTimer = null;
+            }
+            drawAnimTimers.forEach(t => clearTimeout(t));
+            drawAnimTimers = [];
+        }
+
+        function resetPokeballSvg(team = 'a') {
+            const topGroup = document.getElementById('pokeball-top-group');
+            const bottomGroup = document.getElementById('pokeball-bottom-group');
+            const topDome = document.getElementById('pokeball-top-dome');
+            const stripeL = document.getElementById('pokeball-stripe-left');
+            const stripeR = document.getElementById('pokeball-stripe-right');
+            const innerGlow = document.getElementById('pokeball-inner-glow');
+            const coreBtn = document.getElementById('pokeball-core-btn');
+
+            if (topGroup) topGroup.classList.remove('anim-dome-top-open');
+            if (bottomGroup) bottomGroup.classList.remove('anim-dome-bottom-open');
+            if (innerGlow) innerGlow.setAttribute('opacity', '0');
+
+            if (team === 'a') {
+                if (topDome) topDome.setAttribute('fill', 'url(#ballTopTeamA)');
+                if (stripeL) stripeL.setAttribute('stroke', '#FFCB05');
+                if (stripeR) stripeR.setAttribute('stroke', '#FFCB05');
+                if (coreBtn) coreBtn.setAttribute('fill', '#FFCB05');
+            } else {
+                if (topDome) topDome.setAttribute('fill', 'url(#ballTopTeamB)');
+                if (stripeL) stripeL.setAttribute('stroke', '#F472B6');
+                if (stripeR) stripeR.setAttribute('stroke', '#F472B6');
+                if (coreBtn) coreBtn.setAttribute('fill', '#EE1515');
+            }
+        }
+
+        function spawnStars(container, emojis = ['✨', '⭐', '🌟', '⚡']) {
+            container.innerHTML = '';
+            const count = 12;
+            for (let i = 0; i < count; i++) {
+                const star = document.createElement('span');
+                star.className = 'capture-star';
+                star.innerText = emojis[i % emojis.length];
+                const angle = (Math.PI * 2 * i) / count;
+                const dist = 105 + Math.random() * 75;
+                star.style.setProperty('--tx', `${Math.cos(angle) * dist}px`);
+                star.style.setProperty('--ty', `${Math.sin(angle) * dist - 20}px`);
+                container.appendChild(star);
+            }
+        }
+
+        // 公平選出本回合出戰訓練員（不重複點名直到全隊輪完）
+        function pickNextStudent(team) {
+            const currentRoster = db.roster[team];
+            if (currentRoster && currentRoster.length > 0) {
+                let minUsage = Math.min(...currentRoster.map(name => state.usage[team][name] || 0));
+                let candidates = currentRoster.filter(name => (state.usage[team][name] || 0) === minUsage);
+                const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+                state.usage[team][chosen] = (state.usage[team][chosen] || 0) + 1;
+                return chosen;
+            }
+            return "全體訓練員";
+        }
+
+        // 點擊「派出精靈出戰！」：精靈球飛入搖晃 + 全隊名字滾動 + 精靈球爆開揭曉出戰訓練員！
+        function triggerStudentPokeballDraw() {
+            if (isPokeballAnimating) return;
+            if (db.questions.length === 0) {
+                return showNotice("恭喜通關！精靈球題庫裡的所有試煉題目都已完成！");
+            }
+            isPokeballAnimating = true;
+            clearDrawAnimTimers();
+            playSfx('throw');
+
+            const team = state.turn;
+            const teamName = db.teamNames[team];
+            const roster = (db.roster[team] && db.roster[team].length > 0) ? db.roster[team] : ["全體訓練員"];
+            pendingChosenStudent = pickNextStudent(team);
+
+            const stage = document.getElementById('pokeball-anim-stage');
+            const actor = document.getElementById('pokeball-actor');
+            const flashRing = document.getElementById('pokeball-flash-ring');
+            const starsBox = document.getElementById('pokeball-stars-container');
+            const teamTag = document.getElementById('pokeball-team-tag');
+            const rouletteBox = document.getElementById('pokeball-roulette-box');
+            const rouletteLabel = document.getElementById('pokeball-roulette-label');
+            const rouletteName = document.getElementById('pokeball-roulette-name');
+            const banner = document.getElementById('pokeball-banner');
+            const skipBtn = document.getElementById('btn-skip-ball-anim');
+
+            resetPokeballSvg(team);
+            starsBox.innerHTML = '';
+            flashRing.classList.add('hidden');
+            flashRing.classList.remove('anim-flash-burst');
+            rouletteBox.classList.remove('hidden', 'anim-trainer-reveal');
+            skipBtn.classList.remove('hidden');
+
+            teamTag.innerText = team === 'a' ? `⚡ ${teamName}・精靈球抽選訓練員` : `🔥 ${teamName}・精靈球抽選訓練員`;
+            teamTag.className = team === 'a'
+                ? 'mb-4 px-5 py-1.5 rounded-full bg-pokeYellow border-[3px] border-hudDark text-hudDark font-black text-sm sm:text-base tracking-wider shadow-[3px_3px_0_#0F172A]'
+                : 'mb-4 px-5 py-1.5 rounded-full bg-pokeRed border-[3px] border-hudDark text-white font-black text-sm sm:text-base tracking-wider shadow-[3px_3px_0_#0F172A]';
+
+            rouletteLabel.innerText = '🔴 精靈球光波掃描全隊名單中...';
+            rouletteName.innerText = roster[0];
+            rouletteName.className = 'text-2xl sm:text-4xl font-black text-white tracking-wide truncate min-h-[2.75rem] flex items-center justify-center';
+
+            banner.innerText = team === 'a' ? '⚡ 去吧！電氣超級球！' : '🔥 去吧！烈焰大師球！';
+            banner.className = 'mt-4 px-6 py-2 rounded-full bg-hudDark border-[3px] border-pokeYellow text-pokeYellow font-game text-base sm:text-xl font-black tracking-wider shadow-[0_6px_20px_rgba(0,0,0,0.6)]';
+
+            actor.className = 'w-32 h-32 sm:w-40 sm:h-40 relative drop-shadow-[0_14px_24px_rgba(0,0,0,0.65)] anim-ball-throw';
+
+            stage.classList.remove('hidden');
+            stage.classList.add('flex');
+
+            // 1. 精靈球落地後開始高速搖晃 + 訓練員名字高速輪轉
+            let tickIdx = 0;
+            drawAnimTimers.push(setTimeout(() => {
+                actor.classList.remove('anim-ball-throw');
+                actor.classList.add('anim-ball-wobble-loop');
+                banner.innerText = '🔴 精靈球搖晃感應中…';
+
+                rouletteTimer = setInterval(() => {
+                    tickIdx = (tickIdx + 1) % roster.length;
+                    rouletteName.innerText = roster[tickIdx];
+                    playSfx('wobble');
+                }, 95);
+            }, 520));
+
+            // 2. 精靈球上下彈開爆出白金光芒，揭曉出戰訓練員！
+            drawAnimTimers.push(setTimeout(() => {
+                revealChosenStudentStage();
+            }, 1950));
+        }
+
+        function revealChosenStudentStage() {
+            clearDrawAnimTimers();
+            playSfx('burst');
+
+            const team = state.turn;
+            const actor = document.getElementById('pokeball-actor');
+            const topGroup = document.getElementById('pokeball-top-group');
+            const bottomGroup = document.getElementById('pokeball-bottom-group');
+            const innerGlow = document.getElementById('pokeball-inner-glow');
+            const flashRing = document.getElementById('pokeball-flash-ring');
+            const starsBox = document.getElementById('pokeball-stars-container');
+            const rouletteBox = document.getElementById('pokeball-roulette-box');
+            const rouletteLabel = document.getElementById('pokeball-roulette-label');
+            const rouletteName = document.getElementById('pokeball-roulette-name');
+            const banner = document.getElementById('pokeball-banner');
+            const skipBtn = document.getElementById('btn-skip-ball-anim');
+
+            skipBtn.classList.add('hidden');
+            actor.classList.remove('anim-ball-throw', 'anim-ball-wobble-loop');
+            if (topGroup) topGroup.classList.add('anim-dome-top-open');
+            if (bottomGroup) bottomGroup.classList.add('anim-dome-bottom-open');
+            if (innerGlow) innerGlow.setAttribute('opacity', '1');
+
+            flashRing.classList.remove('hidden');
+            flashRing.classList.add('anim-flash-burst');
+            spawnStars(starsBox, team === 'a' ? ['⚡', '✨', '⭐', '🧢'] : ['🔥', '✨', '💥', '🧢']);
+
+            rouletteLabel.innerText = '★ 就決定是你了！出戰訓練員 ★';
+            rouletteName.innerText = pendingChosenStudent;
+            rouletteName.className = 'text-3xl sm:text-5xl font-black text-pokeYellow tracking-wider truncate min-h-[3.2rem] flex items-center justify-center drop-shadow-[2px_2px_0_#000000]';
+            rouletteBox.classList.remove('anim-trainer-reveal');
+            void rouletteBox.offsetWidth;
+            rouletteBox.classList.add('anim-trainer-reveal');
+
+            banner.innerText = `🧢 ${pendingChosenStudent} 登場迎戰！`;
+            banner.className = 'mt-4 px-6 py-2 rounded-full bg-emerald-400 border-[3px] border-hudDark text-hudDark font-game text-base sm:text-xl font-black tracking-wider shadow-[0_6px_20px_rgba(0,0,0,0.6)]';
+
+            // 同步更新側邊隊伍面板的名字
+            setStudentNameDisplay(team, pendingChosenStudent);
+            setStudentNameDisplay(team === 'a' ? 'b' : 'a', "場邊觀戰");
+
+            // 3. 展示訓練員銘牌 1.25 秒後，收起精靈球舞台並召喚題目閃卡
+            drawAnimTimers.push(setTimeout(() => {
+                finishStudentDrawAndOpenCard();
+            }, 1250));
+        }
+
+        function skipStudentDrawAnim() {
+            if (!isPokeballAnimating) return;
+            revealChosenStudentStage();
+        }
+
+        function finishStudentDrawAndOpenCard() {
+            clearDrawAnimTimers();
+            const stage = document.getElementById('pokeball-anim-stage');
+            stage.classList.add('hidden');
+            stage.classList.remove('flex');
+            isPokeballAnimating = false;
+
+            // 抽出題目並觸發黃金閃卡登場動畫
+            drawQuestion(pendingChosenStudent);
+            const tiltBox = document.getElementById('tcg-tilt-box');
+            tiltBox.classList.remove('anim-card-summon');
+            void tiltBox.offsetWidth;
+            tiltBox.classList.add('anim-card-summon');
+            pendingChosenStudent = null;
+        }
+
+        function triggerPokeballOutcome(isCorrect, callback) {
+            if (isPokeballAnimating) return;
+            isPokeballAnimating = true;
+            clearDrawAnimTimers();
+
+            const stage = document.getElementById('pokeball-anim-stage');
+            const actor = document.getElementById('pokeball-actor');
+            const flashRing = document.getElementById('pokeball-flash-ring');
+            const starsBox = document.getElementById('pokeball-stars-container');
+            const teamTag = document.getElementById('pokeball-team-tag');
+            const rouletteBox = document.getElementById('pokeball-roulette-box');
+            const banner = document.getElementById('pokeball-banner');
+            const coreBtn = document.getElementById('pokeball-core-btn');
+            const skipBtn = document.getElementById('btn-skip-ball-anim');
+
+            resetPokeballSvg(state.turn);
+            starsBox.innerHTML = '';
+            flashRing.classList.add('hidden');
+            flashRing.classList.remove('anim-flash-burst');
+            rouletteBox.classList.add('hidden');
+            skipBtn.classList.add('hidden');
+
+            teamTag.innerText = `🏆 ${db.teamNames[state.turn]}・道館招式判定`;
+            actor.className = 'w-32 h-32 sm:w-40 sm:h-40 relative drop-shadow-[0_14px_24px_rgba(0,0,0,0.65)] anim-ball-wobble';
+            coreBtn.setAttribute('fill', '#EE1515');
+            banner.innerText = '🔴 精靈球判定中…';
+            banner.className = 'mt-6 px-6 py-2 rounded-full bg-hudDark border-[3px] border-white text-white font-game text-lg sm:text-2xl font-black tracking-wider shadow-[0_6px_20px_rgba(0,0,0,0.6)]';
+
+            stage.classList.remove('hidden');
+            stage.classList.add('flex');
+            playSfx('wobble');
+
+            // 第二下搖晃
+            setTimeout(() => {
+                playSfx('wobble');
+                actor.classList.remove('anim-ball-wobble');
+                void actor.offsetWidth;
+                actor.classList.add('anim-ball-wobble');
+            }, 430);
+
+            // 結果揭曉：收服成功 OR 掙脫爆裂
+            setTimeout(() => {
+                actor.classList.remove('anim-ball-wobble');
+                if (isCorrect) {
+                    playSfx('victory');
+                    coreBtn.setAttribute('fill', '#34D399');
+                    actor.classList.add('anim-ball-capture');
+                    spawnStars(starsBox, ['✨', '⭐', '🌟', '🏆']);
+                    banner.innerText = '✨ 收服成功！效果絕佳！';
+                    banner.className = 'mt-6 px-6 py-2 rounded-full bg-emerald-500 border-[3px] border-hudDark text-hudDark font-game text-lg sm:text-2xl font-black tracking-wider shadow-[0_6px_20px_rgba(0,0,0,0.6)]';
+                } else {
+                    playSfx('damage');
+                    actor.classList.add('anim-ball-break');
+                    flashRing.classList.remove('hidden');
+                    flashRing.classList.add('anim-flash-burst');
+                    spawnStars(starsBox, ['💥', '💨', '⚠️', '💫']);
+                    banner.innerText = '💥 掙脫了！遭遇野生突襲！';
+                    banner.className = 'mt-6 px-6 py-2 rounded-full bg-pokeRed border-[3px] border-hudDark text-white font-game text-lg sm:text-2xl font-black tracking-wider shadow-[0_6px_20px_rgba(0,0,0,0.6)]';
+                }
+            }, 860);
+
+            setTimeout(() => {
+                stage.classList.add('hidden');
+                stage.classList.remove('flex');
+                isPokeballAnimating = false;
+                if (callback) callback();
+            }, 1480);
         }
 
         // --- 自訂圖鑑通訊彈窗（絕不使用原生 alert()） ---
@@ -825,6 +1585,9 @@
             roster: { a: [], b: [] }
         };
 
+        // 備份完整初始題庫供「重置回合」還原
+        const initialQuestionsBackup = JSON.parse(JSON.stringify(db.questions));
+
         // 初始化預設訓練員名單
         function initDefaultRoster() {
             if (db.roster.a.length === 0) {
@@ -841,12 +1604,83 @@
             hearts: { a: 4, b: 4 },
             curQ: null,
             usage: { a: {}, b: {} },
-            turnCount: 1
+            turnCount: 1,
+            hasStarted: false
         };
+
+        // 常駐可點擊的「挑選訓練員（下一題）」：若上一題尚未結算，自動切換攻守回合並抽下一題
+        function triggerNextTrainerAndQuestion() {
+            if (isPokeballAnimating) return;
+            if (db.questions.length === 0) {
+                return showNotice("恭喜通關！精靈球題庫裡的所有試煉題目都已完成！");
+            }
+            reset5sTimer();
+            if (state.hasStarted && !document.getElementById('action-btns').classList.contains('hidden')) {
+                state.turn = state.turn === 'a' ? 'b' : 'a';
+                state.turnCount++;
+                updateUI();
+            }
+            state.hasStarted = true;
+            triggerStudentPokeballDraw();
+        }
+
+        // 一鍵重置回合（分數、精靈球、回合數、已抽出題庫與點名紀錄全數還原，並返回開始頁）
+        function resetMatch() {
+            if (isPokeballAnimating) return;
+            playSfx('flip');
+            reset5sTimer();
+            db.questions = JSON.parse(JSON.stringify(initialQuestionsBackup));
+            state = {
+                turn: 'a',
+                scores: { a: 100, b: 100 },
+                hearts: { a: 4, b: 4 },
+                curQ: null,
+                usage: { a: {}, b: {} },
+                turnCount: 1,
+                hasStarted: false
+            };
+
+            const card = document.getElementById('game-card');
+            if (card) card.classList.remove('flipped');
+            document.getElementById('q-cat').innerText = '道館挑戰・準備出戰';
+            const qTextEl = document.getElementById('q-text');
+            qTextEl.innerText = '點擊下方「🔴 挑選訓練員（下一題）」\n投擲精靈球召喚文史閃卡試煉吧！';
+            qTextEl.classList.add('text-center', 'justify-center');
+            qTextEl.classList.remove('text-left', 'justify-start');
+            document.getElementById('q-ans').innerText = '';
+            document.getElementById('card-img').classList.add('hidden');
+            document.getElementById('action-btns').classList.add('hidden');
+
+            setStudentNameDisplay('a', '待機中');
+            setStudentNameDisplay('b', '待機中');
+            updateUI();
+            showStartScreen();
+        }
+
+        function showStartScreen() {
+            const startOverlay = document.getElementById('overlay-start');
+            if (!startOverlay) return;
+            document.getElementById('start-team-a').innerText = db.teamNames.a;
+            document.getElementById('start-team-b').innerText = db.teamNames.b;
+            document.getElementById('start-q-count').innerText = db.questions.length;
+            startOverlay.classList.remove('hidden');
+            startOverlay.classList.add('flex');
+        }
+
+        function startGymBattle() {
+            playSfx('victory');
+            const startOverlay = document.getElementById('overlay-start');
+            if (startOverlay) {
+                startOverlay.classList.add('hidden');
+                startOverlay.classList.remove('flex');
+            }
+        }
 
         window.onload = function() {
             updateUI();
             updateSettingsUI();
+            initTcgHoloTilt();
+            showStartScreen();
         };
 
         // 渲染精靈球生命槽（上限 5 顆球）與同步更新 HP 血條顏色
@@ -872,7 +1706,7 @@
             }
             for (let i = 1; i <= max; i++) {
                 if (i <= count) {
-                    html += `<span class="inline-block text-sm lg:text-base drop-shadow-[1px_1px_0_#1E293B]">🔴</span>`;
+                    html += `<span class="inline-block text-sm lg:text-base drop-shadow-[1px_1px_0_#0F172A]">🔴</span>`;
                 } else {
                     html += `<span class="inline-block text-sm lg:text-base opacity-35">⚪</span>`;
                 }
@@ -886,12 +1720,19 @@
             document.getElementById('turn-count').innerText = state.turnCount;
             document.getElementById('name-a').innerText = db.teamNames.a;
             document.getElementById('name-b').innerText = db.teamNames.b;
+            const startTeamA = document.getElementById('start-team-a');
+            const startTeamB = document.getElementById('start-team-b');
+            const startQCount = document.getElementById('start-q-count');
+            if (startTeamA) startTeamA.innerText = db.teamNames.a;
+            if (startTeamB) startTeamB.innerText = db.teamNames.b;
+            if (startQCount) startQCount.innerText = db.questions.length;
 
             const t = state.turn;
             const a = document.getElementById('panel-a');
             const b = document.getElementById('panel-b');
             const badgeA = document.getElementById('badge-a');
             const badgeB = document.getElementById('badge-b');
+            const typeOrb = document.getElementById('tcg-type-orb');
             
             if (t === 'a') {
                 a.classList.add('active-team-a', 'z-10');
@@ -901,6 +1742,11 @@
                 b.classList.remove('active-team-b', 'z-10');
                 b.classList.add('opacity-75');
                 badgeB.classList.add('hidden');
+
+                if (typeOrb) {
+                    typeOrb.innerText = '⚡';
+                    typeOrb.className = 'w-6 h-6 rounded-full bg-pokeYellow border-2 border-hudDark flex items-center justify-center text-xs shadow-xs';
+                }
             } else {
                 b.classList.add('active-team-b', 'z-10');
                 b.classList.remove('opacity-75');
@@ -909,6 +1755,11 @@
                 a.classList.remove('active-team-a', 'z-10');
                 a.classList.add('opacity-75');
                 badgeA.classList.add('hidden');
+
+                if (typeOrb) {
+                    typeOrb.innerText = '🔥';
+                    typeOrb.className = 'w-6 h-6 rounded-full bg-pokeRed text-white border-2 border-hudDark flex items-center justify-center text-xs shadow-xs';
+                }
             }
             
             ['a', 'b'].forEach(team => {
@@ -962,16 +1813,14 @@
         }
 
         function handleResult(isCorrect) {
-            if(isCorrect) {
-                playSfx('victory');
+            if (isCorrect) {
                 modStat(state.turn, 's', 10);
                 modStat(state.turn, 'h', 1);
-                initSelection('chance');
+                triggerPokeballOutcome(true, () => initSelection('chance'));
             } else {
-                playSfx('damage');
                 modStat(state.turn, 's', -10);
                 modStat(state.turn, 'h', -1);
-                initSelection('punish');
+                triggerPokeballOutcome(false, () => initSelection('punish'));
             }
         }
 
@@ -1000,28 +1849,18 @@
             return array;
         }
 
-        // 抽出題目卡（不重複點名直到全隊輪完）
-        function drawQuestion() {
+        // 抽出題目卡（支援由精靈球抽學生動畫傳入已選定的訓練員名字）
+        function drawQuestion(preselectedStudent = null) {
             if (db.questions.length === 0) return showNotice("恭喜通關！精靈球題庫裡的所有試煉題目都已完成！");
             const idx = Math.floor(Math.random() * db.questions.length);
             state.curQ = db.questions[idx];
             db.questions.splice(idx, 1);
             
-            // 公平輪換抽訓練員名字
-            const currentRoster = db.roster[state.turn];
-            let studentName = "---";
-            if (currentRoster && currentRoster.length > 0) {
-                let minUsage = Math.min(...currentRoster.map(name => state.usage[state.turn][name] || 0));
-                let candidates = currentRoster.filter(name => (state.usage[state.turn][name] || 0) === minUsage);
-                studentName = candidates[Math.floor(Math.random() * candidates.length)];
-                state.usage[state.turn][studentName] = (state.usage[state.turn][studentName] || 0) + 1;
-            } else {
-                studentName = "全體訓練員";
-            }
+            const studentName = preselectedStudent || pickNextStudent(state.turn);
             setStudentNameDisplay(state.turn, studentName);
             setStudentNameDisplay(state.turn === 'a' ? 'b' : 'a', "場邊觀戰");
             
-            // 顯示題目卡內容
+            // 顯示題目閃卡內容
             const card = document.getElementById('game-card');
             card.classList.remove('flipped');
             document.getElementById('q-cat').innerText = state.curQ.cat;
@@ -1045,19 +1884,7 @@
                 img.classList.add('hidden');
             }
 
-            document.getElementById('btn-draw').classList.add('hidden');
             document.getElementById('action-btns').classList.remove('hidden');
-            updateUI();
-        }
-
-        function closeQuestion() {
-            state.turn = state.turn === 'a' ? 'b' : 'a';
-            state.turnCount++;
-            document.getElementById('btn-draw').classList.remove('hidden');
-            document.getElementById('action-btns').classList.add('hidden');
-            document.getElementById('game-card').classList.remove('flipped');
-            setStudentNameDisplay('a', "待機中");
-            setStudentNameDisplay('b', "待機中");
             updateUI();
         }
 
@@ -1065,12 +1892,183 @@
             document.getElementById('game-card').classList.toggle('flipped');
         }
 
+        // --- 手動觸發 5 秒倒數計時器（僅在老師主動點擊時啟動） ---
+        let timer5sInterval = null;
+        let timer5sLeft = 5;
+
+        function reset5sTimer() {
+            if (timer5sInterval) {
+                clearInterval(timer5sInterval);
+                timer5sInterval = null;
+            }
+            timer5sLeft = 5;
+            const btn = document.getElementById('btn-timer-5s');
+            const txt = document.getElementById('timer-5s-text');
+            if (btn && txt) {
+                btn.className = 'cursor-pointer flex items-center gap-1 bg-hudDark hover:bg-slate-800 text-pokeYellow border-2 border-white/80 px-2.5 py-0.5 rounded-full text-xs lg:text-sm font-game font-black shadow-[1.5px_1.5px_0_#0F172A] transition-all';
+                txt.innerText = '5s 計時';
+            }
+        }
+
+        function toggle5sTimer() {
+            // 若正在計時或剛結束顯示「時間到」，再按一次即重設回待機狀態
+            if (timer5sInterval || timer5sLeft <= 0) {
+                playSfx('select');
+                reset5sTimer();
+                return;
+            }
+
+            timer5sLeft = 5;
+            const btn = document.getElementById('btn-timer-5s');
+            const txt = document.getElementById('timer-5s-text');
+
+            playSfx('wobble');
+            btn.className = 'cursor-pointer flex items-center gap-1 bg-emerald-400 text-hudDark border-2 border-hudDark px-2.5 py-0.5 rounded-full text-xs lg:text-sm font-game font-black shadow-[1.5px_1.5px_0_#0F172A] animate-pulse';
+            txt.innerText = '5.0s';
+
+            let tenths = 50;
+            timer5sInterval = setInterval(() => {
+                tenths--;
+                timer5sLeft = tenths / 10;
+
+                // 最後 2 秒轉為紅色警戒並每秒發出滴答提示音
+                if (tenths === 20 || tenths === 10) {
+                    playSfx('wobble');
+                    btn.className = 'cursor-pointer flex items-center gap-1 bg-pokeRed text-white border-2 border-hudDark px-2.5 py-0.5 rounded-full text-xs lg:text-sm font-game font-black shadow-[1.5px_1.5px_0_#0F172A] animate-bounce';
+                }
+
+                if (tenths <= 0) {
+                    clearInterval(timer5sInterval);
+                    timer5sInterval = null;
+                    timer5sLeft = 0;
+                    playSfx('damage');
+                    btn.className = 'cursor-pointer flex items-center gap-1 bg-pokeRed text-white border-2 border-white px-2.5 py-0.5 rounded-full text-xs lg:text-sm font-game font-black shadow-[1.5px_1.5px_0_#0F172A]';
+                    txt.innerText = '⏰ 時間到!';
+                } else {
+                    txt.innerText = `${timer5sLeft.toFixed(1)}s`;
+                }
+            }, 100);
+        }
+
+        function closeQuestion() {
+            reset5sTimer();
+            state.turn = state.turn === 'a' ? 'b' : 'a';
+            state.turnCount++;
+            document.getElementById('action-btns').classList.add('hidden');
+            document.getElementById('game-card').classList.remove('flipped');
+            setStudentNameDisplay('a', "待機中");
+            setStudentNameDisplay('b', "待機中");
+            updateUI();
+        }
+
         function openSettings() {
             document.getElementById('overlay-settings').style.display = 'flex';
             updateSettingsUI();
         }
 
-        // --- 🎒 道具背包 / ⚠️ 異常狀態與火箭兵團突襲 三選一系統 ---
+        // --- 🎒 道具閃卡包 / ⚠️ 野生突襲全息精美圖鑑卡 三選一系統 ---
+        const dexMonsChance = [
+            {
+                no: "001", name: "奇異種子", type: "🌿 草 / 毒屬性",
+                svg: `<svg viewBox="0 0 120 100" class="w-full h-full"><ellipse cx="60" cy="30" rx="22" ry="18" fill="#22C55E" stroke="#0F172A" stroke-width="3"/><path d="M60,12 Q48,26 52,42 M60,12 Q72,26 68,42" fill="none" stroke="#15803D" stroke-width="2.5"/><rect x="34" y="42" width="52" height="36" rx="18" fill="#5EEAD4" stroke="#0F172A" stroke-width="3"/><circle cx="48" cy="56" r="5" fill="#DC2626"/><circle cx="49" cy="54" r="1.8" fill="#FFF"/><circle cx="72" cy="56" r="5" fill="#DC2626"/><circle cx="73" cy="54" r="1.8" fill="#FFF"/><path d="M52,68 Q60,73 68,68" fill="none" stroke="#0F172A" stroke-width="2.5" stroke-linecap="round"/><rect x="38" y="74" width="12" height="14" rx="5" fill="#2DD4BF" stroke="#0F172A" stroke-width="2.5"/><rect x="70" y="74" width="12" height="14" rx="5" fill="#2DD4BF" stroke="#0F172A" stroke-width="2.5"/></svg>`
+            },
+            {
+                no: "007", name: "車厘龜", type: "💧 水屬性",
+                svg: `<svg viewBox="0 0 120 100" class="w-full h-full"><path d="M84,68 Q104,64 102,48 Q90,50 86,60" fill="#38BDF8" stroke="#0F172A" stroke-width="2.8"/><ellipse cx="60" cy="64" rx="26" ry="22" fill="#B45309" stroke="#0F172A" stroke-width="3"/><ellipse cx="60" cy="66" rx="20" ry="16" fill="#FEF3C7" stroke="#0F172A" stroke-width="2"/><circle cx="60" cy="34" r="20" fill="#38BDF8" stroke="#0F172A" stroke-width="3"/><circle cx="52" cy="32" r="4.5" fill="#7F1D1D"/><circle cx="53" cy="30.5" r="1.6" fill="#FFF"/><circle cx="68" cy="32" r="4.5" fill="#7F1D1D"/><circle cx="69" cy="30.5" r="1.6" fill="#FFF"/><path d="M52,42 Q60,48 68,42" fill="none" stroke="#0F172A" stroke-width="2.5" stroke-linecap="round"/><rect x="38" y="78" width="13" height="13" rx="5" fill="#38BDF8" stroke="#0F172A" stroke-width="2.5"/><rect x="69" y="78" width="13" height="13" rx="5" fill="#38BDF8" stroke="#0F172A" stroke-width="2.5"/></svg>`
+            },
+            {
+                no: "025", name: "比卡超", type: "⚡ 電氣屬性",
+                svg: `<svg viewBox="0 0 120 100" class="w-full h-full"><path d="M84,72 L102,56 L95,49 L110,30 L95,27 L86,44 L92,49 L78,65 Z" fill="#FFCB05" stroke="#0F172A" stroke-width="2.5"/><path d="M42,36 L24,10 L50,24 Z" fill="#FFCB05" stroke="#0F172A" stroke-width="2.8"/><path d="M24,10 L32,21 L38,17 Z" fill="#0F172A"/><path d="M78,36 L96,10 L70,24 Z" fill="#FFCB05" stroke="#0F172A" stroke-width="2.8"/><path d="M96,10 L88,21 L82,17 Z" fill="#0F172A"/><rect x="35" y="28" width="50" height="58" rx="22" fill="#FFCB05" stroke="#0F172A" stroke-width="3"/><circle cx="49" cy="48" r="4.5" fill="#0F172A"/><circle cx="50.5" cy="46.5" r="1.6" fill="#FFF"/><circle cx="71" cy="48" r="4.5" fill="#0F172A"/><circle cx="72.5" cy="46.5" r="1.6" fill="#FFF"/><circle cx="41" cy="58" r="6" fill="#EE1515" stroke="#0F172A" stroke-width="1.8"/><circle cx="79" cy="58" r="6" fill="#EE1515" stroke="#0F172A" stroke-width="1.8"/><path d="M54,60 Q57,64 60,60 Q63,64 66,60" fill="none" stroke="#0F172A" stroke-width="2.3" stroke-linecap="round"/></svg>`
+            },
+            {
+                no: "039", name: "波波球", type: "🌸 妖精屬性",
+                svg: `<svg viewBox="0 0 120 100" class="w-full h-full"><path d="M36,34 L28,12 L52,24 Z" fill="#F9A8D4" stroke="#0F172A" stroke-width="2.8"/><path d="M84,34 L92,12 L68,24 Z" fill="#F9A8D4" stroke="#0F172A" stroke-width="2.8"/><circle cx="60" cy="54" r="32" fill="#FBCFE8" stroke="#0F172A" stroke-width="3"/><path d="M52,24 Q60,16 66,26 Q60,32 55,27" fill="none" stroke="#0F172A" stroke-width="2.5" stroke-linecap="round"/><circle cx="47" cy="50" r="7.5" fill="#0284C7" stroke="#0F172A" stroke-width="2"/><circle cx="49" cy="48" r="2.5" fill="#FFF"/><circle cx="73" cy="50" r="7.5" fill="#0284C7" stroke="#0F172A" stroke-width="2"/><circle cx="75" cy="48" r="2.5" fill="#FFF"/><path d="M54,62 Q60,68 66,62" fill="#F43F5E" stroke="#0F172A" stroke-width="2"/></svg>`
+            },
+            {
+                no: "133", name: "伊貝", type: "⭐ 一般屬性",
+                svg: `<svg viewBox="0 0 120 100" class="w-full h-full"><path d="M44,38 L22,10 L54,28 Z" fill="#B45309" stroke="#0F172A" stroke-width="2.8"/><path d="M76,38 L98,10 L66,28 Z" fill="#B45309" stroke="#0F172A" stroke-width="2.8"/><ellipse cx="60" cy="74" rx="26" ry="14" fill="#FEF3C7" stroke="#0F172A" stroke-width="2.5"/><circle cx="60" cy="48" r="22" fill="#D97706" stroke="#0F172A" stroke-width="3"/><circle cx="51" cy="46" r="4.5" fill="#0F172A"/><circle cx="52.5" cy="44.5" r="1.6" fill="#FFF"/><circle cx="69" cy="46" r="4.5" fill="#0F172A"/><circle cx="70.5" cy="44.5" r="1.6" fill="#FFF"/><path d="M55,56 Q60,60 65,56" fill="none" stroke="#0F172A" stroke-width="2.3" stroke-linecap="round"/></svg>`
+            },
+            {
+                no: "143", name: "卡比獸", type: "💤 一般屬性",
+                svg: `<svg viewBox="0 0 120 100" class="w-full h-full"><path d="M36,34 L32,14 L50,24 Z" fill="#0F766E" stroke="#0F172A" stroke-width="2.8"/><path d="M84,34 L88,14 L70,24 Z" fill="#0F766E" stroke="#0F172A" stroke-width="2.8"/><ellipse cx="60" cy="58" rx="36" ry="32" fill="#0F766E" stroke="#0F172A" stroke-width="3"/><ellipse cx="60" cy="64" rx="26" ry="22" fill="#FEF3C7" stroke="#0F172A" stroke-width="2"/><ellipse cx="60" cy="36" rx="20" ry="14" fill="#FEF3C7" stroke="#0F172A" stroke-width="2"/><line x1="47" y1="34" x2="55" y2="34" stroke="#0F172A" stroke-width="3" stroke-linecap="round"/><line x1="65" y1="34" x2="73" y2="34" stroke="#0F172A" stroke-width="3" stroke-linecap="round"/><path d="M53,42 Q60,46 67,42" fill="none" stroke="#0F172A" stroke-width="2.3"/></svg>`
+            },
+            {
+                no: "004", name: "小火龍", type: "🔥 火焰屬性",
+                svg: `<svg viewBox="0 0 120 100" class="w-full h-full"><path d="M84,74 Q102,70 104,52 Q95,58 93,48 Q84,58 82,68 Z" fill="#EF4444" stroke="#0F172A" stroke-width="2.2"/><path d="M88,71 Q96,67 97,58 Q90,62 88,71 Z" fill="#FACC15"/><rect x="38" y="42" width="44" height="44" rx="20" fill="#F97316" stroke="#0F172A" stroke-width="3"/><ellipse cx="60" cy="66" rx="14" ry="16" fill="#FEF3C7" stroke="#0F172A" stroke-width="2"/><circle cx="60" cy="32" r="19" fill="#F97316" stroke="#0F172A" stroke-width="3"/><circle cx="52" cy="30" r="4.5" fill="#0284C7"/><circle cx="53" cy="28.5" r="1.6" fill="#FFF"/><circle cx="68" cy="30" r="4.5" fill="#0284C7"/><circle cx="69" cy="28.5" r="1.6" fill="#FFF"/><path d="M53,40 Q60,45 67,40" fill="none" stroke="#0F172A" stroke-width="2.4" stroke-linecap="round"/></svg>`
+            },
+            {
+                no: "006", name: "噴火龍", type: "🔥 火焰 / 飛行",
+                svg: `<svg viewBox="0 0 120 100" class="w-full h-full"><path d="M36,48 L12,20 L22,50 L15,62 L36,62 Z" fill="#0EA5E9" stroke="#0F172A" stroke-width="2.5"/><path d="M84,48 L108,20 L98,50 L105,62 L84,62 Z" fill="#0EA5E9" stroke="#0F172A" stroke-width="2.5"/><path d="M46,28 L36,10 L54,22 Z" fill="#F97316" stroke="#0F172A" stroke-width="2.4"/><path d="M74,28 L84,10 L66,22 Z" fill="#F97316" stroke="#0F172A" stroke-width="2.4"/><rect x="36" y="24" width="48" height="62" rx="22" fill="#F97316" stroke="#0F172A" stroke-width="3"/><ellipse cx="60" cy="68" rx="17" ry="16" fill="#FEF3C7" stroke="#0F172A" stroke-width="2"/><path d="M44,44 L55,48 L46,51 Z" fill="#FFF" stroke="#0F172A" stroke-width="1.8"/><path d="M76,44 L65,48 L74,51 Z" fill="#FFF" stroke="#0F172A" stroke-width="1.8"/><path d="M50,56 Q60,62 70,56" fill="none" stroke="#0F172A" stroke-width="2.4"/></svg>`
+            },
+            {
+                no: "035", name: "皮皮", type: "🌙 妖精屬性",
+                svg: `<svg viewBox="0 0 120 100" class="w-full h-full"><path d="M36,36 L24,14 L48,26 Z" fill="#F472B6" stroke="#0F172A" stroke-width="2.8"/><path d="M24,14 L32,23 L38,19 Z" fill="#78350F"/><path d="M84,36 L96,14 L72,26 Z" fill="#F472B6" stroke="#0F172A" stroke-width="2.8"/><path d="M96,14 L88,23 L82,19 Z" fill="#78350F"/><ellipse cx="60" cy="56" rx="32" ry="28" fill="#FBCFE8" stroke="#0F172A" stroke-width="3"/><path d="M54,28 Q60,20 66,28" fill="none" stroke="#0F172A" stroke-width="2.5" stroke-linecap="round"/><circle cx="49" cy="50" r="4.5" fill="#0F172A"/><circle cx="50.5" cy="48.5" r="1.5" fill="#FFF"/><circle cx="71" cy="50" r="4.5" fill="#0F172A"/><circle cx="72.5" cy="48.5" r="1.5" fill="#FFF"/><ellipse cx="42" cy="58" rx="5" ry="3" fill="#F43F5E"/><ellipse cx="78" cy="58" rx="5" ry="3" fill="#F43F5E"/><path d="M54,60 Q60,65 66,60" fill="none" stroke="#0F172A" stroke-width="2.2"/></svg>`
+            },
+            {
+                no: "149", name: "啟暴龍", type: "🐉 龍 / 飛行",
+                svg: `<svg viewBox="0 0 120 100" class="w-full h-full"><path d="M36,52 L14,34 L26,58 Z" fill="#14B8A6" stroke="#0F172A" stroke-width="2.4"/><path d="M84,52 L106,34 L94,58 Z" fill="#14B8A6" stroke="#0F172A" stroke-width="2.4"/><path d="M52,24 Q42,10 34,14" fill="none" stroke="#F59E0B" stroke-width="3" stroke-linecap="round"/><path d="M68,24 Q78,10 86,14" fill="none" stroke="#F59E0B" stroke-width="3" stroke-linecap="round"/><polygon points="60,12 56,24 64,24" fill="#FBBF24" stroke="#0F172A" stroke-width="2"/><ellipse cx="60" cy="56" rx="26" ry="32" fill="#FBBF24" stroke="#0F172A" stroke-width="3"/><ellipse cx="60" cy="64" rx="18" ry="20" fill="#FEF3C7" stroke="#0F172A" stroke-width="2"/><circle cx="50" cy="38" r="4.5" fill="#0F172A"/><circle cx="51" cy="36.5" r="1.5" fill="#FFF"/><circle cx="70" cy="38" r="4.5" fill="#0F172A"/><circle cx="71" cy="36.5" r="1.5" fill="#FFF"/><path d="M52,48 Q60,54 68,48" fill="none" stroke="#0F172A" stroke-width="2.4"/></svg>`
+            },
+            {
+                no: "150", name: "超夢夢", type: "🔮 超能力傳說",
+                svg: `<svg viewBox="0 0 120 100" class="w-full h-full"><path d="M74,76 Q106,82 104,48 Q102,32 92,38" fill="none" stroke="#A855F7" stroke-width="7" stroke-linecap="round"/><path d="M74,76 Q106,82 104,48 Q102,32 92,38" fill="none" stroke="#0F172A" stroke-width="2" stroke-linecap="round"/><rect x="44" y="14" width="8" height="16" rx="4" fill="#E9D5FF" stroke="#0F172A" stroke-width="2.4"/><rect x="68" y="14" width="8" height="16" rx="4" fill="#E9D5FF" stroke="#0F172A" stroke-width="2.4"/><ellipse cx="60" cy="36" rx="18" ry="15" fill="#F3E8FF" stroke="#0F172A" stroke-width="2.8"/><ellipse cx="60" cy="66" rx="16" ry="20" fill="#F3E8FF" stroke="#0F172A" stroke-width="2.8"/><ellipse cx="60" cy="68" rx="11" ry="13" fill="#9333EA" stroke="#0F172A" stroke-width="2"/><path d="M48,35 L56,38 L49,40 Z" fill="#A855F7" stroke="#0F172A" stroke-width="1.5"/><path d="M72,35 L64,38 L71,40 Z" fill="#A855F7" stroke="#0F172A" stroke-width="1.5"/></svg>`
+            },
+            {
+                no: "175", name: "波克比", type: "🥚 幸運妖精",
+                svg: `<svg viewBox="0 0 120 100" class="w-full h-full"><polygon points="44,36 38,14 52,28" fill="#FEF3C7" stroke="#0F172A" stroke-width="2.5"/><polygon points="60,28 60,10 66,28" fill="#FEF3C7" stroke="#0F172A" stroke-width="2.5"/><polygon points="76,36 82,14 68,28" fill="#FEF3C7" stroke="#0F172A" stroke-width="2.5"/><circle cx="60" cy="54" r="28" fill="#FEF3C7" stroke="#0F172A" stroke-width="3"/><path d="M32,54 L42,46 L52,56 L60,46 L68,56 L78,46 L88,54 A28,28 0 0,1 32,54 Z" fill="#FFFFFF" stroke="#0F172A" stroke-width="2.6"/><polygon points="46,64 52,60 50,68" fill="#EF4444"/><polygon points="72,62 66,68 74,70" fill="#3B82F6"/><circle cx="50" cy="38" r="3.5" fill="#0F172A"/><circle cx="70" cy="38" r="3.5" fill="#0F172A"/><path d="M55,44 Q60,48 65,44" fill="none" stroke="#0F172A" stroke-width="2.2"/></svg>`
+            },
+            {
+                no: "197", name: "月亮伊貝", type: "🌑 惡屬性",
+                svg: `<svg viewBox="0 0 120 100" class="w-full h-full"><path d="M44,38 L30,8 L52,28 Z" fill="#1E293B" stroke="#0F172A" stroke-width="2.8"/><ellipse cx="41" cy="22" rx="3" ry="7" transform="rotate(-22 41 22)" fill="none" stroke="#FACC15" stroke-width="2.2"/><path d="M76,38 L90,8 L68,28 Z" fill="#1E293B" stroke="#0F172A" stroke-width="2.8"/><ellipse cx="79" cy="22" rx="3" ry="7" transform="rotate(22 79 22)" fill="none" stroke="#FACC15" stroke-width="2.2"/><circle cx="60" cy="54" r="24" fill="#1E293B" stroke="#0F172A" stroke-width="3"/><circle cx="60" cy="38" r="5" fill="none" stroke="#FACC15" stroke-width="2.5"/><ellipse cx="50" cy="52" rx="4" ry="5" fill="#EF4444"/><circle cx="51" cy="50.5" r="1.4" fill="#FFF"/><ellipse cx="70" cy="52" rx="4" ry="5" fill="#EF4444"/><circle cx="71" cy="50.5" r="1.4" fill="#FFF"/><path d="M54,64 Q60,68 66,64" fill="none" stroke="#94A3B8" stroke-width="2.2"/></svg>`
+            },
+            {
+                no: "448", name: "路卡利歐", type: "🥋 格鬥 / 鋼屬性",
+                svg: `<svg viewBox="0 0 120 100" class="w-full h-full"><path d="M44,34 L38,10 L54,26 Z" fill="#2563EB" stroke="#0F172A" stroke-width="2.6"/><path d="M76,34 L82,10 L66,26 Z" fill="#2563EB" stroke="#0F172A" stroke-width="2.6"/><path d="M36,44 L22,56 L38,54 Z" fill="#1E293B" stroke="#0F172A" stroke-width="2"/><path d="M84,44 L98,56 L82,54 Z" fill="#1E293B" stroke="#0F172A" stroke-width="2"/><ellipse cx="60" cy="54" rx="23" ry="26" fill="#2563EB" stroke="#0F172A" stroke-width="3"/><path d="M39,46 Q60,40 81,46 L77,60 Q60,54 43,60 Z" fill="#1E293B"/><path d="M46,48 L56,52 L47,55 Z" fill="#EF4444" stroke="#FFF" stroke-width="1"/><path d="M74,48 L64,52 L73,55 Z" fill="#EF4444" stroke="#FFF" stroke-width="1"/><ellipse cx="60" cy="70" rx="14" ry="10" fill="#FEF3C7" stroke="#0F172A" stroke-width="2"/></svg>`
+            }
+        ];
+
+        const dexMonsPunish = [
+            {
+                no: "052", name: "喵喵怪", type: "💰 火箭兵團",
+                svg: `<svg viewBox="0 0 120 100" class="w-full h-full"><path d="M36,38 L24,14 L52,26 Z" fill="#FEF3C7" stroke="#0F172A" stroke-width="2.8"/><path d="M84,38 L96,14 L68,26 Z" fill="#FEF3C7" stroke="#0F172A" stroke-width="2.8"/><ellipse cx="60" cy="54" rx="28" ry="24" fill="#FEF3C7" stroke="#0F172A" stroke-width="3"/><ellipse cx="60" cy="34" rx="7" ry="10" fill="#FACC15" stroke="#0F172A" stroke-width="2.2"/><line x1="60" y1="29" x2="60" y2="39" stroke="#0F172A" stroke-width="2"/><circle cx="48" cy="52" r="5.5" fill="#FFF" stroke="#0F172A" stroke-width="2"/><line x1="48" y1="48" x2="48" y2="56" stroke="#0F172A" stroke-width="2.5"/><circle cx="72" cy="52" r="5.5" fill="#FFF" stroke="#0F172A" stroke-width="2"/><line x1="72" y1="48" x2="72" y2="56" stroke="#0F172A" stroke-width="2.5"/><path d="M48,66 Q60,74 72,66" fill="#F43F5E" stroke="#0F172A" stroke-width="2.2"/></svg>`
+            },
+            {
+                no: "094", name: "耿鬼", type: "👻 幽靈 / 毒屬性",
+                svg: `<svg viewBox="0 0 120 100" class="w-full h-full"><path d="M34,42 L22,12 L48,28 L60,16 L72,28 L98,12 L86,42 Q94,64 82,84 L70,76 L60,86 L50,76 L38,84 Q26,64 34,42 Z" fill="#7E22CE" stroke="#0F172A" stroke-width="3" stroke-linejoin="round"/><path d="M40,44 L54,50 L42,54 Z" fill="#EF4444" stroke="#0F172A" stroke-width="1.8"/><path d="M80,44 L66,50 L78,54 Z" fill="#EF4444" stroke="#0F172A" stroke-width="1.8"/><path d="M40,62 Q60,78 80,62 Q60,70 40,62 Z" fill="#FFFFFF" stroke="#0F172A" stroke-width="2.2"/></svg>`
+            },
+            {
+                no: "109", name: "瓦斯彈", type: "☠️ 毒氣屬性",
+                svg: `<svg viewBox="0 0 120 100" class="w-full h-full"><circle cx="60" cy="54" r="30" fill="#A855F7" stroke="#0F172A" stroke-width="3"/><circle cx="34" cy="34" r="6" fill="#C084FC" stroke="#0F172A" stroke-width="2"/><circle cx="88" cy="36" r="5" fill="#C084FC" stroke="#0F172A" stroke-width="2"/><circle cx="48" cy="48" r="5" fill="#FFF" stroke="#0F172A" stroke-width="2"/><circle cx="48" cy="48" r="2" fill="#0F172A"/><circle cx="72" cy="48" r="5" fill="#FFF" stroke="#0F172A" stroke-width="2"/><circle cx="72" cy="48" r="2" fill="#0F172A"/><path d="M46,64 Q60,56 74,64" fill="none" stroke="#0F172A" stroke-width="2.8" stroke-linecap="round"/><circle cx="60" cy="76" r="6" fill="none" stroke="#FEF08A" stroke-width="2.2"/><line x1="54" y1="84" x2="66" y2="84" stroke="#FEF08A" stroke-width="2.2"/></svg>`
+            },
+            {
+                no: "054", name: "傻鴨", type: "💫 念力混亂",
+                svg: `<svg viewBox="0 0 120 100" class="w-full h-full"><path d="M54,22 L50,10 M60,21 L60,8 M66,22 L70,10" stroke="#0F172A" stroke-width="2.8" stroke-linecap="round"/><ellipse cx="60" cy="56" rx="28" ry="32" fill="#FACC15" stroke="#0F172A" stroke-width="3"/><circle cx="48" cy="42" r="6.5" fill="#FFF" stroke="#0F172A" stroke-width="2"/><circle cx="48" cy="42" r="2" fill="#0F172A"/><circle cx="72" cy="42" r="6.5" fill="#FFF" stroke="#0F172A" stroke-width="2"/><circle cx="72" cy="42" r="2" fill="#0F172A"/><ellipse cx="60" cy="58" rx="16" ry="10" fill="#FDE68A" stroke="#0F172A" stroke-width="2.5"/></svg>`
+            },
+            {
+                no: "202", name: "果然翁", type: "🛡️ 反擊屬性",
+                svg: `<svg viewBox="0 0 120 100" class="w-full h-full"><path d="M44,88 Q38,52 46,24 Q60,12 74,24 Q82,52 76,88 Z" fill="#38BDF8" stroke="#0F172A" stroke-width="3"/><path d="M47,36 L55,41 L47,46 M73,36 L65,41 L73,46" fill="none" stroke="#0F172A" stroke-width="2.8" stroke-linecap="round"/><path d="M48,54 Q54,50 60,54 Q66,50 72,54 Q66,60 60,56 Q54,60 48,54 Z" fill="#F43F5E" stroke="#0F172A" stroke-width="2"/></svg>`
+            },
+            {
+                no: "024", name: "阿柏怪", type: "🐍 火箭兵團毒蛇",
+                svg: `<svg viewBox="0 0 120 100" class="w-full h-full"><path d="M60,16 Q26,22 28,58 Q30,86 60,86 Q90,86 92,58 Q94,22 60,16 Z" fill="#9333EA" stroke="#0F172A" stroke-width="3"/><ellipse cx="44" cy="54" rx="7" ry="11" fill="#FACC15" stroke="#0F172A" stroke-width="2"/><ellipse cx="76" cy="54" rx="7" ry="11" fill="#FACC15" stroke="#0F172A" stroke-width="2"/><path d="M48,32 L57,36 L49,39 Z" fill="#FEF08A" stroke="#0F172A" stroke-width="1.6"/><path d="M72,32 L63,36 L71,39 Z" fill="#FEF08A" stroke="#0F172A" stroke-width="1.6"/><path d="M52,44 Q60,40 68,44" fill="none" stroke="#0F172A" stroke-width="2.5"/></svg>`
+            },
+            {
+                no: "100", name: "霹靂電球", type: "💣 大自爆危機",
+                svg: `<svg viewBox="0 0 120 100" class="w-full h-full"><circle cx="60" cy="52" r="32" fill="#FFFFFF" stroke="#0F172A" stroke-width="3"/><path d="M28,52 A32,32 0 0,1 92,52 Z" fill="#EE1515" stroke="#0F172A" stroke-width="3"/><path d="M42,38 L55,44 L45,48 Z" fill="#FFFFFF" stroke="#0F172A" stroke-width="2"/><circle cx="49" cy="43" r="2" fill="#0F172A"/><path d="M78,38 L65,44 L75,48 Z" fill="#FFFFFF" stroke="#0F172A" stroke-width="2"/><circle cx="71" cy="43" r="2" fill="#0F172A"/></svg>`
+            },
+            {
+                no: "129", name: "鯉魚王", type: "🐟 水濺躍",
+                svg: `<svg viewBox="0 0 120 100" class="w-full h-full"><polygon points="86,52 106,32 102,52 106,72" fill="#FEF3C7" stroke="#0F172A" stroke-width="2.6"/><polygon points="56,22 48,10 60,14 68,10 64,22" fill="#FACC15" stroke="#0F172A" stroke-width="2.2"/><ellipse cx="58" cy="52" rx="30" ry="26" fill="#F97316" stroke="#0F172A" stroke-width="3"/><circle cx="44" cy="44" r="7.5" fill="#FFFFFF" stroke="#0F172A" stroke-width="2.2"/><circle cx="44" cy="44" r="2.5" fill="#0F172A"/><ellipse cx="32" cy="56" rx="6" ry="9" fill="#F43F5E" stroke="#0F172A" stroke-width="2"/><path d="M36,62 Q22,74 18,68" fill="none" stroke="#FACC15" stroke-width="3" stroke-linecap="round"/></svg>`
+            },
+            {
+                no: "778", name: "謎擬Ｑ", type: "🎭 畫皮偽裝",
+                svg: `<svg viewBox="0 0 120 100" class="w-full h-full"><path d="M46,34 L34,12 L54,28 Z" fill="#FEF08A" stroke="#0F172A" stroke-width="2.6"/><path d="M34,12 L41,21 L46,18 Z" fill="#0F172A"/><path d="M74,34 L94,24 L76,42 Z" fill="#FEF08A" stroke="#0F172A" stroke-width="2.6"/><path d="M40,86 Q36,56 44,32 Q60,26 76,32 Q84,56 80,86 L70,80 L60,88 L50,80 Z" fill="#FEF08A" stroke="#0F172A" stroke-width="3"/><path d="M46,44 L54,52 M54,44 L46,52 M66,44 L74,52 M74,44 L66,52" stroke="#0F172A" stroke-width="2.6" stroke-linecap="round"/><path d="M48,60 Q54,65 60,60 Q66,65 72,60" fill="none" stroke="#0F172A" stroke-width="2.4"/><circle cx="44" cy="56" r="4.5" fill="#F97316"/><circle cx="76" cy="56" r="4.5" fill="#F97316"/></svg>`
+            },
+            {
+                no: "079", name: "呆呆獸", type: "🐚 慢半拍呆萌",
+                svg: `<svg viewBox="0 0 120 100" class="w-full h-full"><ellipse cx="38" cy="34" rx="7" ry="10" fill="#F472B6" stroke="#0F172A" stroke-width="2.5"/><ellipse cx="82" cy="34" rx="7" ry="10" fill="#F472B6" stroke="#0F172A" stroke-width="2.5"/><ellipse cx="60" cy="56" rx="32" ry="26" fill="#F9A8D4" stroke="#0F172A" stroke-width="3"/><circle cx="46" cy="48" r="6.5" fill="#FFFFFF" stroke="#0F172A" stroke-width="2"/><circle cx="45" cy="48" r="2" fill="#0F172A"/><circle cx="74" cy="48" r="6.5" fill="#FFFFFF" stroke="#0F172A" stroke-width="2"/><circle cx="75" cy="48" r="2" fill="#0F172A"/><ellipse cx="60" cy="64" rx="18" ry="12" fill="#FDE68A" stroke="#0F172A" stroke-width="2.2"/><path d="M52,66 Q60,72 68,66" fill="#F43F5E" stroke="#0F172A" stroke-width="2"/></svg>`
+            }
+        ];
+
         function initSelection(type) {
             const pool = type === 'chance' ? db.ops : db.puns;
             let deck = [...pool];
@@ -1079,40 +2077,85 @@
             while(selected3.length < 3) selected3.push({title:"空精靈球 🔴", desc:"平安無事，繼續下一回合對戰！", val:0});
             shuffleArray(selected3);
 
+            // 為三張圖鑑卡各自配對不同的小精靈
+            const monPool = shuffleArray([...(type === 'chance' ? dexMonsChance : dexMonsPunish)]);
+
             const grid = document.getElementById('cards-grid');
             grid.innerHTML = '';
             const overlay = document.getElementById('overlay-select');
             
             if (type === 'chance') {
-                document.getElementById('select-title').innerText = "🎒 道具背包（選擇一項補給道具！）";
+                document.getElementById('select-title').innerText = "📱 神秘精靈圖鑑卡（選擇一隻小精靈支援！）";
             } else {
-                document.getElementById('select-title').innerText = "⚠️ 遭遇野生突襲（翻開一張異常狀態卡）";
+                document.getElementById('select-title').innerText = "⚠️ 遭遇野生精靈突襲（翻開一張圖鑑卡）";
             }
 
             const backPatternClass = type === 'chance' ? 'pokeball-back-item' : 'pokeball-back-rocket';
-            const frontBgClass = type === 'chance' ? 'bg-blue-50' : 'bg-red-50';
+            const dexHeaderClass = type === 'chance'
+                ? 'bg-gradient-to-r from-pokeRedDark via-pokeRed to-rose-600'
+                : 'bg-gradient-to-r from-slate-900 via-purple-950 to-slate-900';
+            const frontBgClass = type === 'chance'
+                ? 'bg-gradient-to-b from-sky-50 via-white to-amber-50'
+                : 'bg-gradient-to-b from-rose-50 via-white to-purple-50';
             const tagBgClass = type === 'chance' ? 'bg-pokeBlue text-white' : 'bg-pokeRed text-white';
 
-            selected3.forEach((cardData) => {
+            selected3.forEach((cardData, idx) => {
+                const mon = monPool[idx % monPool.length];
                 const el = document.createElement('div');
-                el.className = 'tarot-card w-[200px] h-[320px] sm:w-[235px] sm:h-[385px] relative cursor-pointer preserve-3d m-1.5 sm:m-2';
+                el.className = 'tarot-card w-[225px] h-[375px] sm:w-[260px] sm:h-[435px] relative cursor-pointer preserve-3d m-1.5 sm:m-2';
                 el.onclick = () => revealCard(el, cardData, type);
                 el.innerHTML = `
-                    <div class="tarot-face ${backPatternClass} poke-hud-box absolute inset-0 backface-hidden flex flex-col justify-center items-center gap-3">
-                        <div class="w-20 h-20 rounded-full border-[4px] border-hudDark flex items-center justify-center bg-white shadow-[3px_3px_0_#1E293B]">
-                            <span class="text-3xl font-game font-black text-hudDark">${type==='chance'?'ITEM':'⚠️'}</span>
+                    <!-- 卡背：立體精靈球金屬全息背 -->
+                    <div class="tarot-face ${backPatternClass} poke-hud-box absolute inset-0 backface-hidden flex flex-col justify-center items-center gap-3 overflow-hidden holo-sweep">
+                        <div class="holo-glitter-layer"></div>
+                        <div class="w-20 h-20 rounded-full border-[4px] border-hudDark flex items-center justify-center bg-white shadow-[3px_3px_0_#0F172A] relative z-10">
+                            <span class="text-3xl font-game font-black text-hudDark">${type==='chance'?'DEX':'⚠️'}</span>
                         </div>
-                        <div class="bg-pokeYellow border-2 border-hudDark px-4 py-1 rounded-full text-sm font-black text-hudDark shadow-[2px_2px_0_#1E293B] mt-4">
-                            ${type==='chance'?'道館補給箱':'異常狀態'}
+                        <div class="bg-pokeYellow border-2 border-hudDark px-4 py-1 rounded-full text-sm font-black text-hudDark shadow-[2px_2px_0_#0F172A] mt-4 relative z-10">
+                            ${type==='chance'?'📱 精靈圖鑑閃卡':'⚠️ 野生精靈圖鑑'}
                         </div>
                     </div>
-                    <div class="tarot-face poke-hud-box absolute inset-0 backface-hidden rotate-y-180 ${frontBgClass} p-4 sm:p-5 text-center flex flex-col items-center text-hudDark">
-                        <div class="w-full flex justify-between items-center mb-2">
-                            <span class="font-game text-xs font-black text-slate-500">POKÉ-ITEM</span>
-                            <span class="text-xs font-black px-2.5 py-0.5 rounded-full border-2 border-hudDark ${tagBgClass}">${type==='chance'?'補給道具':'異常狀態'}</span>
+
+                    <!-- 卡面：收錄真實不同精靈的精美圖鑑全息閃卡 -->
+                    <div class="tarot-face tcg-gold-frame absolute inset-0 backface-hidden rotate-y-180 overflow-hidden">
+                        <div class="holo-foil-layer"></div>
+                        <div class="holo-glitter-layer"></div>
+                        <div class="holo-sweep absolute inset-0 pointer-events-none"></div>
+                        <div class="w-full h-full rounded-[16px] border-2 border-hudDark ${frontBgClass} flex flex-col overflow-hidden text-hudDark relative">
+                            <!-- 圖鑑頂部紅蓋與發光藍鏡頭 -->
+                            <div class="${dexHeaderClass} px-3 py-1.5 border-b-[2.5px] border-hudDark flex items-center justify-between text-white relative z-10 shrink-0">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="w-3.5 h-3.5 rounded-full bg-dexCyan border-2 border-white dex-lens inline-block"></span>
+                                    <span class="w-2 h-2 rounded-full bg-rose-400 border border-hudDark inline-block"></span>
+                                    <span class="w-2 h-2 rounded-full bg-pokeYellow border border-hudDark inline-block"></span>
+                                    <span class="w-2 h-2 rounded-full bg-emerald-400 border border-hudDark inline-block"></span>
+                                </div>
+                                <span class="font-game text-[11px] font-black tracking-wider text-pokeYellow">No.${mon.no} ${mon.name}</span>
+                            </div>
+
+                            <!-- 圖鑑中央專屬精靈插畫螢幕 -->
+                            <div class="mx-3 mt-2 p-2 rounded-xl bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 border-2 border-hudDark flex flex-col items-center justify-center relative z-10 shadow-inner">
+                                <div class="w-full flex justify-between items-center px-1 mb-0.5">
+                                    <span class="text-[10px] font-black text-dexCyan">${mon.type}</span>
+                                    <span class="text-[10px] font-game font-black text-pokeYellow">★ HOLO</span>
+                                </div>
+                                <div class="w-24 h-20 sm:w-28 sm:h-24 flex items-center justify-center drop-shadow-[0_0_12px_rgba(255,255,255,0.28)]">
+                                    ${mon.svg}
+                                </div>
+                                <div class="text-sm sm:text-base font-black leading-tight text-pokeYellow text-center tracking-wide mt-0.5">${cardData.title}</div>
+                            </div>
+
+                            <!-- 圖鑑檔案招式說明欄 -->
+                            <div class="flex-1 mx-3 my-2 p-2.5 rounded-xl bg-white/95 border-2 border-hudDark/25 flex items-center justify-center text-xs sm:text-sm font-bold text-hudDark leading-relaxed text-center relative z-10 shadow-xs overflow-y-auto">
+                                ${cardData.desc}
+                            </div>
+
+                            <!-- 圖鑑底部狀態條 -->
+                            <div class="px-3 py-1 bg-slate-100 border-t-2 border-hudDark flex items-center justify-between text-[10px] font-black relative z-10 shrink-0">
+                                <span class="px-2 py-0.5 rounded-full border border-hudDark ${tagBgClass}">${type==='chance'?'★ 夥伴支援圖鑑':'★ 野生遭遇圖鑑'}</span>
+                                <span class="font-game text-slate-600">DEX #${mon.no}</span>
+                            </div>
                         </div>
-                        <div class="text-xl sm:text-2xl font-black leading-tight text-hudDark mb-3 border-b-2 border-hudDark/25 pb-2.5 w-full">${cardData.title}</div>
-                        <div class="text-sm sm:text-base text-hudDark font-bold flex-1 flex items-center justify-center leading-relaxed bg-white p-3 rounded-2xl border-2 border-hudDark/20 w-full">${cardData.desc}</div>
                     </div>
                 `;
                 grid.appendChild(el);
@@ -1178,12 +2221,12 @@
                 ctx.fillStyle = colors[i % colors.length];
                 ctx.fill();
                 ctx.lineWidth = 3.5;
-                ctx.strokeStyle = "#1E293B";
+                ctx.strokeStyle = "#0F172A";
                 ctx.stroke();
                 ctx.save();
                 ctx.rotate(ang + arc / 2);
                 ctx.textAlign = "right";
-                ctx.fillStyle = (i % 4 === 2) ? "#1E293B" : "#FFFFFF";
+                ctx.fillStyle = (i % 4 === 2) ? "#0F172A" : "#FFFFFF";
                 ctx.font = "900 18px 'Noto Sans TC', sans-serif";
                 ctx.fillText(db.wheel[i].title, r - 20, 6);
                 ctx.restore();
@@ -1194,14 +2237,14 @@
             ctx.fillStyle = "#FFFFFF";
             ctx.fill();
             ctx.lineWidth = 5;
-            ctx.strokeStyle = "#1E293B";
+            ctx.strokeStyle = "#0F172A";
             ctx.stroke();
             ctx.beginPath();
             ctx.arc(0, 0, 14, 0, Math.PI * 2);
             ctx.fillStyle = "#38BDF8";
             ctx.fill();
             ctx.lineWidth = 3;
-            ctx.strokeStyle = "#1E293B";
+            ctx.strokeStyle = "#0F172A";
             ctx.stroke();
             ctx.restore();
         }
@@ -1304,6 +2347,8 @@
                             a: String(row["答案"] || ""),
                             img: String(row["圖片URL"] || "")
                         }));
+                        initialQuestionsBackup.length = 0;
+                        initialQuestionsBackup.push(...JSON.parse(JSON.stringify(db.questions)));
                         msg += `• 題目：${db.questions.length} 題\n`;
                     }
 
