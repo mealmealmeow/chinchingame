@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>寵物小精靈道館賽</title>
+    <title>寵物小精靈道館賽：TCG閃卡文史對決</title>
     <!-- 引入遊戲感粗體與繁體字型 -->
     <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@700;900&family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
     <!-- SheetJS Excel 處理 -->
@@ -49,8 +49,41 @@
         .perspective-1500 { perspective: 1500px; }
         .perspective-1200 { perspective: 1200px; }
         .preserve-3d { transform-style: preserve-3d; }
-        .backface-hidden { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+        .backface-hidden {
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+        }
         .rotate-y-180 { transform: rotateY(180deg); }
+
+        /* 確保 3D 翻轉卡正反面擁有獨立 Z 軸空間，徹底防止瀏覽器在翻轉後透出背面鏡像文字 */
+        .card-face,
+        .tarot-face {
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            transform-style: flat;
+        }
+        .card-face.front,
+        .tarot-face:not(.rotate-y-180) {
+            transform: rotateY(0deg) translateZ(2px);
+            z-index: 2;
+        }
+        .card-face.back,
+        .tarot-face.rotate-y-180 {
+            transform: rotateY(180deg) translateZ(2px);
+            z-index: 1;
+        }
+
+        /* 翻轉後動態切換前後層級與可見度，避免任何混合模式導致穿透 */
+        .main-card.flipped .card-face.front,
+        .tarot-card.flipped .tarot-face:not(.rotate-y-180) {
+            pointer-events: none;
+            z-index: 1;
+        }
+        .main-card.flipped .card-face.back,
+        .tarot-card.flipped .tarot-face.rotate-y-180 {
+            pointer-events: auto;
+            z-index: 3;
+        }
 
         /* 經典對戰資訊框 */
         .poke-hud-box {
